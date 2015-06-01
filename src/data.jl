@@ -42,7 +42,7 @@ function sample(datalist::DataVec, n::Int)
 	SolverData[sample(datalist) for i in 1:n]
 end
 
-function shuffle(datalist::DataVec)
+function Base.shuffle(datalist::DataVec)
 	indices = collect(1:length(datalist))
 	datalist[shuffle(indices)]
 end

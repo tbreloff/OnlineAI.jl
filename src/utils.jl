@@ -61,6 +61,10 @@ function setcol(M::Matrix, col::Int, v::Vector)
 end
 
 
+mat(t::DataType = Float64) = zeros(t, 0, 0)
+mat(m::Matrix) = m
+mat(v::Vector) = reshape(v, length(v), 1)
+
 
 getPctOfInt(pct::Float64, T::Int) = round(Int, max(0., min(1., pct)) * T)
 
@@ -74,5 +78,3 @@ function splitMatrixRows(mat::Matrix, pct::Float64)
 	rows(mat,rng1), rows(mat,rng2)
 end
 
-
-end

@@ -1,6 +1,7 @@
 module test_OnlineAI
 
 using OnlineAI
+include("../src/utils.jl")
 
 function testxor(maxiter::Int)
 
