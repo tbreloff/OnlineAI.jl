@@ -17,12 +17,12 @@ function buildSolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displa
 	SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
 end
 
-update!(nn::NeuralNet, data::SolverData) = update!(nn, data.input, data.target)
-totalerror(nn::NeuralNet, data::SolverData) = totalerror(nn, data.input, data.target)
-totalerror(nn::NeuralNet, dataset::DataVec) = sum([totalerror(nn, data) for data in dataset])
+update!(net::NeuralNet, data::SolverData) = update!(net, data.input, data.target)
+totalerror(net::NeuralNet, data::SolverData) = totalerror(net, data.input, data.target)
+totalerror(net::NeuralNet, dataset::DataVec) = sum([totalerror(net, data) for data in dataset])
 
 
-function solve!(nn::NeuralNet, params::SolverParams, datasets::DataSets)
+function solve!(net::NeuralNet, params::SolverParams, datasets::DataSets)
 
 	stats = SolverStats(0, 0.0)
 
@@ -33,11 +33,11 @@ function solve!(nn::NeuralNet, params::SolverParams, datasets::DataSets)
 
 		# randomly sample one data item and update the network
 		data = sample(datasets.trainingSet)
-		update!(nn, data)
+		update!(net, data)
 
 		# # check for convergence
 		if i % params.erroriter == 0
-			stats.validationError = totalerror(nn, datasets.validationSet)
+			stats.validationError = totalerror(net, datasets.validationSet)
 			println("Status: iter=$i toterr=$(stats.validationError)")
 			if stats.validationError <= params.minerror
 				println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(params.minerror)")
@@ -46,7 +46,7 @@ function solve!(nn::NeuralNet, params::SolverParams, datasets::DataSets)
 		end
 
 		if i % params.displayiter == 0
-			params.onbreak(nn, params, datasets, stats)
+			params.onbreak(net, params, datasets, stats)
 		end
 	end
 

@@ -1,5 +1,6 @@
 module test_OnlineAI
 
+reload("OnlineAI")
 using OnlineAI
 include("../src/utils.jl")
 
@@ -13,35 +14,29 @@ function testxor(maxiter::Int)
 	data = buildSolverData(inputs, targets)
 	datasets = DataSets(data, data, data)
 
-	nn = buildNeuralNet([2,2,1]; η=0.5, μ=0.1)
+	net = buildNeuralNet([2,2,1]; η=0.5, μ=0.1)
 
 	params = buildSolverParams(maxiter=maxiter, minerror=1e-6)
-	solve!(nn, params, datasets)
+	solve!(net, params, datasets)
 
 	for d in data
-		output = feedforward!(nn, d.input)
+		output = feedforward!(net, d.input)
 		println("Result: input=$(d.input) target=$(d.target) output=$output")
 	end
 
-	nn
+	net
 end
 
 # -------------------------------------------------------------------
 
 using Qwt
-const maxx = 15.0
-const sp = subplot(zeros(0,2), ncols=1)
-const plt = oplot(sp.plots[1], zeros(1,2), labels=["estimate","target"])
-const plt2 = oplot(sp.plots[2], zeros(1), xlabel="Iteration", ylabel="Network Error"); empty!(plt2)
-const xxx = collect(-maxx:.1:maxx)
-const anim = animation(sp, "/tmp/png")
 
 # sinfunction(x) = sin(x) / 2 + sin(x*8) / 4
 sinfunction(x) = 0.9 * x^2 / maxx^2
 
-function updatesinplot(nn::NeuralNet, params::SolverParams, datasets::DataSets, stats::SolverStats)
+function updatesinplot(net::NeuralNet, params::SolverParams, datasets::DataSets, stats::SolverStats)
 
-	setdata(plt.lines[1], xxx, Float64[feedforward!(nn, [f])[1] for f in xxx])
+	setdata(plt.lines[1], xxx, Float64[feedforward!(net, [f])[1] for f in xxx])
 	setdata(plt.lines[2], xxx, map(sinfunction,xxx))
 	title(plt, @sprintf("Update: %4d  Error: %10.4f", stats.numiter, stats.validationError))
 
@@ -55,6 +50,13 @@ end
 
 function testsin(maxiter::Int)
 
+	global maxx = 15.0
+	global sp = subplot(zeros(0,2), ncols=1)
+	global plt = oplot(sp.plots[1], zeros(1,2), labels=["estimate","target"])
+	global plt2 = oplot(sp.plots[2], zeros(1), xlabel="Iteration", ylabel="Network Error"); empty!(plt2)
+	global xxx = collect(-maxx:.1:maxx)
+	global anim = animation(sp, "/tmp/png")
+
 	inputs = mat(collect(linspace(-maxx,maxx,1000)))
 	targets = map(sinfunction, inputs)
 
@@ -62,13 +64,13 @@ function testsin(maxiter::Int)
 	data = buildSolverData(inputs, targets)
 	datasets = DataSets(data, sample(data,30), data)
 
-	nn = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
+	net = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
 
 	params = buildSolverParams(maxiter=maxiter, onbreak=updatesinplot, displayiter=10000, minerror=0.01)
-	solve!(nn, params, datasets)
+	solve!(net, params, datasets)
 
 	makegif(anim)
-	nn
+	net
 end
 
 

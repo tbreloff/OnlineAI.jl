@@ -21,24 +21,20 @@ Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout), w=$(vec(l.w
 
 
 
-# function initializeWeights(ni::Int, nj::Int)
-# 	w = ((rand(ni, nj) - 0.5) * 2.0) * sqrt(6.0 / (ni + nj))
+# function initializeWeights(nin::Int, nj::Int)
+# 	w = ((rand(nin, nj) - 0.5) * 2.0) * sqrt(6.0 / (nin + nj))
 # 	w[end,:] = 0.0  # bias row
 # 	w
 # end
 
-initialWeights(nin::Int, nout::Int) = vcat((rand(ni) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout)), 0.0)
-
-function buildNodes(nin::Int, nout::Int, activation::Activation)
-	[Perceptron(nin, activation, initializeWeights(nin, nout)) for i in 1:nout]
-end
+initialWeights(nin::Int, nout::Int) = vcat((rand(nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout)), 0.0)
 
 
 function buildLayer(nin::Int, nout::Int, activation::Activation = SigmoidActivation())
-	nodes = [Perceptron(nin, activation, initializeWeights)]
+	nodes = [Perceptron(nin, initialWeights(nin, nout), activation) for j in 1:nout]
 	Layer(nin, nout,
 				# initializeWeights(nin+1, nout), zeros(nin+1,nout),  # w, dw
-				buildNodes(nin, nout, activation),
+				nodes,
 				# activation,
 				# zeros(nin+1),	# x
 				zeros(nout) 	# δ
@@ -54,21 +50,35 @@ end
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
 function feedforward!(layer::Layer, inputs::VecF)
 	x = vcat(inputs, 1.0)  # add bias to the end
-	[feedforward!(node, x) for node in layer.nodes]
+	Float64[feedforward!(node, x) for node in layer.nodes]
 	# layer.x = vcat(inputs, 1.0)  # add bias to the end
 	# layer.Σ = layer.w' * layer.x
 	# activate(layer)
 end
 
+δ(layer::Layer, j::Int) = layer.nodes[j].δ
+δ(layer::Layer) = Float64[δ(layer, j) for j in 1:layer.nout]
+
 function hiddenδ!(layer::Layer, nextlayer::Layer)
 	for j in 1:layer.nout
-		weightedNextδ = dot(nextlayer.δ, Float64[node.w[j] for node in nextlayer.nodes])
-		layer.δ[j] = hiddenδ(layer.node, weightedNextδ)
+		weightedNextδ = dot(δ(nextlayer), Float64[node.w[j] for node in nextlayer.nodes])
+		# layer.δ[j] = hiddenδ(layer.nodes[j], weightedNextδ)
+		hiddenδ!(layer.nodes[j], weightedNextδ)
 	end
 end
 
 function finalδ!(layer::Layer, errors::VecF)
-	layer.δ = map(finalδ, layer.nodes, errors)
+	# layer.δ = map(finalδ, layer.nodes, errors)
+	for j in 1:layer.nout
+		finalδ!(layer.nodes[j], errors[j])
+	end
+end
+
+function update!(layer::Layer, η::Float64, μ::Float64)
+	for node in layer.nodes
+		# update!(node, layer.δ, η, μ)
+		update!(node, η, μ)
+	end
 end
 
 # # given next layer's δ, compute this hidden layer's δ  (this is the recursive calculation based on the chain rule)
@@ -83,7 +93,6 @@ end
 # 	layer.δ, layer.w
 # end
 
-# TODO
 # function update!(layer::Layer, η::Float64, μ::Float64)
 # 	dw = -η * layer.x * layer.δ' + μ * layer.dw
 # 	layer.w += dw

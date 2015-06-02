@@ -10,13 +10,10 @@ export Activation,
 			 Layer,
 			 buildLayer,
 			 feedforward!,
-			 hiddenδ!,
-			 finalδ!,
 			 update!,
 
 			 NeuralNet,
 			 buildNeuralNet,
-			 backpropagate!,
 			 totalerror,
 
 			 SolverData,

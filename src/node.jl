@@ -7,22 +7,24 @@ abstract Node
 # NOTE: ignore bias! assume it's been passed in already
 type Perceptron
 	nin::Int
-	A::Function
-	dA::Function
-	x::VecF
-	w::VecF
-	dw::VecF
-	# δ::Float64
+	A::Function  # activation function
+	dA::Function # derivative
+	x::VecF  # nin x 1
+	w::VecF  # nin x 1
+	dw::VecF # nin x 1
+	δ::Float64
 	Σ::Float64
 end
 
-function Perceptron(nin::Int, activationType::DataType, lossType::DataType)
-	A, da = getActivationFunctions(activationType, lossType)
-	Perceptron(nin, A, dA, zeros(nin), zeros(nin), zeros(nin), 0.0, 0.0)
+# TODO: change passing of activation
+# function Perceptron(nin::Int, activationType::DataType, lossType::DataType)
+function Perceptron(nin::Int, w::VecF, activation::Activation)
+	# A, da = getActivationFunctions(activationType, lossType)
+	Perceptron(nin, activation.A, activation.dA, zeros(nin), w, zeros(nin), 0.0, 0.0)
 end
 
 function feedforward!(node::Perceptron, inputs::VecF)
-	node.x = copy(inputs)
+	node.x = inputs
 	node.Σ = dot(node.x, node.w)
 	node.A(node.Σ)
 end
@@ -30,11 +32,17 @@ end
 
 # TODO: computeδ function(s)... can we have 1 generic function, or do we need output-specific one?
 
-hiddenδ(node::Perceptron, weightedδ::Float64) = node.dA(node.Σ) * weightedδ
-finalδ(node::Perceptron, err::Float64) = -node.dA(node.Σ) * err  # this probably needs to change for different loss functions?
+function hiddenδ!(node::Perceptron, weightedδ::Float64)
+	node.δ = node.dA(node.Σ) * weightedδ
+end
 
-function update!(node::Perceptron, δ::VecF, η::Float64, μ::Float64)
-	dw = -η * node.x .* δ + μ * node.dw
+function finalδ!(node::Perceptron, err::Float64)
+	node.δ = -node.dA(node.Σ) * err  # this probably needs to change for different loss functions?
+end
+
+function update!(node::Perceptron, η::Float64, μ::Float64)
+	println("$(size(node.x)) $(size(node.dw)) $(size(node.w))")
+	dw = -η * node.δ * node.x + μ * node.dw
 	node.w += dw
 	node.dw = dw
 end

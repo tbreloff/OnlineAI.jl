@@ -24,9 +24,9 @@ function buildNeuralNet(structure::VecI;
 	NeuralNet(layers, η, μ, activation) 
 end
 
-function Base.show(io::IO, nn::NeuralNet)
-	println(io, "NeuralNet{η=$(nn.η), μ=$(nn.μ), layers:")
-	for layer in nn.layers
+function Base.show(io::IO, net::NeuralNet)
+	println(io, "NeuralNet{η=$(net.η), μ=$(net.μ), layers:")
+	for layer in net.layers
 		println(io, "    ", layer)
 	end
 	println(io, "}")
@@ -34,9 +34,9 @@ end
 
 
 # produces a vector of outputs (activations) from the network
-function feedforward!(nn::NeuralNet, inputs::VecF)
+function feedforward!(net::NeuralNet, inputs::VecF)
 	outputs = inputs
-	for layer in nn.layers
+	for layer in net.layers
 		outputs = feedforward!(layer, outputs)
 	end
 	outputs
@@ -44,46 +44,52 @@ end
 
 
 # given a vector of errors (true values - activations), update network weights
-function backpropagate!(nn::NeuralNet, errors::VecF)
+function backpropagate!(net::NeuralNet, errors::VecF)
+
+	# # update δ (sensitivities)
+	# nextδ, nextw = finalδ!(net.layers[end], errors)
+	# for i in length(net.layers)-1:-1:1
+	# 	nextδ, nextw = hiddenδ!(net.layers[i], nextδ, nextw)
+	# end
 
 	# update δ (sensitivities)
-	nextδ, nextw = finalδ!(nn.layers[end], errors)
-	for i in length(nn.layers)-1:-1:1
-		nextδ, nextw = hiddenδ!(nn.layers[i], nextδ, nextw)
+	finalδ!(net.layers[end], errors)
+	for i in length(net.layers)-1:-1:1
+		hiddenδ!(net.layers[i], net.layers[i+1])
 	end
 
 	# update weights
-	for layer in nn.layers
-		update!(layer, nn.η, nn.μ)
+	for layer in net.layers
+		update!(layer, net.η, net.μ)
 	end
 
 end
 
 
-function totalerror(nn::NeuralNet, inputs::VecF, targets::VecF)
-	outputs = feedforward!(nn, inputs)
+function totalerror(net::NeuralNet, inputs::VecF, targets::VecF)
+	outputs = feedforward!(net, inputs)
 	0.5 * sumabs2(targets - outputs)
 end
 
 
 # online version
-function update!(nn::NeuralNet, inputs::VecF, targets::VecF)
-	outputs = feedforward!(nn, inputs)
+function update!(net::NeuralNet, inputs::VecF, targets::VecF)
+	outputs = feedforward!(net, inputs)
 	errors = targets - outputs
-	backpropagate!(nn, errors)
+	backpropagate!(net, errors)
 	outputs
 end
 
 
 # batch version
-function update!(nn::NeuralNet, inputs::MatF, targets::MatF)
-	@assert size(inputs,2) == nn.nin
-	@assert size(targets,2) == nn.nout
+function update!(net::NeuralNet, inputs::MatF, targets::MatF)
+	@assert size(inputs,2) == net.nin
+	@assert size(targets,2) == net.nout
 	@assert size(inputs,1) == size(targets,1)
 
 	outputs = VecF[]
 	for i in 1:size(inputs,1)
-		output = update!(nn, row(inputs,i), row(targets,i))
+		output = update!(net, row(inputs,i), row(targets,i))
 		push!(outputs, output)
 	end
 	outputs
