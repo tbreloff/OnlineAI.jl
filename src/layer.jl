@@ -1,7 +1,7 @@
 
 # one layer of a multilayer perceptron (neural net)
 # w and b are both length nout, which is the number of neurons.  ninᵢ == noutᵢ₋₁
-type MLPLayer
+type Layer
 	nin::Int
 	nout::Int
 
@@ -17,7 +17,7 @@ type MLPLayer
 	# Σ::VecF	# weighted sum of inputs and bias:  Σⱼ = dot(x, col(w,j)) + b[j]
 end
 
-Base.print(io::IO, l::MLPLayer) = print(io, "MLPLayer{$(l.nin)=>$(l.nout), w=$(vec(l.w)), dw=$(vec(l.dw)), x=$(l.x), δ=$(l.δ), Σ=$(l.Σ)}")
+Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout), w=$(vec(l.w)), dw=$(vec(l.dw)), x=$(l.x), δ=$(l.δ), Σ=$(l.Σ)}")
 
 
 
@@ -36,7 +36,7 @@ end
 
 function buildLayer(nin::Int, nout::Int, activation::Activation = SigmoidActivation())
 	nodes = [Perceptron(nin, activation, initializeWeights)]
-	MLPLayer(nin, nout,
+	Layer(nin, nout,
 				# initializeWeights(nin+1, nout), zeros(nin+1,nout),  # w, dw
 				buildNodes(nin, nout, activation),
 				# activation,
@@ -47,12 +47,12 @@ function buildLayer(nin::Int, nout::Int, activation::Activation = SigmoidActivat
 end
 
 
-# activate(layer::MLPLayer) = map(layer.activation.A, layer.Σ)
-# activateprime(layer::MLPLayer) = map(layer.activation.dA, layer.Σ)
+# activate(layer::Layer) = map(layer.activation.A, layer.Σ)
+# activateprime(layer::Layer) = map(layer.activation.dA, layer.Σ)
 
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
-function feedforward!(layer::MLPLayer, inputs::VecF)
+function feedforward!(layer::Layer, inputs::VecF)
 	x = vcat(inputs, 1.0)  # add bias to the end
 	[feedforward!(node, x) for node in layer.nodes]
 	# layer.x = vcat(inputs, 1.0)  # add bias to the end
@@ -60,19 +60,31 @@ function feedforward!(layer::MLPLayer, inputs::VecF)
 	# activate(layer)
 end
 
+function hiddenδ!(layer::Layer, nextlayer::Layer)
+	for j in 1:layer.nout
+		weightedNextδ = dot(nextlayer.δ, Float64[node.w[j] for node in nextlayer.nodes])
+		layer.δ[j] = hiddenδ(layer.node, weightedNextδ)
+	end
+end
+
+function finalδ!(layer::Layer, errors::VecF)
+	layer.δ = map(finalδ, layer.nodes, errors)
+end
+
 # # given next layer's δ, compute this hidden layer's δ  (this is the recursive calculation based on the chain rule)
-# function hiddenδ!(layer::MLPLayer, nextδ::VecF, nextw::MatF)
+# function hiddenδ!(layer::Layer, nextδ::VecF, nextw::MatF)
 # 	layer.δ = activateprime(layer) .* (nextw * nextδ)[1:end-1]
 # 	layer.δ, layer.w
 # end
 
 # # compute the δ for the final layer... uses errors
-# function finalδ!(layer::MLPLayer, errors::VecF)
+# function finalδ!(layer::Layer, errors::VecF)
 # 	layer.δ = -errors .* activateprime(layer)
 # 	layer.δ, layer.w
 # end
 
-# function update!(layer::MLPLayer, η::Float64, μ::Float64)
+# TODO
+# function update!(layer::Layer, η::Float64, μ::Float64)
 # 	dw = -η * layer.x * layer.δ' + μ * layer.dw
 # 	layer.w += dw
 # 	layer.dw = dw
