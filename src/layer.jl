@@ -13,11 +13,11 @@ type Layer
 	# activation::Activation
 
 	# x::VecF	# input vector (output from previous layer)
-	δ::VecF	# a vector of partial derivatives: {∂E/∂Σᵢ} also known as "sensitivities"
+	# δ::VecF	# a vector of partial derivatives: {∂E/∂Σᵢ} also known as "sensitivities"
 	# Σ::VecF	# weighted sum of inputs and bias:  Σⱼ = dot(x, col(w,j)) + b[j]
 end
 
-Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout), w=$(vec(l.w)), dw=$(vec(l.dw)), x=$(l.x), δ=$(l.δ), Σ=$(l.Σ)}")
+Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout)}")
 
 
 
@@ -31,15 +31,14 @@ initialWeights(nin::Int, nout::Int) = vcat((rand(nin) - 0.5) * 2.0 * sqrt(6.0 / 
 
 
 function buildLayer(nin::Int, nout::Int, activation::Activation = SigmoidActivation())
-	nodes = [Perceptron(nin, initialWeights(nin, nout), activation) for j in 1:nout]
-	Layer(nin, nout,
+	nodes = [Perceptron(initialWeights(nin, nout), activation) for j in 1:nout]
+	Layer(nin, nout, nodes)
 				# initializeWeights(nin+1, nout), zeros(nin+1,nout),  # w, dw
-				nodes,
 				# activation,
 				# zeros(nin+1),	# x
-				zeros(nout) 	# δ
+				# zeros(nout) 	# δ
 				# zeros(nout)		# Σ
-				)
+				# )
 end
 
 

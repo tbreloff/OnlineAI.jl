@@ -18,8 +18,9 @@ end
 
 # TODO: change passing of activation
 # function Perceptron(nin::Int, activationType::DataType, lossType::DataType)
-function Perceptron(nin::Int, w::VecF, activation::Activation)
+function Perceptron(w::VecF, activation::Activation)
 	# A, da = getActivationFunctions(activationType, lossType)
+	nin = length(w)
 	Perceptron(nin, activation.A, activation.dA, zeros(nin), w, zeros(nin), 0.0, 0.0)
 end
 
@@ -41,7 +42,6 @@ function finalδ!(node::Perceptron, err::Float64)
 end
 
 function update!(node::Perceptron, η::Float64, μ::Float64)
-	println("$(size(node.x)) $(size(node.dw)) $(size(node.w))")
 	dw = -η * node.δ * node.x + μ * node.dw
 	node.w += dw
 	node.dw = dw
