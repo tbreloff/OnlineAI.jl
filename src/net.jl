@@ -4,7 +4,6 @@ type NeuralNet
 	layers::Vector{Layer}  # note: this doesn't include input layer!!
 	η::Float64 # learning rate
 	μ::Float64 # momentum
-	activation::Activation
 end
 
 
@@ -21,7 +20,7 @@ function buildNeuralNet(structure::VecI;
 		push!(layers, buildLayer(nin, nout, activation))
 	end
 
-	NeuralNet(layers, η, μ, activation) 
+	NeuralNet(layers, η, μ) 
 end
 
 function Base.show(io::IO, net::NeuralNet)
@@ -45,12 +44,6 @@ end
 
 # given a vector of errors (true values - activations), update network weights
 function backpropagate!(net::NeuralNet, errors::VecF)
-
-	# # update δ (sensitivities)
-	# nextδ, nextw = finalδ!(net.layers[end], errors)
-	# for i in length(net.layers)-1:-1:1
-	# 	nextδ, nextw = hiddenδ!(net.layers[i], nextδ, nextw)
-	# end
 
 	# update δ (sensitivities)
 	finalδ!(net.layers[end], errors)

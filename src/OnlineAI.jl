@@ -26,7 +26,12 @@ export Activation,
 			 SolverParams,
 			 SolverStats,
 			 buildSolverParams,
-			 solve!
+			 solve!,
+
+			 buildNet,
+			 buildClassifierNet,
+			 buildRegressionNet
+
 
 
 include("utils.jl")
@@ -37,5 +42,6 @@ include("net.jl")
 include("lstm.jl")
 include("data.jl")
 include("solver.jl")
+include("build.jl")
 
 end

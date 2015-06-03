@@ -31,8 +31,9 @@ end
 
 using Qwt
 
-# sinfunction(x) = sin(x) / 2 + sin(x*8) / 4
-sinfunction(x) = 0.9 * x^2 / maxx^2
+sinfunction(x) = sin(x) / 2 + sin(x*4) / 4
+# sinfunction(x) = 0.9 * x^2 / maxx^2
+# sinfunction(x) = x^2
 
 function updatesinplot(net::NeuralNet, params::SolverParams, datasets::DataSets, stats::SolverStats)
 
@@ -44,18 +45,34 @@ function updatesinplot(net::NeuralNet, params::SolverParams, datasets::DataSets,
 
 	refresh(plt)
 	refresh(plt2)
-	saveframe(anim)
+	
+	shoulddogif && saveframe(anim)
+end
+
+function buildRegNN1()
+	buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
+end
+
+function buildRegNN2()
+	η=0.02
+	μ=0.2
+	NeuralNet(Layer[
+		buildLayer(1, 10),
+		buildLayer(10, 10),
+		buildLayer(10, 1, IdentityActivation())
+		], η, μ)
 end
 
 
-function testsin(maxiter::Int)
+function testsin(maxiter::Int, dogif = false)
 
-	global maxx = 15.0
+	global maxx = 10.0
 	global sp = subplot(zeros(0,2), ncols=1)
 	global plt = oplot(sp.plots[1], zeros(1,2), labels=["estimate","target"])
 	global plt2 = oplot(sp.plots[2], zeros(1), xlabel="Iteration", ylabel="Network Error"); empty!(plt2)
 	global xxx = collect(-maxx:.1:maxx)
 	global anim = animation(sp, "/tmp/png")
+	global shoulddogif = dogif
 
 	inputs = mat(collect(linspace(-maxx,maxx,1000)))
 	targets = map(sinfunction, inputs)
@@ -64,12 +81,13 @@ function testsin(maxiter::Int)
 	data = buildSolverData(inputs, targets)
 	datasets = DataSets(data, sample(data,30), data)
 
-	net = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
+	# net = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
+	net = buildRegressionNet(1, 1, [30,30]; hiddenActivation = SoftsignActivation(), η = 0.05)
 
-	params = buildSolverParams(maxiter=maxiter, onbreak=updatesinplot, displayiter=10000, minerror=0.01)
+	params = buildSolverParams(maxiter=maxiter, onbreak=updatesinplot, displayiter=10000, minerror=1e-3)
 	solve!(net, params, datasets)
 
-	makegif(anim)
+	shoulddogif && makegif(anim)
 	net
 end
 
