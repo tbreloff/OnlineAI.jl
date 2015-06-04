@@ -1,4 +1,6 @@
 
+# WORK IN PROGRESS
+
 # implements long short term memory as a pluggable node within any network
 # see http://www.deeplearning.net/tutorial/lstm.html for some additional background
 # and http://www.overcomplete.net/papers/nn2012.pdf for a generalized version
