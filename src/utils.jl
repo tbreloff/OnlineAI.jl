@@ -78,3 +78,8 @@ function splitMatrixRows(mat::Matrix, pct::Float64)
 	rows(mat,rng1), rows(mat,rng2)
 end
 
+function apply(f::Function, A::AbstractArray)
+	for x in A
+		f(x)
+	end
+end
