@@ -64,34 +64,34 @@ end
 
 # we use the model [ uₜ = pulsesₜ + (1-λ) * uₜ₋₁ ] to update
 type DiscreteLeakyIntegrateAndFireNeuron <: SpikingNeuron
-	position::Tuple{Int,Int,Int}  # position in neuronal column
+	position::VecI  # 3x1 position in neuronal column
 	excitatory::Bool
 	futurePulses::CircularBuffer{Float64}  # future pulses by time offset {pulseₜ₊₁, pulseₜ₊₂, ...}
 	u::Float64		  		# current state
 	# uᵣₑₛₜ::Float64  # resting state # note: assume 0 for now
 	ϑ::Float64  		# threshold level
-	λ::Float64 				# exponential decay rate
+	decayRate::Float64 				# exponential decay rate
 	refractoryPeriodsRemaining::Int  # no activity allowed for this many periods after a spike
 	refractoryPeriodsTotal::Int  # no activity allowed for this many periods after a spike
 	fired::Bool  # did the neuron fire in the most recent period?
-	synapses::Vector{Synapse}
+	synapses::Vector{DiscreteSynapse}
 end
 
 const MAX_FUTURE = 10
 const DEFAULT_THRESHOLD = 2.0
 const DEFAULT_REFRACTORY_PERIOD = 4
 
-function DiscreteLeakyIntegrateAndFireNeuron(position::Tuple{Int,Int,Int}, excitatory::Bool, λ::Float64)
+function DiscreteLeakyIntegrateAndFireNeuron(position::VecI, excitatory::Bool, decayRate::Float64)
 	DiscreteLeakyIntegrateAndFireNeuron(position,
 																			excitatory,
 																			CircularBuffer(Float64, MAX_FUTURE, 0.0),
 																			0.0,
 																			DEFAULT_THRESHOLD,
-																			λ,
+																			decayRate,
 																			0,
 																			DEFAULT_REFRACTORY_PERIOD,
 																			false,
-																			Synapse[])
+																			DiscreteSynapse[])
 end
 
 # stepping through time involves 2 actions:
@@ -104,7 +104,7 @@ function OnlineStats.update!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 	if neuron.refractoryPeriodsRemaining > 0
 		neuron.refractoryPeriodsRemaining -= 1
 	else
-		neuron.u *= (1.0 - neuron.λ)
+		neuron.u *= neuron.decayRate
 		neuron.u += futurePulses[1]
 	end
 
@@ -123,37 +123,69 @@ function fire!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 end
 
 
+
 # ---------------------------------------------------------------------
 
-# give default values of C from the P(connection) = C * exp(-(D(a,b)/λ)^2)
+# methods to compute probability of synaptic connection
+#		P(connection) = C * exp(-(D(a,b)/λ)^2)
 
 const C_EE = 0.3
 const C_EI = 0.2
 const C_IE = 0.4
 const C_II = 0.1
+function C(n1::SpikingNeuron, n2::SpikingNeuron)
+	n1.excitatory && (return n2.excitatory ? C_EE : C_EI)
+	n2.excitatory ? C_IE : C_II
+end
 
-function C(a_excitatory::Bool, b_excitatory::Bool)
-	if a_excitatory
-		return b_excitatory ? C_EE : C_EI
-	else
-		return b_excitatory ? C_IE : C_II
-	end
+function distance(n1::SpikingNeuron, n2::SpikingNeuron)
+	norm(n1.position - n2.position)
+end
+
+function probabilityOfConnection(n1::SpikingNeuron, n2::SpikingNeuron, λ::Float64)
+	C(n1, n2) * exp(-((distance(n1, n2) / λ) ^ 2))
+end
+
+const UNIF_WEIGHT = Uniform(0.0, 0.5)
+function weight(n::SpikingNeuron)
+	(n.excitatory ? 1.0 : -1.0) * rand(UNIF_WEIGHT)
+end
+
+bound{T<:Real}(x::T, l::T, u::T) = max(l, min(x, u))
+
+function delay(n::SpikingNeuron)
+	sample(1:MAX_FUTURE)
 end
 
 # ---------------------------------------------------------------------
 
-type Liquid{T<:SpikingNeuron}
-	neurons::Vector{T}
-	outputNeurons::Vector{T}
+type Liquid{SN<:SpikingNeuron}
+	neurons::Vector{SN}
+	outputNeurons::Vector{SN}
 end
 
-function Liquid{T<:SpikingNeuron}(::Type{T}, l::Int, w::Int, h::Int; 
+function Liquid{SN<:SpikingNeuron}(::Type{SN},
+				w::Int, h::Int; 
 				pctInhibitory::Float64 = 0.2,
+				decayRate::Float64 = 0.99,  # TODO: make this variable/random
 				λ::Float64 = 0.01,
 				pctOutput::Float64 = 0.4)
 	
-	neurons = vec([T((i, j, k), rand() > pctInhibitory, λ) for i in 1:l, j in 1:w, k in 1:h])
+	# create neurons in an (w x w x h) column
+	neurons = vec([SN([i, j, k], rand() > pctInhibitory, decayRate) for i in 1:w, j in 1:w, k in 1:h])
 	outputNeurons = sample(neurons, round(Int, pctOutput * length(neurons)))
+
+	# randomly connect the neurons
+	for n1 in neurons
+		for n2 in neurons
+			if rand() <= probabilityOfConnection(n1, n2, λ)
+				synapse = DiscreteSynapse(n2, weight(n1), delay(n1))
+				push!(n1.synapses, synapse)
+			end
+		end
+		println(n1, ", Synapses: ", n1.synapses)
+	end
+
 	Liquid(neurons, outputNeurons)
 end
 
@@ -225,10 +257,10 @@ type LiquidStateMachine{T<:OnlineStat} <: OnlineStat
 	readoutModels::Vector{T}
 end
 
-function LiquidStateMachine(l::Int, w::Int, h::Int,
+function LiquidStateMachine(w::Int, h::Int,
 														numInputs::Int, numOutputs::Int)
 	# initialize liquid
-	liquid = Liquid(DiscreteLeakyIntegrateAndFireNeuron, l, w, h)
+	liquid = Liquid(DiscreteLeakyIntegrateAndFireNeuron, w, h)
 
 	# create input structure
 	wgt = ExponentialWeighting(1000)
