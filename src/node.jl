@@ -5,7 +5,7 @@ abstract Node
 
 # takes in nin inputs, outputs A(Σ), where Σ = dot(x,w) + b, and A is the activation
 # NOTE: ignore bias! assume it's been passed in already
-type Perceptron
+type Perceptron <: Node
 	nin::Int
 	A::Function  # activation function
 	dA::Function # derivative
@@ -41,7 +41,7 @@ function finalδ!(node::Perceptron, err::Float64)
 	node.δ = -node.dA(node.Σ) * err  # this probably needs to change for different loss functions?
 end
 
-function update!(node::Perceptron, η::Float64, μ::Float64)
+function OnlineStats.update!(node::Perceptron, η::Float64, μ::Float64)
 	dw = -η * node.δ * node.x + μ * node.dw
 	node.w += dw
 	node.dw = dw

@@ -5,6 +5,7 @@ typealias MatF Matrix{Float64}
 typealias VecI Vector{Int}
 typealias MatI Matrix{Int}
 typealias IntIterable Union(VecI, StepRange{Int,Int}, UnitRange{Int})
+typealias FloatIterable Union(VecF, FloatRange{Float64})
 
 
 ####################################################
@@ -82,4 +83,14 @@ function apply(f::Function, A::AbstractArray)
 	for x in A
 		f(x)
 	end
+end
+
+function foreach(A::AbstractArray, f::Function, fs::Function...)
+	for x in A
+		f(x)
+	end
+	for g in fs
+		foreach(A, g)
+	end
+	A
 end

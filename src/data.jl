@@ -33,12 +33,12 @@ function splitSolverData(inputs::MatF, targets, pctValidation::Float64, pctTest:
 	[buildSolverData(inputs, targets, indices) for indices in (trainindices, validindices, testindices)]
 end
 
-function sample(datalist::DataVec)
+function Distributions.sample(datalist::DataVec)
 	j = abs(rand(Int)) % length(datalist) + 1
 	datalist[j]
 end
 
-function sample(datalist::DataVec, n::Int)
+function Distributions.sample(datalist::DataVec, n::Int)
 	SolverData[sample(datalist) for i in 1:n]
 end
 

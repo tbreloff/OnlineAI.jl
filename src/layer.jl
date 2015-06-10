@@ -42,7 +42,7 @@ function finalδ!(layer::Layer, errors::VecF)
 	end
 end
 
-function update!(layer::Layer, η::Float64, μ::Float64)
+function OnlineStats.update!(layer::Layer, η::Float64, μ::Float64)
 	for node in layer.nodes
 		update!(node, η, μ)
 	end

@@ -1,6 +1,13 @@
 
 module OnlineAI
 
+
+using Distributions
+using QuickStructs
+using OnlineStats
+using Qwt
+import StatsBase
+
 export Activation,
 			 IdentityActivation,
 			 SigmoidActivation,
@@ -10,7 +17,7 @@ export Activation,
 			 Layer,
 			 buildLayer,
 			 feedforward!,
-			 update!,
+			 # update!,
 
 			 NeuralNet,
 			 buildNeuralNet,
@@ -20,7 +27,7 @@ export Activation,
 			 DataVec,
 			 buildSolverData,
 			 splitSolverData,
-			 sample,
+			 # sample,
 			 DataSets,
 
 			 SolverParams,
@@ -43,5 +50,7 @@ include("lstm.jl")
 include("data.jl")
 include("solver.jl")
 include("build.jl")
+
+include("liquid.jl")
 
 end

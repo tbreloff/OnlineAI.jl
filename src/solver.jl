@@ -17,7 +17,7 @@ function buildSolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displa
 	SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
 end
 
-update!(net::NeuralNet, data::SolverData) = update!(net, data.input, data.target)
+OnlineStats.update!(net::NeuralNet, data::SolverData) = update!(net, data.input, data.target)
 totalerror(net::NeuralNet, data::SolverData) = totalerror(net, data.input, data.target)
 totalerror(net::NeuralNet, dataset::DataVec) = sum([totalerror(net, data) for data in dataset])
 

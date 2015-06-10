@@ -2,9 +2,6 @@
 
 # NOTE: consider this experimental at best... you probably shouldn't use it
 
-using Distributions
-using QuickStructs
-using OnlineStats
 
 # ---------------------------------------------------------------------
 
@@ -12,33 +9,34 @@ using OnlineStats
 # to a series of spike trains
 
 type GaussianReceptiveField
-	# TODO: replace this with OnlineStats.Var so we can update as we go
-	dist::Normal
-	μ_offset::Float64
-	σ_scaling::Float64
+	variance::Variance
+	grf_offset::Float64
+	grf_width_factor::Float64
 end
-# GaussianReceptiveField(μ::Float64, σ::Float64) = GaussianReceptiveField(Normal(μ, σ))
 
 
 # create a field that covers a specific area (partially overlapping with the next closest one)
-
-const μ_offsets = [0.0, 2.0, 6.0, 14.0]
-const σ_scalings = [0.5, 1.0, 2.0, 4.0]
-function GaussianReceptiveField(dist::Normal, fieldnum::Int)
-
+const grf_offsets = [0.0, 2.0, 6.0, 14.0]
+const grf_width_factors = [0.5, 1.0, 2.0, 4.0] * 1.5
+function GaussianReceptiveField(variance::Variance, fieldnum::Int)
 	idx = floor(Int, fieldnum/2) + 1
-	@assert idx > 0 && idx <= length(μ_offsets)
-
-	GaussianReceptiveField(dist, (iseven(fieldnum) ? 1.0 : -1.0) * μ_offsets[idx], σ_scalings[idx])
+	@assert idx > 0 && idx <= length(grf_offsets)
+	GaussianReceptiveField(variance, (iseven(fieldnum) ? 1.0 : -1.0) * grf_offsets[idx], grf_width_factors[idx])
 end
 
 
-# probabilityOfSpike(grf::GaussianReceptiveField, x::Float64) = pdf(grf.dist, x) / pdf(grf.dist, grf.dist.μ)
-
-const CENTER_PDF = pdf(Normal(), 0.0)
+const STANDARD_NORMAL = Normal()
+const CENTER_PDF = pdf(STANDARD_NORMAL, 0.0)
 function value(grf::GaussianReceptiveField, x::Float64)
-	normalized_x = (x - grf.dist.μ) / (grf.dist.σ == 0.0 ? 0.0 : grf.dist.σ)
-	pdf(grf.dist, (normalized_x + grf.μ_offset) / grf.σ_scaling) / CENTER_PDF
+	pdf(STANDARD_NORMAL, (standardize(grf.variance, x) + grf.grf_offset) / grf.grf_width_factor) / CENTER_PDF
+end
+
+OnlineStats.update!(grf::GaussianReceptiveField, x::Float64) = update!(grf.variance, x)
+
+
+function Qwt.plot(grfs::Vector{GaussianReceptiveField}, rng::FloatIterable)
+	y = Float64[value(grfs[i],r) for r in rng, i in 1:length(grfs)]
+	plot(rng,y)
 end
 
 
@@ -48,21 +46,26 @@ end
 # When a neuron nᵢ fires, it sends a pulse of wᵢⱼ to the dᵗʰ position of the circular buffer of future pulses for nⱼ.
 # In other words: at time t there is a spike in neuron nᵢ.  at time t+d we apply a pulse wᵢⱼ to neuron nⱼ
 
+abstract Synapse
+abstract SpikingNeuron <: Node
+
 # connects neurons together
-type Synapse
-	postsynapticNeuron::DiscreteLeakyIntegrateAndFireNeuron
+type DiscreteSynapse
+	postsynapticNeuron::SpikingNeuron
 	weight::Float64
 	delay::Int # number of periods to delay the pulse
 end
 
-function fire!(synapse::Synapse)
+function fire!(synapse::DiscreteSynapse)
 	postsynapticNeuron.futurePulses[synapse.delay] += synapse.weight
 end
 
 # ---------------------------------------------------------------------
 
 # we use the model [ uₜ = pulsesₜ + (1-λ) * uₜ₋₁ ] to update
-type DiscreteLeakyIntegrateAndFireNeuron <: Node
+type DiscreteLeakyIntegrateAndFireNeuron <: SpikingNeuron
+	position::NTuple{Int,3}  # position in neuronal column
+	excitatory::Bool
 	futurePulses::CircularBuffer{Float64}  # future pulses by time offset {pulseₜ₊₁, pulseₜ₊₂, ...}
 	u::Float64		  		# current state
 	# uᵣₑₛₜ::Float64  # resting state # note: assume 0 for now
@@ -74,11 +77,28 @@ type DiscreteLeakyIntegrateAndFireNeuron <: Node
 	synapses::Vector{Synapse}
 end
 
+const MAX_FUTURE = 10
+const DEFAULT_THRESHOLD = 2.0
+const DEFAULT_REFRACTORY_PERIOD = 4
+
+function DiscreteLeakyIntegrateAndFireNeuron(position::NTuple{Int,3}, excitatory::Bool, λ::Float64)
+	DiscreteLeakyIntegrateAndFireNeuron(position,
+																			excitatory,
+																			CircularBuffer(Float64, MAX_FUTURE, 0.0),
+																			0.0,
+																			DEFAULT_THRESHOLD,
+																			λ,
+																			0,
+																			DEFAULT_REFRACTORY_PERIOD,
+																			false,
+																			Synapse[])
+end
+
 # stepping through time involves 2 actions:
 # - incorporate pulses into u (spike --> reset and apply pulse to other neuron's futurePulses) and decay
 # - push! 0 onto futurePulses to step forward into time
 
-function update!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
+function OnlineStats.update!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 
 	# if we're in the refractory period, don't adjust u
 	if neuron.refractoryPeriodsRemaining > 0
@@ -96,7 +116,7 @@ end
 function fire!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 	neuron.fired = neuron.u >= neuron.ϑ
 	if neuron.fired
-		apply(fire!, synapses)
+		foreach(synapses, fire!)
 		neuron.u = 0.0
 		neuron.refractoryPeriodsRemaining = neuron.refractoryPeriodsTotal
 	end
@@ -130,15 +150,19 @@ type Liquid
 	outputNeurons::Neurons
 end
 
-Liquid(l::Int, w::Int, h::Int; 
+function Liquid(l::Int, w::Int, h::Int; 
 				pctInhibitory::Float64 = 0.2,
-				λ::Float64 = 
-				)
-
-function update!(liquid::Liquid)
-	apply(update!, liquid.neurons)
-	apply(fire!, liquid.neurons)
+				λ::Float64 = 0.01,
+				pctInput::Float64 = 0.2,
+				pctOutput::Float64 = 0.4)
+	
+	neurons = vec([DiscreteLeakyIntegrateAndFireNeuron((i, j, k), rand() > pctInhibitory, λ) for i in 1:l, j in 1:w, k in 1:h])
+	inputNeurons = sample(neurons, round(Int, pctInput * length(neurons)))
+	outputNeurons = sample(neurons, round(Int, pctOutput * length(neurons)))
+	Liquid(neurons, inputNeurons, outputNeurons)
 end
+
+OnlineStats.update!(liquid::Liquid) = foreach(liquid.neurons, update!, fire!)
 
 # ---------------------------------------------------------------------
 
@@ -147,13 +171,14 @@ end
 type LiquidInput
 	K::Int # number of inputs
 	M::Int # number of receptive fields per input
+	variances::Vector{Variance}
 	grfs::Matrix{GaussianReceptiveField}  # K x M matrix of GRFs
 	synapses::Matrix{Synapse}   # K x M matrix of synapses to input neurons
 end
 
 const GRF_MULTS = map(abs2, 1:10)[2:end]
 
-function createGRF(dist::Normal, j::Int, M::Int)
+function createGRF(variance::Variance, j::Int, M::Int)
 	n = trunc(Int, M/2)
 	idx = (j-2) % n + 1
 	if idx == 0
@@ -166,21 +191,31 @@ function createGRF(dist::Normal, j::Int, M::Int)
 end
 
 
-function LiquidInput(input_distributions::Vector{Normal}, liquid::Liquid)
-	K = length(input_distributions)
+function LiquidInput(variances::Vector{Variance}, liquid::Liquid)
+	K = length(variances)
 	M = 5  # TODO: make variable?
-	grfs = GaussianReceptiveField[createGRF(input_distributions[i], j, M) for i in 1:K, j in 1:M]
+	grfs = GaussianReceptiveField[createGRF(variances[i], j, M) for i in 1:K, j in 1:M]
 	
 	# TODO: create synapses!
 
-	LiquidInput(K, M, grfs, synapses)
+	LiquidInput(K, M, variances, grfs, synapses)
 end
 
+OnlineStats.update!(liquidInput::LiquidInput, x::VecF) = foreach(liquidInput.variances, update!)
 
 # ---------------------------------------------------------------------
 
 type LiquidStateMachine
 	# TODO: holds LiquidInput, Liquid, LiquidOutput, OutputModel
+end
+
+function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF)
+	# TODO:
+	# update LiquidInput
+end
+
+function StatsBase.predict(lsm::LiquidStateMachine)
+	# TODO: given the current liquid state and readout model, predict the future
 end
 
 # ---------------------------------------------------------------------

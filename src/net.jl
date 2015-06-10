@@ -66,7 +66,7 @@ end
 
 
 # online version
-function update!(net::NeuralNet, inputs::VecF, targets::VecF)
+function OnlineStats.update!(net::NeuralNet, inputs::VecF, targets::VecF)
 	outputs = feedforward!(net, inputs)
 	errors = targets - outputs
 	backpropagate!(net, errors)
@@ -75,7 +75,7 @@ end
 
 
 # batch version
-function update!(net::NeuralNet, inputs::MatF, targets::MatF)
+function OnlineStats.update!(net::NeuralNet, inputs::MatF, targets::MatF)
 	@assert size(inputs,2) == net.nin
 	@assert size(targets,2) == net.nout
 	@assert size(inputs,1) == size(targets,1)
