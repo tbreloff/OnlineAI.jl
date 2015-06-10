@@ -12,11 +12,34 @@ using OnlineStats
 # to a series of spike trains
 
 type GaussianReceptiveField
+	# TODO: replace this with OnlineStats.Var so we can update as we go
 	dist::Normal
+	μ_offset::Float64
+	σ_scaling::Float64
 end
-GaussianReceptiveField(μ::Float64, σ::Float64) = GaussianReceptiveField(Normal(μ, σ))
+# GaussianReceptiveField(μ::Float64, σ::Float64) = GaussianReceptiveField(Normal(μ, σ))
 
-probabilityOfSpike(grf::GaussianReceptiveField, x::Float64) = pdf(grf.dist, x) / pdf(grf.dist, grf.dist.μ)
+
+# create a field that covers a specific area (partially overlapping with the next closest one)
+
+const μ_offsets = [0.0, 2.0, 6.0, 14.0]
+const σ_scalings = [0.5, 1.0, 2.0, 4.0]
+function GaussianReceptiveField(dist::Normal, fieldnum::Int)
+
+	idx = floor(Int, fieldnum/2) + 1
+	@assert idx > 0 && idx <= length(μ_offsets)
+
+	GaussianReceptiveField(dist, (iseven(fieldnum) ? 1.0 : -1.0) * μ_offsets[idx], σ_scalings[idx])
+end
+
+
+# probabilityOfSpike(grf::GaussianReceptiveField, x::Float64) = pdf(grf.dist, x) / pdf(grf.dist, grf.dist.μ)
+
+const CENTER_PDF = pdf(Normal(), 0.0)
+function value(grf::GaussianReceptiveField, x::Float64)
+	normalized_x = (x - grf.dist.μ) / (grf.dist.σ == 0.0 ? 0.0 : grf.dist.σ)
+	pdf(grf.dist, (normalized_x + grf.μ_offset) / grf.σ_scaling) / CENTER_PDF
+end
 
 
 
