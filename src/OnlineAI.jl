@@ -46,11 +46,14 @@ export Activation,
 			 fire!,
 			 SpikingNeuron,
 			 DiscreteLeakyIntegrateAndFireNeuron,
+			 LiquidParams,
 			 Liquid,
 			 GRFInput,
 			 LiquidInput,
 			 LiquidStateMachine,
-			 liquidState
+			 liquidState,
+
+			 foreach
 
 
 

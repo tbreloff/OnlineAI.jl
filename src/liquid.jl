@@ -159,26 +159,66 @@ end
 
 # ---------------------------------------------------------------------
 
-type Liquid{SN<:SpikingNeuron}
-	neurons::Vector{SN}
-	outputNeurons::Vector{SN}
+type LiquidParams
+	l::Int  # column dimensions l x w x h
+	w::Int
+	h::Int
+	pctInhibitory::Float64
+	decayRateDist::Distribution{Univariate,Continuous}
+	λ::Float64  # used in probability of synapse connection
+	pctOutput::Float64
 end
 
-function Liquid{SN<:SpikingNeuron}(::Type{SN},
-				w::Int, h::Int; 
-				pctInhibitory::Float64 = 0.2,
-				decayRate::Float64 = 0.99,  # TODO: make this variable/random
-				λ::Float64 = 0.01,
-				pctOutput::Float64 = 0.4)
-	
+function LiquidParams(; l::Int = 3,
+												w::Int = l,
+												h::Int = 5,
+												pctInhibitory::Float64 = 0.2,
+												decayRateDist::Distribution{Univariate,Continuous} = Uniform(0.8, 0.99),
+												λ::Float64 = 0.1,
+												pctOutput::Float64 = 0.4)
+	LiquidParams(l, w, h, pctInhibitory, decayRateDist, λ, pctOutput)
+end
+
+
+
+# ---------------------------------------------------------------------
+
+type Liquid
+	neurons
+	outputNeurons
+end
+
+# function Liquid{SN<:SpikingNeuron}(::Type{SN},
+# 				w::Int, h::Int; 
+# 				pctInhibitory::Float64 = 0.2,
+# 				decayRate::Float64 = 0.99,  # TODO: make this variable/random
+# 				λ::Float64 = 0.01,
+# 				pctOutput::Float64 = 0.4)
+
+function Liquid(params::LiquidParams)	
+
 	# create neurons in an (w x w x h) column
-	neurons = vec([SN([i, j, k], rand() > pctInhibitory, decayRate) for i in 1:w, j in 1:w, k in 1:h])
-	outputNeurons = sample(neurons, round(Int, pctOutput * length(neurons)))
+	neurons = DiscreteLeakyIntegrateAndFireNeuron[]
+	for i in 1:params.l
+		for j in 1:params.w
+			for k in 1:params.h
+				excitatory = rand() > params.pctInhibitory
+				decayRate = rand(params.decayRateDist)
+				neuron = DiscreteLeakyIntegrateAndFireNeuron([i, j, k], excitatory, decayRate)
+				push!(neurons, neuron)
+			end
+		end
+	end
+
+	# neurons = vec([DiscreteLeakyIntegrateAndFireNeuron([i, j, k], rand() > params.pctInhibitory, rand(params.decayRateDist)) for i in 1:params.l, j in 1:params.w, k in 1:params.h])
+
+	# output from a random subset of the neuronal column
+	outputNeurons = sample(neurons, round(Int, params.pctOutput * length(neurons)))
 
 	# randomly connect the neurons
 	for n1 in neurons
 		for n2 in neurons
-			if rand() <= probabilityOfConnection(n1, n2, λ)
+			if rand() <= probabilityOfConnection(n1, n2, params.λ)
 				synapse = DiscreteSynapse(n2, weight(n1), delay(n1))
 				push!(n1.synapses, synapse)
 			end
@@ -210,7 +250,7 @@ type LiquidInput
 	inputs::Matrix{GRFInput}  # K x M matrix of inputs
 end
 
-function LiquidInput(variances::Vector{Variance}, liquid::Liquid)
+function LiquidInput{W}(variances::Vector{Variance{W}}, liquid::Liquid)
 	K = length(variances)
 	M = 5  # TODO: make variable?
 	inputs = GRFInput[createInput(liquid, variance, j) for variance in variances, j in 1:M]
@@ -251,16 +291,16 @@ end
 
 # manages the various layers and flow: input --> liquid --> output --> readout model
 
-type LiquidStateMachine{T<:OnlineStat} <: OnlineStat
+type LiquidStateMachine <: OnlineStat
 	liquid::Liquid
 	input::LiquidInput
-	readoutModels::Vector{T}
+	readoutModels::Vector{OnlineStat}
+	n::Int
 end
 
-function LiquidStateMachine(w::Int, h::Int,
-														numInputs::Int, numOutputs::Int)
+function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::Int)
 	# initialize liquid
-	liquid = Liquid(DiscreteLeakyIntegrateAndFireNeuron, w, h)
+	liquid = Liquid(params)
 
 	# create input structure
 	wgt = ExponentialWeighting(1000)
@@ -268,12 +308,15 @@ function LiquidStateMachine(w::Int, h::Int,
 	input = LiquidInput(variances, liquid)
 
 	# create readout models
-	readoutModels = [OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
+	readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
 
-	LiquidStateMachine(liquid, input, readoutModels)
+	LiquidStateMachine(liquid, input, readoutModels, 0)
 end
 
 liquidState(lsm::LiquidStateMachine) = Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]
+OnlineStats.statenames(lsm::LiquidStateMachine) = [:liquidState, :nobs]
+OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
+
 
 function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
 	update!(lsm.input, x)   # update input neurons
@@ -284,6 +327,8 @@ function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
 	for model in lsm.readoutModels
 		update!(model, y, state)
 	end
+
+	lsm.n += 1
 end
 
 # given the current liquid state and readout model, predict the future
