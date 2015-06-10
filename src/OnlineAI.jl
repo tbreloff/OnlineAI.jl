@@ -37,7 +37,21 @@ export Activation,
 
 			 buildNet,
 			 buildClassifierNet,
-			 buildRegressionNet
+			 buildRegressionNet,
+
+			 GaussianReceptiveField,
+			 value,
+			 Synapse,
+			 DiscreteSynapse,
+			 fire!,
+			 SpikingNeuron,
+			 DiscreteLeakyIntegrateAndFireNeuron,
+			 Liquid,
+			 GRFInput,
+			 LiquidInput,
+			 LiquidStateMachine,
+			 liquidState
+
 
 
 

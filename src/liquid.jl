@@ -64,7 +64,7 @@ end
 
 # we use the model [ uₜ = pulsesₜ + (1-λ) * uₜ₋₁ ] to update
 type DiscreteLeakyIntegrateAndFireNeuron <: SpikingNeuron
-	position::NTuple{Int,3}  # position in neuronal column
+	position::Tuple{Int,Int,Int}  # position in neuronal column
 	excitatory::Bool
 	futurePulses::CircularBuffer{Float64}  # future pulses by time offset {pulseₜ₊₁, pulseₜ₊₂, ...}
 	u::Float64		  		# current state
@@ -81,7 +81,7 @@ const MAX_FUTURE = 10
 const DEFAULT_THRESHOLD = 2.0
 const DEFAULT_REFRACTORY_PERIOD = 4
 
-function DiscreteLeakyIntegrateAndFireNeuron(position::NTuple{Int,3}, excitatory::Bool, λ::Float64)
+function DiscreteLeakyIntegrateAndFireNeuron(position::Tuple{Int,Int,Int}, excitatory::Bool, λ::Float64)
 	DiscreteLeakyIntegrateAndFireNeuron(position,
 																			excitatory,
 																			CircularBuffer(Float64, MAX_FUTURE, 0.0),
@@ -142,80 +142,122 @@ end
 
 # ---------------------------------------------------------------------
 
-typealias Neurons Vector{DiscreteLeakyIntegrateAndFireNeuron}
-
-type Liquid
-	neurons::Neurons
-	inputNeurons::Neurons
-	outputNeurons::Neurons
+type Liquid{T<:SpikingNeuron}
+	neurons::Vector{T}
+	outputNeurons::Vector{T}
 end
 
-function Liquid(l::Int, w::Int, h::Int; 
+function Liquid{T<:SpikingNeuron}(::Type{T}, l::Int, w::Int, h::Int; 
 				pctInhibitory::Float64 = 0.2,
 				λ::Float64 = 0.01,
-				pctInput::Float64 = 0.2,
 				pctOutput::Float64 = 0.4)
 	
-	neurons = vec([DiscreteLeakyIntegrateAndFireNeuron((i, j, k), rand() > pctInhibitory, λ) for i in 1:l, j in 1:w, k in 1:h])
-	inputNeurons = sample(neurons, round(Int, pctInput * length(neurons)))
+	neurons = vec([T((i, j, k), rand() > pctInhibitory, λ) for i in 1:l, j in 1:w, k in 1:h])
 	outputNeurons = sample(neurons, round(Int, pctOutput * length(neurons)))
-	Liquid(neurons, inputNeurons, outputNeurons)
+	Liquid(neurons, outputNeurons)
 end
 
 OnlineStats.update!(liquid::Liquid) = foreach(liquid.neurons, update!, fire!)
 
 # ---------------------------------------------------------------------
 
+type GRFInput
+	grf::GaussianReceptiveField
+	synapse::DiscreteSynapse
+end
+
+
+
+# ---------------------------------------------------------------------
 
 # maintains a list of GRFs which correspond to several spike trains for each input value
 type LiquidInput
 	K::Int # number of inputs
 	M::Int # number of receptive fields per input
 	variances::Vector{Variance}
-	grfs::Matrix{GaussianReceptiveField}  # K x M matrix of GRFs
-	synapses::Matrix{Synapse}   # K x M matrix of synapses to input neurons
+	inputs::Matrix{GRFInput}  # K x M matrix of inputs
 end
-
-const GRF_MULTS = map(abs2, 1:10)[2:end]
-
-function createGRF(variance::Variance, j::Int, M::Int)
-	n = trunc(Int, M/2)
-	idx = (j-2) % n + 1
-	if idx == 0
-		return GaussianReceptiveField(dist)
-	else
-		σ = dist.σ * GRF_MULTS[idx]
-		μ = 1.5 * (idx <= n + 1 ? -1.0 : 1.0) * σ + dist.μ
-		return GaussianReceptiveField(Normal(μ, σ))
-	end
-end
-
 
 function LiquidInput(variances::Vector{Variance}, liquid::Liquid)
 	K = length(variances)
 	M = 5  # TODO: make variable?
-	grfs = GaussianReceptiveField[createGRF(variances[i], j, M) for i in 1:K, j in 1:M]
-	
-	# TODO: create synapses!
-
-	LiquidInput(K, M, variances, grfs, synapses)
+	inputs = GRFInput[createInput(liquid, variance, j) for variance in variances, j in 1:M]
+	LiquidInput(K, M, variances, inputs)
 end
 
-OnlineStats.update!(liquidInput::LiquidInput, x::VecF) = foreach(liquidInput.variances, update!)
+function createInput(liquid::Liquid, variance::Variance, j::Int)
+	grf = GaussianReceptiveField(variance, j)
+	postsynapticNeuron = sample(liquid.neurons)
+	synapse = DiscreteSynapse(postsynapticNeuron, postsynapticNeuron.ϑ, 1)
+	GRFInput(grf, synapse)
+end
+
+
+
+function OnlineStats.update!(liquidInput::LiquidInput, x::VecF)
+	foreach(liquidInput.variances, update!)
+
+	# for each field, fire! with probability indicated by GRF
+	for i in 1:liquidInput.K
+		for j in 1:liquidInput.M
+			input = liquidInput.inputs[i,j]
+			probSpike = value(input.grf, x[i])
+			if rand() <= probSpike
+				fire!(input.synapse)
+			end
+		end
+	end
+end
+
+
 
 # ---------------------------------------------------------------------
 
-type LiquidStateMachine
-	# TODO: holds LiquidInput, Liquid, LiquidOutput, OutputModel
+
+
+# ---------------------------------------------------------------------
+
+# manages the various layers and flow: input --> liquid --> output --> readout model
+
+type LiquidStateMachine{T<:OnlineStat} <: OnlineStat
+	liquid::Liquid
+	input::LiquidInput
+	readoutModels::Vector{T}
 end
 
-function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF)
-	# TODO:
-	# update LiquidInput
+function LiquidStateMachine(l::Int, w::Int, h::Int,
+														numInputs::Int, numOutputs::Int)
+	# initialize liquid
+	liquid = Liquid(DiscreteLeakyIntegrateAndFireNeuron, l, w, h)
+
+	# create input structure
+	wgt = ExponentialWeighting(1000)
+	variances = [Variance(wgt) for i in 1:numInputs]
+	input = LiquidInput(variances, liquid)
+
+	# create readout models
+	readoutModels = [OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
+
+	LiquidStateMachine(liquid, input, readoutModels)
 end
 
+liquidState(lsm::LiquidStateMachine) = Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]
+
+function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
+	update!(lsm.input, x)   # update input neurons
+	update!(lsm.liquid)			# update liquid state
+
+	# update readout models
+	state = liquidState(lsm)
+	for model in lsm.readoutModels
+		update!(model, y, state)
+	end
+end
+
+# given the current liquid state and readout model, predict the future
 function StatsBase.predict(lsm::LiquidStateMachine)
-	# TODO: given the current liquid state and readout model, predict the future
+	state = liquidState(lsm)
+	Float64[predict(model, state) for model in lsm.readoutModels]
 end
 
 # ---------------------------------------------------------------------
