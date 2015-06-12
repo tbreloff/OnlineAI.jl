@@ -16,8 +16,8 @@ end
 
 
 # create a field that covers a specific area (partially overlapping with the next closest one)
-const grf_offsets = [0.0, 2.0, 6.0, 14.0]
-const grf_width_factors = [0.5, 1.0, 2.0, 4.0] * 1.5
+const grf_offsets = [0.0, 2.0, 6.0, 14.0] / 2.0
+const grf_width_factors = [0.5, 1.0, 2.0, 4.0] * 0.5
 function GaussianReceptiveField(variance::Variance, fieldnum::Int)
 	idx = floor(Int, fieldnum/2) + 1
 	@assert idx > 0 && idx <= length(grf_offsets)
@@ -57,8 +57,11 @@ type DiscreteSynapse
 end
 
 function fire!(synapse::DiscreteSynapse)
-	postsynapticNeuron.futurePulses[synapse.delay] += synapse.weight
+	synapse.postsynapticNeuron.futurePulses[synapse.delay] += synapse.weight
 end
+
+Base.print(io::IO, s::DiscreteSynapse) = print(io, "DiscreteSynapse{post=$(s.postsynapticNeuron), wgt=$(s.weight), delay=$(s.delay)}")
+Base.show(io::IO, s::DiscreteSynapse) = print(io, s)
 
 # ---------------------------------------------------------------------
 
@@ -94,6 +97,10 @@ function DiscreteLeakyIntegrateAndFireNeuron(position::VecI, excitatory::Bool, d
 																			DiscreteSynapse[])
 end
 
+Base.print(io::IO, n::DiscreteLeakyIntegrateAndFireNeuron) = 
+	print(io, "DLIFNeuron{pos=$(n.position), exite=$(n.excitatory), u=$(n.u), fired=$(n.fired), nsyn=$(length(n.synapses))}")
+Base.show(io::IO, n::DiscreteLeakyIntegrateAndFireNeuron) = print(io, n)
+
 # stepping through time involves 2 actions:
 # - incorporate pulses into u (spike --> reset and apply pulse to other neuron's futurePulses) and decay
 # - push! 0 onto futurePulses to step forward into time
@@ -105,7 +112,7 @@ function OnlineStats.update!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 		neuron.refractoryPeriodsRemaining -= 1
 	else
 		neuron.u *= neuron.decayRate
-		neuron.u += futurePulses[1]
+		neuron.u += neuron.futurePulses[1]
 	end
 
 	# step to next time period
@@ -116,7 +123,7 @@ end
 function fire!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 	neuron.fired = neuron.u >= neuron.ϑ
 	if neuron.fired
-		foreach(synapses, fire!)
+		foreach(neuron.synapses, fire!)
 		neuron.u = 0.0
 		neuron.refractoryPeriodsRemaining = neuron.refractoryPeriodsTotal
 	end
@@ -146,7 +153,7 @@ function probabilityOfConnection(n1::SpikingNeuron, n2::SpikingNeuron, λ::Float
 	C(n1, n2) * exp(-((distance(n1, n2) / λ) ^ 2))
 end
 
-const UNIF_WEIGHT = Uniform(0.0, 0.5)
+const UNIF_WEIGHT = Uniform(0.2, 1.0)
 function weight(n::SpikingNeuron)
 	(n.excitatory ? 1.0 : -1.0) * rand(UNIF_WEIGHT)
 end
@@ -180,13 +187,19 @@ function LiquidParams(; l::Int = 3,
 end
 
 
+Base.print(io::IO, l::LiquidParams) = print(io, "Params{$(l.l)x$(l.w)x$(l.h), pcti=$(l.pctInhibitory), λ=$(l.λ), pctout=$(l.pctOutput)}")
+Base.show(io::IO, l::LiquidParams) = print(io, l)
 
 # ---------------------------------------------------------------------
 
 type Liquid
-	neurons
-	outputNeurons
+	params::LiquidParams
+	neurons::Vector
+	outputNeurons::Vector
 end
+
+Base.print(io::IO, l::Liquid) = print(io, "Liquid{n=$(length(l.neurons)), nout=$(length(l.outputNeurons))}")
+Base.show(io::IO, l::Liquid) = print(io, l)
 
 # function Liquid{SN<:SpikingNeuron}(::Type{SN},
 # 				w::Int, h::Int; 
@@ -223,10 +236,11 @@ function Liquid(params::LiquidParams)
 				push!(n1.synapses, synapse)
 			end
 		end
-		println(n1, ", Synapses: ", n1.synapses)
+		println(n1, ", Synapses:")
+		for s in n1.synapses println("     ", s) end
 	end
 
-	Liquid(neurons, outputNeurons)
+	Liquid(params, neurons, outputNeurons)
 end
 
 OnlineStats.update!(liquid::Liquid) = foreach(liquid.neurons, update!, fire!)
@@ -267,7 +281,9 @@ end
 
 
 function OnlineStats.update!(liquidInput::LiquidInput, x::VecF)
-	foreach(liquidInput.variances, update!)
+	for (i,var) in enumerate(liquidInput.variances)
+		update!(var, x[i])
+	end
 
 	# for each field, fire! with probability indicated by GRF
 	for i in 1:liquidInput.K
@@ -324,8 +340,8 @@ function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
 
 	# update readout models
 	state = liquidState(lsm)
-	for model in lsm.readoutModels
-		update!(model, y, state)
+	for (i,model) in enumerate(lsm.readoutModels)
+		update!(model, y[i], state)
 	end
 
 	lsm.n += 1

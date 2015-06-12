@@ -6,7 +6,7 @@ using Distributions
 using QuickStructs
 using OnlineStats
 using Qwt
-import StatsBase
+using StatsBase
 
 export Activation,
 			 IdentityActivation,
