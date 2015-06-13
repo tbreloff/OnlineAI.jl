@@ -80,9 +80,10 @@ type DiscreteLeakyIntegrateAndFireNeuron <: SpikingNeuron
 	synapses::Vector{DiscreteSynapse}
 end
 
-const MAX_FUTURE = 10
-const DEFAULT_THRESHOLD = 2.0
-const DEFAULT_REFRACTORY_PERIOD = 4
+# TODO: make these parameters
+const MAX_FUTURE = 3
+const DEFAULT_THRESHOLD = 1.0
+const DEFAULT_REFRACTORY_PERIOD = 1
 
 function DiscreteLeakyIntegrateAndFireNeuron(position::VecI, excitatory::Bool, decayRate::Float64)
 	DiscreteLeakyIntegrateAndFireNeuron(position,
@@ -115,6 +116,9 @@ function OnlineStats.update!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 		neuron.u += neuron.futurePulses[1]
 	end
 
+	# don't let it go negative
+	neuron.u = max(0.0, neuron.u)
+
 	# step to next time period
 	push!(neuron.futurePulses, 0.0)
 end
@@ -129,6 +133,10 @@ function fire!(neuron::DiscreteLeakyIntegrateAndFireNeuron)
 	end
 end
 
+
+function OnlineStats.state(neuron::DiscreteLeakyIntegrateAndFireNeuron)
+	neuron.u / neuron.ϑ + 10.0 * float(neuron.fired)
+end
 
 
 # ---------------------------------------------------------------------
@@ -153,7 +161,9 @@ function probabilityOfConnection(n1::SpikingNeuron, n2::SpikingNeuron, λ::Float
 	C(n1, n2) * exp(-((distance(n1, n2) / λ) ^ 2))
 end
 
-const UNIF_WEIGHT = Uniform(0.2, 1.0)
+# TODO: make this a parameter
+const UNIF_WEIGHT = Uniform(0.1, 0.5)
+
 function weight(n::SpikingNeuron)
 	(n.excitatory ? 1.0 : -1.0) * rand(UNIF_WEIGHT)
 end
@@ -266,8 +276,8 @@ end
 
 function LiquidInput{W}(variances::Vector{Variance{W}}, liquid::Liquid)
 	K = length(variances)
-	M = 5  # TODO: make variable?
-	inputs = GRFInput[createInput(liquid, variance, j) for variance in variances, j in 1:M]
+	M = 4  # TODO: make variable?
+	inputs = GRFInput[createInput(liquid, variance, j+1) for variance in variances, j in 1:M]
 	LiquidInput(K, M, variances, inputs)
 end
 
@@ -324,7 +334,8 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
 	input = LiquidInput(variances, liquid)
 
 	# create readout models
-	readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
+	# TODO: make readout model more flexible... param
+	readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.001, wgt) for i in 1:numOutputs]
 
 	LiquidStateMachine(liquid, input, readoutModels, 0)
 end
@@ -339,6 +350,7 @@ function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
 	update!(lsm.liquid)			# update liquid state
 
 	# update readout models
+	# TODO: liquidState should be more flexible... multiple models, recent window averages, etc
 	state = liquidState(lsm)
 	for (i,model) in enumerate(lsm.readoutModels)
 		update!(model, y[i], state)

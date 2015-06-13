@@ -8,21 +8,27 @@ using OnlineStats, Qwt, Distributions, StatsBase, OnlineAI
 # create data
 nin = 1
 nout = 1
-T = 100
+T = 2000
 # x = collect(linspace(-15., 15., T))
+
+# x is a simple differenced AR(1)... y is the future val
 x = randn(T)
 for i in 2:T
-	x[i] += x[i-1] * 0.5
+	x[i] += x[i-1] * 0.95
 end
-y = sin(x)
+# dx = diff(x)
+lookahead = 5
+y = x[lookahead:end]
+x = x[1:end-lookahead]
+T = length(x)
 
-plt1 = plot(x, ylabel="Inputs")
+# plt1 = plot(x, ylabel="Inputs")
 plt2 = plot(y, ylabel="Outputs", labels = map(x->"Output$x", 1:nout))
 oplot(plt2, zeros(1,nout), labels = map(x->"Est$x", 1:nout))
 foreach(plt2.lines[nout+1:end], empty!)
 
 
-params = LiquidParams(λ = 1.5, w = 15, h = 3, decayRateDist = Uniform(0.97, 0.999))
+params = LiquidParams(λ = 1.5, w = 7, h = 3, decayRateDist = Uniform(0.995, 1.0), pctOutput = 1.0)
 lsm = LiquidStateMachine(params, nin, nout)
 liquid = lsm.liquid
 
@@ -39,12 +45,13 @@ background!(:gray)
 
 
 # put all 3 together
-viz = vsplitter(scene, hsplitter(plt1, plt2))
+# viz = vsplitter(scene, hsplitter(plt1, plt2))
+viz = vsplitter(scene, plt2)
 Qwt.moveWindowToCenterScreen(viz)
 showwidget(viz)
 
 
-startpos = P3(-300,-300,-300)
+startpos = P3(-200,-200,-300)
 diffpos = -2 * startpos
 radius = 20
 
@@ -61,6 +68,7 @@ for neuron in liquid.neurons
 	z = pos[3]
 	pos = pos + P3(z/6, z/3, 0)
 
+	# add the circles
 	circle = circle!(20, pos)
 	brush!(pen!(circle, 0), :lightGray)
 	if !neuron.excitatory
@@ -102,65 +110,12 @@ for t = 1:T
 	end
 	refresh(plt2)
 
-	sleep(0.01)
+	sleep(0.0001)
 end
 
-grfs = GaussianReceptiveField[input.grf for input in lsm.input.inputs[1,:]]
-plt3 = plot(grfs, -15.:.1:15.)
-
-# type LiquidVisualization
-# 	liquid::Liquid
-
-
-
-# scene = currentScene()
-# empty!(scene)
-# background!(:gray)
-
-# # draw axes.. by default it adds to current scene, but could pass scene as optional first arg
-# line!(0, top(scene), 0, bottom(scene))
-# line!(left(scene), 0, right(scene), 0)
-
-# # cube of circles... connect all with lines
-# startpos = P3(-300, -300, -300)
-# endpos = P3(300, 300, 300)
-# pdiff = endpos - startpos
-# n = 3
-# r = maximum(pdiff) / n / 5
-
-# # create the circles
-# circles = Array(Any, n, n, n)
-# for i in 1:n
-# 	for j in 1:n
-# 		for k in 1:n
-# 			# layout in a grid
-# 			pos = startpos + (P3(i,j,k) - 1) .* pdiff ./ (n-1)
-
-# 			# shift x/y coords based on zvalue to give a 3d-ish look
-# 			z = pos[3]
-# 			pos = pos + P3(z/8, z/6, 0)
-
-# 			c = circles[i,j,k] = circle!(r, pos)
-# 			brush!(pen!(c, 0), :lightGray)
-# 		end
-# 	end
-# end
-
-# # connect them randomly with lines (note the proper overlap based on z value)
-# for c1 in circles
-# 	for c2 in circles
-# 		if rand() < 0.2
-# 			l = line!(c1,c2)
-# 			pen!(l, 2, 0, rand(), .8, .2)
-# 		end
-# 	end
-# end
-
-# # pretty lights :)
-# for i in 1:500
-# 	map(x->brush!(x, rand(3)...), circles)
-# 	sleep(0.01)
-# end
+# # plot the grf functions
+# grfs = GaussianReceptiveField[input.grf for input in lsm.input.inputs[1,:]]
+# plt3 = plot(grfs, -15.:.1:15.)
 
 
 end
