@@ -1,6 +1,5 @@
 
 
-abstract Node
 
 
 # takes in nin inputs, outputs A(Σ), where Σ = dot(x,w) + b, and A is the activation

@@ -56,6 +56,8 @@ export Activation,
 			 foreach
 
 
+# represents a node in an arbitrary graph... typically representing a neuron within a neural net
+abstract Node
 
 
 include("utils.jl")

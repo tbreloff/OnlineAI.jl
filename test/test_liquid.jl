@@ -8,7 +8,7 @@ using OnlineStats, Qwt, Distributions, StatsBase, OnlineAI
 # create data
 nin = 1
 nout = 1
-T = 2000
+T = 500
 # x = collect(linspace(-15., 15., T))
 
 # x is a simple differenced AR(1)... y is the future val
@@ -23,9 +23,11 @@ x = x[1:end-lookahead]
 T = length(x)
 
 # plt1 = plot(x, ylabel="Inputs")
-plt2 = plot(y, ylabel="Outputs", labels = map(x->"Output$x", 1:nout))
-oplot(plt2, zeros(1,nout), labels = map(x->"Est$x", 1:nout))
-foreach(plt2.lines[nout+1:end], empty!)
+pltEstVsAct = plot(y, ylabel="Outputs", labels = map(x->"Output$x", 1:nout), show=false)
+oplot(pltEstVsAct, zeros(0,nout), labels = map(x->"Est$x", 1:nout))
+# foreach(pltEstVsAct.lines[nout+1:end], empty!)
+
+pltScatter = scatter(zeros(0,nout), zeros(0,nout), show=false)
 
 
 params = LiquidParams(λ = 1.5, w = 7, h = 3, decayRateDist = Uniform(0.995, 1.0), pctOutput = 1.0)
@@ -45,9 +47,10 @@ background!(:gray)
 
 
 # put all 3 together
-# viz = vsplitter(scene, hsplitter(plt1, plt2))
-viz = vsplitter(scene, plt2)
+# viz = vsplitter(scene, hsplitter(plt1, pltEstVsAct))
+viz = vsplitter(hsplitter(scene, pltScatter), pltEstVsAct)
 Qwt.moveWindowToCenterScreen(viz)
+resizewidget(viz, P2(2000,1500))
 showwidget(viz)
 
 
@@ -106,9 +109,11 @@ for t = 1:T
 
 	est = predict(lsm)
 	for (i,e) in enumerate(est)
-		push!(plt2, i+nout, t, e)
+		push!(pltEstVsAct, i+nout, t, e)
+		push!(pltScatter, i, e, y[t,i])
 	end
-	refresh(plt2)
+	refresh(pltEstVsAct)
+	refresh(pltScatter)
 
 	sleep(0.0001)
 end
