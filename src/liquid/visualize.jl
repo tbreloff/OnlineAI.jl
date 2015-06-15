@@ -9,6 +9,11 @@ function findMatching(viznodes, neuron)
 	error("Couldn't find matching viznode for $neuron")
 end
 
+function getLinspace(n, h)
+	h = n > 1 ? h : 0
+	linspace(-h, h, n)
+end
+
 
 # ---------------------------------------------------------------------------
 
@@ -20,7 +25,7 @@ end
 function LiquidVisualizationNode(neuron::SpikingNeuron, pos::P3)
 	# shift x/y coords based on zvalue to give a 3d-ish look
 	z = pos[3]
-	pos = pos + P3(z/6, z/3, 0)
+	pos = pos + P3(z/5, z/5, 0)
 
 	# create a new circle in the scene
 	radius = 20
@@ -47,8 +52,7 @@ end
 # ---------------------------------------------------------------------------
 
 function visualize(input::GRFInput, pos::P2, viznodes)
-	h = 100
-	ys = linspace(-h, h, length(input.neurons))
+	ys = getLinspace(length(input.neurons), 100)
 	pt = P3(pos - P2(70, 0), -10000)
 	for (i,neuron) in enumerate(input.neurons)
 		viznode = LiquidVisualizationNode(neuron, P3(pos + P2(0,ys[i])))
@@ -78,27 +82,33 @@ function visualize(lsm::LiquidStateMachine)
 	liquid = lsm.liquid
 
 	# set up the liquid scene
-	scene = currentScene()
-	empty!(scene)
+	scene = Scene(show=false)
 	background!(:gray)
 	viznodes = LiquidVisualizationNode[]
 
 	# input
 	nin = length(lsm.inputs.inputs)
-	startpos = P2(-400, -400)
-	diffpos = P2(0, -startpos[2])
+	x = -400
+	ys = getLinspace(nin, 400)
+	# diffpos = P2(0, -startpos[2])
 	for (i,input) in enumerate(lsm.inputs.inputs)
-		pos = startpos + diffpos .* (nin > 1 ? (i-1) / (nin-1) : 0.5)
+		# pos = startpos + diffpos .* (nin > 1 ? (i-1) / (nin-1) : 0.5)
+		pos = P2(x, ys[i])
 		visualize(input, pos, viznodes)
 	end
 
 	# liquid
-	startpos = P3(-150,-150,-300)
-	diffpos = -2 * startpos
-	liquidsz = (liquid.params.l, liquid.params.w, liquid.params.h)
+	xs = getLinspace(liquid.params.l, 140)
+	ys = getLinspace(liquid.params.w, 300)
+	zs = getLinspace(liquid.params.h, 120)
+	# startpos = P3(-150,-150,-300)
+	# diffpos = -2 * startpos
+	# liquidsz = (liquid.params.l, liquid.params.w, liquid.params.h)
 	for neuron in liquid.neurons
-		pct = (P3(neuron.position...) - 1) ./ (P3(liquidsz...) - 1)
-		pos = startpos + pct .* diffpos
+		# pct = (P3(neuron.position...) - 1) ./ (P3(liquidsz...) - 1)
+		# pos = startpos + pct .* diffpos
+		i, j, k = neuron.position
+		pos = P3(xs[i], ys[j], zs[k])
 		push!(viznodes, LiquidVisualizationNode(neuron, pos))
 	end
 

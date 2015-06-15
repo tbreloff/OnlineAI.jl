@@ -26,7 +26,7 @@ T = length(x)
 
 
 # create liquid state machine
-params = LiquidParams(λ = 1.5, w = 7, h = 3, decayRateDist = Uniform(0.995, 1.0), pctOutput = 1.0)
+params = LiquidParams(λ = 1.5, w = 9, h = 3, decayRateDist = Uniform(0.995, 1.0), pctOutput = 1.0)
 lsm = LiquidStateMachine(params, nin, nout)
 liquid = lsm.liquid
 
