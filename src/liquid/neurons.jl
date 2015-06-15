@@ -38,9 +38,9 @@ type DiscreteLeakyIntegrateAndFireNeuron <: SpikingNeuron
 end
 
 # TODO: make these parameters
-const MAX_FUTURE = 3
-const DEFAULT_THRESHOLD = 1.0
-const DEFAULT_REFRACTORY_PERIOD = 1
+const MAX_FUTURE = 5
+const DEFAULT_THRESHOLD = 2.0
+const DEFAULT_REFRACTORY_PERIOD = 2
 
 function DiscreteLeakyIntegrateAndFireNeuron(position::VecI, excitatory::Bool, decayRate::Float64)
 	DiscreteLeakyIntegrateAndFireNeuron(position,

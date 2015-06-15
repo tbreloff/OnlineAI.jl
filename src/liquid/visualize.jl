@@ -90,9 +90,7 @@ function visualize(lsm::LiquidStateMachine)
 	nin = length(lsm.inputs.inputs)
 	x = -400
 	ys = getLinspace(nin, 400)
-	# diffpos = P2(0, -startpos[2])
 	for (i,input) in enumerate(lsm.inputs.inputs)
-		# pos = startpos + diffpos .* (nin > 1 ? (i-1) / (nin-1) : 0.5)
 		pos = P2(x, ys[i])
 		visualize(input, pos, viznodes)
 	end
@@ -101,12 +99,7 @@ function visualize(lsm::LiquidStateMachine)
 	xs = getLinspace(liquid.params.l, 140)
 	ys = getLinspace(liquid.params.w, 300)
 	zs = getLinspace(liquid.params.h, 120)
-	# startpos = P3(-150,-150,-300)
-	# diffpos = -2 * startpos
-	# liquidsz = (liquid.params.l, liquid.params.w, liquid.params.h)
 	for neuron in liquid.neurons
-		# pct = (P3(neuron.position...) - 1) ./ (P3(liquidsz...) - 1)
-		# pos = startpos + pct .* diffpos
 		i, j, k = neuron.position
 		pos = P3(xs[i], ys[j], zs[k])
 		push!(viznodes, LiquidVisualizationNode(neuron, pos))
@@ -119,7 +112,6 @@ function visualize(lsm::LiquidStateMachine)
 										 title="predicted vs actual",
 										 labels = map(i->string(i<=nout ? "Act" : "Est", i), 1:nout*2),
 										 show=false)
-	# oplot(pltEstVsAct, zeros(0,nout), labels = map(x->"Est$x", 1:nout))
 
 	# set up the scatter plot of estimate vs actual
 	pltScatter = scatter(zeros(0,nout),
@@ -130,8 +122,8 @@ function visualize(lsm::LiquidStateMachine)
 
 	# put all 3 together into a widget container, resize, then show
 	window = vsplitter(hsplitter(scene, pltScatter), pltEstVsAct)
-	Qwt.moveWindowToCenterScreen(window)
-	resizewidget(window, P2(2000,1500))
+	moveToLastScreen(window)
+	resizewidget(window, screenSize(screenCount()) - P2(20,20))
 	showwidget(window)
 
 	LiquidVisualization(lsm, window, scene, pltEstVsAct, pltScatter, viznodes, 0)

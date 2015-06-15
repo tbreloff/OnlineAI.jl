@@ -67,7 +67,7 @@ function probabilityOfConnection(n1::SpikingNeuron, n2::SpikingNeuron, λ::Float
 end
 
 # TODO: make this a parameter
-const UNIF_WEIGHT = Uniform(0.1, 0.5)
+const UNIF_WEIGHT = Uniform(0.1, 1.3)
 
 function weight(n::SpikingNeuron)
 	(n.excitatory ? 1.0 : -1.0) * rand(UNIF_WEIGHT)
