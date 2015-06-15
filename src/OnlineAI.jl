@@ -39,20 +39,6 @@ export Activation,
 			 buildClassifierNet,
 			 buildRegressionNet,
 
-			 GaussianReceptiveField,
-			 value,
-			 Synapse,
-			 DiscreteSynapse,
-			 fire!,
-			 SpikingNeuron,
-			 DiscreteLeakyIntegrateAndFireNeuron,
-			 LiquidParams,
-			 Liquid,
-			 GRFInput,
-			 LiquidInput,
-			 LiquidStateMachine,
-			 liquidState,
-
 			 foreach
 
 
@@ -70,6 +56,41 @@ include("data.jl")
 include("solver.jl")
 include("build.jl")
 
-include("liquid.jl")
+# ----------------------------------------------------------------------
+
+export GaussianReceptiveField,
+			 value,
+			 Synapse,
+			 DelaySynapse,
+			 fire!,    # checks for threshold crossing, then fires
+			 SpikingNeuron,
+			 DiscreteLeakyIntegrateAndFireNeuron,
+			 LiquidParams,
+			 Liquid,
+
+			 ImmediateSynapse,
+			 GRFNeuron,
+			 GRFInput,
+			 LiquidInput,
+			 LiquidInputs,
+
+			 LiquidStateMachine,
+			 liquidState,
+
+			 visualize,
+			 LiquidVisualization,
+			 LiquidVisualizationNode
+
+abstract Synapse
+abstract SpikingNeuron <: Node
+abstract LiquidInput
+
+
+include("liquid/liquid.jl")
+include("liquid/neurons.jl")
+include("liquid/input.jl")
+include("liquid/readout.jl")
+include("liquid/visualize.jl")
+
 
 end
