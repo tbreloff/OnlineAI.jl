@@ -50,15 +50,15 @@ row!(M::Matrix, r::Int, v::Vector) = setrow(M, r, v)
 col!(M::Matrix, c::Int, v::Vector) = setcol(M, c, v)
 
 function setrow(M::Matrix, row::Int, v::Vector)
-	for col in 1:length(v)
-		M[row,col] = v[col]
-	end
+  for col in 1:length(v)
+    M[row,col] = v[col]
+  end
 end
 
 function setcol(M::Matrix, col::Int, v::Vector)
-	for row in 1:length(v)
-		M[row,col] = v[row]
-	end
+  for row in 1:length(v)
+    M[row,col] = v[row]
+  end
 end
 
 
@@ -70,27 +70,27 @@ mat(v::Vector) = reshape(v, length(v), 1)
 getPctOfInt(pct::Float64, T::Int) = round(Int, max(0., min(1., pct)) * T)
 
 function splitRange(pct::Float64, T::Int)
-	lastin = getPctOfInt(pct,T)
-	1:lastin, lastin+1:T
+  lastin = getPctOfInt(pct,T)
+  1:lastin, lastin+1:T
 end
 
 function splitMatrixRows(mat::Matrix, pct::Float64)
-	rng1, rng2 = splitRange(pct, nrows(mat))
-	rows(mat,rng1), rows(mat,rng2)
+  rng1, rng2 = splitRange(pct, nrows(mat))
+  rows(mat,rng1), rows(mat,rng2)
 end
 
 function apply(f::Function, A::AbstractArray)
-	for x in A
-		f(x)
-	end
+  for x in A
+    f(x)
+  end
 end
 
 function foreach(A::AbstractArray, f::Function, fs::Function...)
-	for x in A
-		f(x)
-	end
-	for g in fs
-		foreach(A, g)
-	end
-	A
+  for x in A
+    f(x)
+  end
+  for g in fs
+    foreach(A, g)
+  end
+  A
 end

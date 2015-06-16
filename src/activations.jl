@@ -1,7 +1,7 @@
 
 immutable Activation
-	A::Function  # activation function
-	dA::Function # derivative
+  A::Function  # activation function
+  dA::Function # derivative
 end
 
 returnone(x) = 1.0

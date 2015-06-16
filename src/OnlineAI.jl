@@ -9,37 +9,37 @@ using Qwt
 using StatsBase
 
 export Activation,
-			 IdentityActivation,
-			 SigmoidActivation,
-			 TanhActivation,
-			 SoftsignActivation,
+       IdentityActivation,
+       SigmoidActivation,
+       TanhActivation,
+       SoftsignActivation,
 
-			 Layer,
-			 buildLayer,
-			 feedforward!,
-			 # update!,
+       Layer,
+       buildLayer,
+       feedforward!,
+       # update!,
 
-			 NeuralNet,
-			 buildNeuralNet,
-			 totalerror,
+       NeuralNet,
+       buildNeuralNet,
+       totalerror,
 
-			 SolverData,
-			 DataVec,
-			 buildSolverData,
-			 splitSolverData,
-			 # sample,
-			 DataSets,
+       SolverData,
+       DataVec,
+       buildSolverData,
+       splitSolverData,
+       # sample,
+       DataSets,
 
-			 SolverParams,
-			 SolverStats,
-			 buildSolverParams,
-			 solve!,
+       SolverParams,
+       SolverStats,
+       buildSolverParams,
+       solve!,
 
-			 buildNet,
-			 buildClassifierNet,
-			 buildRegressionNet,
+       buildNet,
+       buildClassifierNet,
+       buildRegressionNet,
 
-			 foreach
+       foreach
 
 
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
@@ -59,27 +59,27 @@ include("build.jl")
 # ----------------------------------------------------------------------
 
 export GaussianReceptiveField,
-			 value,
-			 Synapse,
-			 DelaySynapse,
-			 fire!,    # checks for threshold crossing, then fires
-			 SpikingNeuron,
-			 DiscreteLeakyIntegrateAndFireNeuron,
-			 LiquidParams,
-			 Liquid,
+       value,
+       Synapse,
+       DelaySynapse,
+       fire!,    # checks for threshold crossing, then fires
+       SpikingNeuron,
+       DiscreteLeakyIntegrateAndFireNeuron,
+       LiquidParams,
+       Liquid,
 
-			 ImmediateSynapse,
-			 GRFNeuron,
-			 GRFInput,
-			 LiquidInput,
-			 LiquidInputs,
+       ImmediateSynapse,
+       GRFNeuron,
+       GRFInput,
+       LiquidInput,
+       LiquidInputs,
 
-			 LiquidStateMachine,
-			 liquidState,
+       LiquidStateMachine,
+       liquidState,
 
-			 visualize,
-			 LiquidVisualization,
-			 LiquidVisualizationNode
+       visualize,
+       LiquidVisualization,
+       LiquidVisualizationNode
 
 abstract Synapse
 abstract SpikingNeuron <: Node

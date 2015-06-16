@@ -11,28 +11,28 @@
 # note: w should have length nin+2
 
 type MemoryGate <: Node
-	perceptron::Perceptron
-	memblock
+  perceptron::Perceptron
+  memblock
 end
 
 # TODO: allow cellstate to be a vector?
 
 # the "state" of the memory block
 type MemoryCell <: Node
-	perceptron::Perceptron # could be a layer??
-	memblock
+  perceptron::Perceptron # could be a layer??
+  memblock
 end
 
 
 type MemoryBlock <: Node
-	inputGate::MemoryGate
-	forgetGate::MemoryGate
-	outputGate::MemoryGate
-	lastOutput::Float64
+  inputGate::MemoryGate
+  forgetGate::MemoryGate
+  outputGate::MemoryGate
+  lastOutput::Float64
 end
 
 
 
 function buildMemoryGate(w::VecF, memblock::MemoryBlock)
-	MemoryGate(Perceptron(w, SigmoidActivation()), memblock)
+  MemoryGate(Perceptron(w, SigmoidActivation()), memblock)
 end

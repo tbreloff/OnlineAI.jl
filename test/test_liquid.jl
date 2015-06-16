@@ -15,7 +15,7 @@ T = 2000
 # x is a simple differenced AR(1)... y is the future val
 x = randn(T)
 for i in 2:T
-	x[i] += x[i-1] * 0.95
+  x[i] += x[i-1] * 0.95
 end
 # dx = diff(x)
 lookahead = 5
@@ -37,8 +37,8 @@ viz = visualize(lsm)
 
 # fit the lsm
 for t = 1:T
-	update!(lsm, vec(y[t,:]), vec(x[t,:]))
-	update!(viz, vec(y[t,:]))
+  update!(lsm, vec(y[t,:]), vec(x[t,:]))
+  update!(viz, vec(y[t,:]))
 end
 
 
