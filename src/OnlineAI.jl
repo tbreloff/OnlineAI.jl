@@ -74,6 +74,10 @@ export GaussianReceptiveField,
        LiquidInput,
        LiquidInputs,
 
+       Readout,
+       FireReadout,
+       StateReadout,
+
        LiquidStateMachine,
        liquidState,
 

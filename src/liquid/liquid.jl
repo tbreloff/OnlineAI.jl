@@ -162,7 +162,7 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
   LiquidStateMachine(numInputs, numOutputs, liquid, inputs, params.readout, readoutModels, 0)
 end
 
-liquidState(lsm::LiquidStateMachine) = Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]
+# liquidState(lsm::LiquidStateMachine) = Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]
 OnlineStats.statenames(lsm::LiquidStateMachine) = [:liquidState, :nobs]
 OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
 
@@ -173,7 +173,7 @@ function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
 
   # update readout models
   # TODO: liquidState should be more flexible... multiple models, recent window averages, etc
-  state = liquidState(lsm)
+  state = liquidState(lsm, lsm.readout)
   for (i,model) in enumerate(lsm.readoutModels)
     update!(model, y[i], state)
   end
@@ -183,7 +183,7 @@ end
 
 # given the current liquid state and readout model, predict the future
 function StatsBase.predict(lsm::LiquidStateMachine)
-  state = liquidState(lsm)
+  state = liquidState(lsm, lsm.readout)
   Float64[predict(model, state) for model in lsm.readoutModels]
 end
 

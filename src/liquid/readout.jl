@@ -9,3 +9,9 @@ function liquidState(lsm, readout::FireReadout)
   Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]
 end
 
+# takes the state of the neuron, whatever that may be
+type StateReadout <: Readout end
+function liquidState(lsm, readout::StateReadout)
+  Float64[float(state(neuron)) for neuron in lsm.liquid.outputNeurons]
+end
+
