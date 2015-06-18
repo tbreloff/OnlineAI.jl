@@ -13,6 +13,7 @@ type LiquidParams
   λ::Float64  # used in probability of synapse connection
   pctInput::Float64
   pctOutput::Float64
+  readout::Readout
 end
 
 function LiquidParams(; l::Int = 3,
@@ -23,8 +24,9 @@ function LiquidParams(; l::Int = 3,
                         decayRateDist::Distribution{Univariate,Continuous} = Uniform(0.8, 0.99),
                         λ::Float64 = 0.1,
                         pctInput::Float64 = 0.1,
-                        pctOutput::Float64 = 0.4)
-  LiquidParams(l, w, h, neuronType, pctInhibitory, decayRateDist, λ, pctInput, pctOutput)
+                        pctOutput::Float64 = 0.4,
+                        readout::Readout = FireReadout())
+  LiquidParams(l, w, h, neuronType, pctInhibitory, decayRateDist, λ, pctInput, pctOutput, readout)
 end
 
 
@@ -132,13 +134,14 @@ OnlineStats.update!(liquid::Liquid) = foreach(liquid.neurons, update!, fire!)
 
 # ---------------------------------------------------------------------
 
-# manages the various layers and flow: input --> liquid --> output --> readout model
+# manages the various layers and flow: input --> liquid --> readout --> readout model
 
 type LiquidStateMachine <: OnlineStat
   nin::Int
   nout::Int
   liquid::Liquid
   inputs::LiquidInputs
+  readout::Readout
   readoutModels::Vector{OnlineStat}
   n::Int
 end
@@ -156,7 +159,7 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
   # TODO: make readout model more flexible... param
   readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.001, wgt) for i in 1:numOutputs]
 
-  LiquidStateMachine(numInputs, numOutputs, liquid, inputs, readoutModels, 0)
+  LiquidStateMachine(numInputs, numOutputs, liquid, inputs, params.readout, readoutModels, 0)
 end
 
 liquidState(lsm::LiquidStateMachine) = Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]

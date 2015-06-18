@@ -86,10 +86,10 @@ abstract SpikingNeuron <: Node
 abstract LiquidInput
 
 
+include("liquid/readout.jl")
 include("liquid/liquid.jl")
 include("liquid/neurons.jl")
 include("liquid/input.jl")
-include("liquid/readout.jl")
 include("liquid/visualize.jl")
 
 
