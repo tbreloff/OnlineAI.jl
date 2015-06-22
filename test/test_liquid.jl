@@ -27,8 +27,8 @@ T = length(x)
 
 # create liquid state machine
 params = LiquidParams(λ = 1.5, 
-                      w = 7,
-                      h = 3,
+                      w = 5,
+                      h = 4,
                       decayRateDist = Uniform(0.99, 1.0),
                       pctOutput = 0.7,
                       readout = StateReadout())

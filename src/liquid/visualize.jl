@@ -97,7 +97,7 @@ function visualize(lsm::LiquidStateMachine)
 
   # liquid
   xs = getLinspace(liquid.params.l, 140)
-  ys = getLinspace(liquid.params.w, 300)
+  ys = getLinspace(liquid.params.w, 200)
   zs = getLinspace(liquid.params.h, 120)
   for neuron in liquid.neurons
     i, j, k = neuron.position
