@@ -1,6 +1,46 @@
 
+# Leaky Integrate and Fire (LIF)
+
+type LIFSynapse <: Synapse
+  postsynapticNeuron::SpikingNeuron
+  weight::Float64
+end
+
+function fire!(synapse::LIFSynapse)
+  # TODO add current to postsynaptic neuron
+end
+
+Base.print(io::IO, s::LIFSynapse) = print(io, "LIFSynapse{post=$(s.postsynapticNeuron), wgt=$(s.weight)}")
+Base.show(io::IO, s::LIFSynapse) = print(io, s)
+
 
 # ---------------------------------------------------------------------
+
+const τm = 30.0         # ms - membrane time constant
+const urest = 0.0       # mV - resting membrane potential
+const Rm = 1.0          # MΩ - input resistence
+const I_inject = 13.5   # nA - current from injection
+const I_noise = 1.0     # nA - current noise
+const τe = 2.0          # ms - refractory period for exitatory neurons
+const τi = 2.0          # ms - refractory period for inhibitory neurons
+
+type LIFNeuron <: SpikingNeuron
+  position::VecI
+  excitatory::Bool
+  u::Float64      # voltage (Vm)
+  ϑ::Float64      # voltage threshold
+  I_synapse::Float64  # current from synapse
+  tf::Float64     # last firing time
+  synapses::Vector{LIFSynapse}
+end
+
+LIFNeuron(pos::VecI, exitatory::Bool)
+
+
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+
+# Discrete LIF (my design... not biologically plausible)
 
 # When a neuron nᵢ fires, it sends a pulse of wᵢⱼ to the dᵗʰ position of the circular buffer of future pulses for nⱼ.
 # In other words: at time t there is a spike in neuron nᵢ.  at time t+d we apply a pulse wᵢⱼ to neuron nⱼ
