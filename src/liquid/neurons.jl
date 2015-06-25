@@ -16,6 +16,10 @@ Base.show(io::IO, s::LIFSynapse) = print(io, s)
 
 # ---------------------------------------------------------------------
 
+# dirac pulse from presynaptic neuron (times weight) adds to total current of postsynaptic neuron
+# total current decays back to 0 at rate τs (spike)
+# (current * dt) is added to membrane potential (u) after decaying potential back to urest
+
 const τm = 30.0         # ms - membrane time constant
 const urest = 0.0       # mV - resting membrane potential
 const Rm = 1.0          # MΩ - input resistence
@@ -34,7 +38,8 @@ type LIFNeuron <: SpikingNeuron
   synapses::Vector{LIFSynapse}
 end
 
-LIFNeuron(pos::VecI, exitatory::Bool)
+function LIFNeuron(pos::VecI, exitatory::Bool)
+  LIFNeuron(pos, exitatory, urest, )
 
 
 # ---------------------------------------------------------------------
