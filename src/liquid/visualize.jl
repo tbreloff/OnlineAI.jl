@@ -70,6 +70,7 @@ type LiquidVisualization
   scene::Scene
   pltEstVsAct::PlotWidget
   pltScatter::PlotWidget
+  pltMembranePotential::PlotWidget
   viznodes::Vector{LiquidVisualizationNode}
   t::Int
 end
@@ -120,13 +121,18 @@ function visualize(lsm::LiquidStateMachine)
                        ylabel = "actual",
                        show=false)
 
+  # set up the plot of membrane potential
+  pltMembranePotential = plot(zeros(0, length(liquid.neurons)),
+                              title = "Membrane Potential",
+                              show = false)
+
   # put all 3 together into a widget container, resize, then show
-  window = vsplitter(hsplitter(scene, pltScatter), pltEstVsAct)
+  window = vsplitter(hsplitter(scene, pltScatter), hsplitter(pltEstVsAct, pltMembranePotential))
   moveToLastScreen(window)
   resizewidget(window, screenSize(screenCount()) - P2(20,20))
   showwidget(window)
 
-  LiquidVisualization(lsm, window, scene, pltEstVsAct, pltScatter, viznodes, 0)
+  LiquidVisualization(lsm, window, scene, pltEstVsAct, pltScatter, pltMembranePotential, viznodes, 0)
 end
 
 #update visualization
@@ -145,14 +151,27 @@ function OnlineStats.update!(viz::LiquidVisualization, y::VecF)
     brush!(viznode.circle, args...)
   end
 
+  # neuron-specific plotting
+  for (i,neuron) in enumerate(viz.lsm.liquid.neurons)
+    if neuron.fired
+      push!(viz.pltMembranePotential, i, viz.t, neuron.ϑ)
+      push!(viz.pltMembranePotential, i, viz.t, neuron.ϑ + 0.25)
+    end
+    push!(viz.pltMembranePotential, i, viz.t, neuron.u)
+  end
+
+  # readout plotting
   est = predict(viz.lsm)
   for (i,e) in enumerate(est)
     push!(viz.pltEstVsAct, i, viz.t, y[i])
     push!(viz.pltEstVsAct, i+viz.lsm.nout, viz.t, e)
     push!(viz.pltScatter, i, e, y[i])
   end
+
+  # refresh the plots
   refresh(viz.pltEstVsAct)
   refresh(viz.pltScatter)
+  refresh(viz.pltMembranePotential)
 
   sleep(0.0001)
 end
