@@ -129,7 +129,21 @@ end
 
 StatsBase.sample{T<:SpikingNeuron}(neurons::Vector{T}, pct::Float64) = sample(neurons, round(Int, pct * length(neurons)))
 
-OnlineStats.update!(liquid::Liquid) = foreach(liquid.neurons, update!, fire!)
+function OnlineStats.update!(liquid::Liquid)
+
+  # update/step forward
+  foreach(liquid.neurons, update!)
+
+  # now keep firing neurons until nothing fires
+  while true
+    didfire = false
+    for neuron in liquid.neurons
+      fire!(neuron)
+      didfire = didfire || neuron.fired
+    end
+    !didfire && break
+  end
+end
 
 
 # ---------------------------------------------------------------------
