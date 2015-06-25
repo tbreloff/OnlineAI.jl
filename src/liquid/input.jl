@@ -38,31 +38,31 @@ end
 
 # ---------------------------------------------------------------------
 
-# immediately increases the value of u for the postSynaptic neuron
-type ImmediateSynapse <: Synapse
-  postsynapticNeuron::SpikingNeuron
-  weight::Float64
-end
+# # immediately increases the value of u for the postSynaptic neuron
+# type ImmediateSynapse <: Synapse
+#   postsynapticNeuron::SpikingNeuron
+#   weight::Float64
+# end
 
-function fire!(synapse::ImmediateSynapse)
-  synapse.postsynapticNeuron.u += synapse.weight
-end
+# function fire!(synapse::ImmediateSynapse)
+#   synapse.postsynapticNeuron.u += synapse.weight
+# end
 
 # ---------------------------------------------------------------------
 
-# simple neuron to pass along a spike train
-type GRFNeuron <: SpikingNeuron
-  excitatory::Bool
-  u::Float64          # current state
-  ϑ::Float64      # threshold level
-  refractoryPeriodsRemaining::Int  # no activity allowed for this many periods after a spike
-  refractoryPeriodsTotal::Int  # no activity allowed for this many periods after a spike
-  fired::Bool  # did the neuron fire in the most recent period?
-  synapses::Vector{ImmediateSynapse}
-end
-GRFNeuron() = GRFNeuron(true, 0.0, 1.0, 0, 0, false, ImmediateSynapse[])
+# # simple neuron to pass along a spike train
+# type GRFNeuron <: SpikingNeuron
+#   excitatory::Bool
+#   u::Float64          # current state
+#   ϑ::Float64      # threshold level
+#   refractoryPeriodsRemaining::Int  # no activity allowed for this many periods after a spike
+#   refractoryPeriodsTotal::Int  # no activity allowed for this many periods after a spike
+#   fired::Bool  # did the neuron fire in the most recent period?
+#   synapses::Vector{ImmediateSynapse}
+# end
+# GRFNeuron() = GRFNeuron(true, 0.0, 1.0, 0, 0, false, ImmediateSynapse[])
 
-weight(n::GRFNeuron) = rand(Uniform(0.1, 1.0)) # TODO: make variable?
+# weight(n::GRFNeuron) = rand(Uniform(0.1, 1.0)) # TODO: make variable?
 
 
 # ---------------------------------------------------------------------
@@ -70,19 +70,20 @@ weight(n::GRFNeuron) = rand(Uniform(0.1, 1.0)) # TODO: make variable?
 type GRFInput <: LiquidInput
   variance::Variance
   grfs::Vector{GaussianReceptiveField}
-  neurons::Vector{GRFNeuron}
+  neurons::Vector{SpikingNeuron}
 end
 
 function GRFInput(liquid, variance::Variance)
   M = 4  # TODO: make variable?
   grfs = GaussianReceptiveField[]
-  neurons = GRFNeuron[]
+  neurons = SpikingNeuron[]
   for j in 1:M
     push!(grfs, GaussianReceptiveField(variance, j))
 
-    neuron = GRFNeuron()
+    # neuron = GRFNeuron()
+    neuron = LIFNeuron()
     postsynapticNeurons = sample(liquid.neurons, liquid.params.pctInput)
-    neuron.synapses = [ImmediateSynapse(psn, weight(neuron)) for psn in postsynapticNeurons]
+    neuron.synapses = [LIFSynapse(psn, weight(neuron)) for psn in postsynapticNeurons]
     push!(neurons, neuron)
   end
 
@@ -102,21 +103,9 @@ end
 
 # ---------------------------------------------------------------------
 
-# # maintains a list of GRFs which correspond to several spike trains for each input value
-# type LiquidInputs{T <: LiquidInput}
-#   inputs::Vector{T}   # one per input
-# end
-
 function LiquidInputs{W}(liquid, variances::Vector{Variance{W}})
   LiquidInputs([GRFInput(liquid, variance) for variance in variances])
 end
-
-
-# function OnlineStats.update!(inputs::LiquidInputs, x::VecF)
-#   map(update!, inputs.inputs, x)
-# end
-
-
 
 # ---------------------------------------------------------------------
 

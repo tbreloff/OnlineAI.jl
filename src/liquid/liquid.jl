@@ -19,10 +19,10 @@ end
 function LiquidParams(; l::Int = 3,
                         w::Int = l,
                         h::Int = 5,
-                        neuronType::DataType = DiscreteLeakyIntegrateAndFireNeuron,
+                        neuronType::DataType = LIFNeuron,
                         pctInhibitory::Float64 = 0.2,
                         decayRateDist::Distribution{Univariate,Continuous} = Uniform(0.8, 0.99),
-                        λ::Float64 = 0.1,
+                        λ::Float64 = 1.0,
                         pctInput::Float64 = 0.1,
                         pctOutput::Float64 = 0.4,
                         readout::Readout = FireReadout())
@@ -69,7 +69,7 @@ function probabilityOfConnection(n1::SpikingNeuron, n2::SpikingNeuron, λ::Float
 end
 
 # TODO: make this a parameter
-const UNIF_WEIGHT = Uniform(0.1, 1.3)
+const UNIF_WEIGHT = Uniform(0.1, 1.0)
 
 function weight(n::SpikingNeuron)
   (n.excitatory ? 1.0 : -1.0) * rand(UNIF_WEIGHT)
@@ -101,9 +101,10 @@ function Liquid{T}(::Type{T}, params::LiquidParams)
     for j in 1:params.w
       for k in 1:params.h
         excitatory = rand() > params.pctInhibitory
-        decayRate = rand(params.decayRateDist)
+        # decayRate = rand(params.decayRateDist)
         # neuron = DiscreteLeakyIntegrateAndFireNeuron([i, j, k], excitatory, decayRate)
-        neuron = T([i, j, k], excitatory, decayRate)
+        # neuron = T([i, j, k], excitatory, decayRate)
+        neuron = T([i,j,k], excitatory)
         push!(neurons, neuron)
       end
     end
@@ -116,7 +117,8 @@ function Liquid{T}(::Type{T}, params::LiquidParams)
   for n1 in neurons
     for n2 in neurons
       if rand() <= probabilityOfConnection(n1, n2, params.λ)
-        synapse = DelaySynapse(n2, weight(n1), delay(n1))
+        # synapse = DelaySynapse(n2, weight(n1), delay(n1))
+        synapse = LIFSynapse(n2, weight(n1))
         push!(n1.synapses, synapse)
       end
     end

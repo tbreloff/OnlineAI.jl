@@ -15,7 +15,9 @@ function fire!(synapse::LIFSynapse)
   neuron.q += pulse
 
   # add pulse to membrane potential (unless it just fired)
-  !neuron.fired && neuron.u += pulse
+  if !neuron.fired
+    neuron.u += pulse
+  end
 end
 
 Base.print(io::IO, s::LIFSynapse) = print(io, "LIFSynapse{post=$(s.postsynapticNeuron), wgt=$(s.weight)}")
@@ -51,6 +53,9 @@ end
 function LIFNeuron(pos::VecI, exitatory::Bool)
   LIFNeuron(pos, exitatory, urest, 0.0, baseThreshold, false, LIFSynapse[])
 end
+
+LIFNeuron() = LIFNeuron(Int[0,0,0], true)
+
 
 Base.print(io::IO, n::LIFNeuron) = 
   print(io, "LIFNeuron{pos=$(n.position), exite=$(n.excitatory), u=$(n.u), q=$(n.q), fired=$(n.fired), nsyn=$(length(n.synapses))}")
@@ -166,7 +171,7 @@ end
 # end
 
 
-# function OnlineStats.state(neuron::SpikingNeuron)
-#   neuron.u / neuron.ϑ + 10.0 * float(neuron.fired)
-# end
+function OnlineStats.state(neuron::SpikingNeuron)
+  neuron.u / neuron.ϑ + 10.0 * float(neuron.fired)
+end
 
