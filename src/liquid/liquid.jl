@@ -145,9 +145,10 @@ function OnlineStats.update!(liquid::Liquid)
     prevnumfired, numfired = numfired, 0
     for neuron in liquid.neurons
       fire!(neuron)
-      if neuron.fired
-        numfired += 1
-      end
+      numfired += neuron.fired ? 1 : 0
+      # if neuron.fired
+      #   numfired += 1
+      # end
       # didfire = didfire || neuron.fired
     end
     # println("fire loop $i $numfired $prevnumfired")

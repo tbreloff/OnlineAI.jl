@@ -122,7 +122,7 @@ function visualize(lsm::LiquidStateMachine)
                        show=false)
 
   # set up the plot of membrane potential
-  pltMembranePotential = plot(zeros(0, length(liquid.neurons)),
+  pltMembranePotential = plot(zeros(0, 4), #length(liquid.neurons)),
                               title = "Membrane Potential",
                               show = false)
 
@@ -145,14 +145,14 @@ function OnlineStats.update!(viz::LiquidVisualization, y::VecF)
     if neuron.fired
       args = (:red,)
     else
-      upct = 1 - neuron.u / neuron.ϑ
+      upct = 1.0 - max(0., min(neuron.u / neuron.ϑ, 1.))
       args = (upct,upct,upct)
     end
     brush!(viznode.circle, args...)
   end
 
   # neuron-specific plotting
-  for (i,neuron) in enumerate(viz.lsm.liquid.neurons)
+  for (i,neuron) in enumerate(viz.lsm.liquid.neurons[1:length(viz.pltMembranePotential.lines)])
     if neuron.fired
       push!(viz.pltMembranePotential, i, viz.t, neuron.ϑ)
       push!(viz.pltMembranePotential, i, viz.t, neuron.ϑ + 0.25)

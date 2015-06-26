@@ -9,7 +9,9 @@ end
 # transmit pulses to postsynaptic neurons
 function fire!(synapse::LIFSynapse)
   neuron = synapse.postsynapticNeuron
-  pulse = synapse.weight / τq
+
+  # make sure we won't send current negative with negative weights
+  pulse = max(neuron.q, synapse.weight / τq)
   
   # increase pulse of the postsynaptic neuron
   neuron.q += pulse
@@ -38,7 +40,7 @@ const τu = 30.0         # ms - membrane potential decay period
 const τq = 4.0          # ms - pulse decay period
 const urest = 0.0       # mV - resting membrane potential
 const ufire = -0.4      # mV - membrane potential immediately after firing a spike
-const baseThreshold = 1.0
+const baseThreshold = 2.0
 
 type LIFNeuron <: SpikingNeuron
   position::VecI
@@ -73,6 +75,7 @@ function fire!(neuron::LIFNeuron)
   if neuron.u >= neuron.ϑ
     neuron.fired = true
     neuron.u = ufire
+    neuron.q = 0.0
     foreach(neuron.synapses, fire!)
   end
 end

@@ -96,6 +96,7 @@ function OnlineStats.update!(input::GRFInput, x::Float64)
   for (j,grf) in enumerate(input.grfs)
     neuron = input.neurons[j]
     neuron.u += value(grf, x)
+    neuron.fired = false
     fire!(neuron)
   end
 end

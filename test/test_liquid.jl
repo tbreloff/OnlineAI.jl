@@ -9,7 +9,7 @@ using OnlineStats, Qwt, Distributions, StatsBase, OnlineAI
 
 nin = 1
 nout = 1
-T = 700
+T = 70
 # x = collect(linspace(-15., 15., T))
 
 # x is a simple differenced AR(1)... y is the future val
