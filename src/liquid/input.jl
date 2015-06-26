@@ -12,10 +12,11 @@ end
 
 
 # create a field that covers a specific area (partially overlapping with the next closest one)
-const grf_offsets = [0.0, 2.0, 6.0, 14.0] / 2.0
-const grf_width_factors = [0.5, 1.0, 2.0, 4.0] * 0.5
+const grf_offsets = [2.0, 6.0, 14.0, 30.0] * 0.5
+const grf_width_factors = [1.0, 2.0, 4.0, 8.0] * 0.6
 function GaussianReceptiveField(variance::Variance, fieldnum::Int)
-  idx = floor(Int, fieldnum/2) + 1
+  idx = floor(Int, (fieldnum+1.01)/2)
+  println("$fieldnum $idx")
   @assert idx > 0 && idx <= length(grf_offsets)
   GaussianReceptiveField(variance, (iseven(fieldnum) ? 1.0 : -1.0) * grf_offsets[idx], grf_width_factors[idx])
 end

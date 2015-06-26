@@ -9,7 +9,7 @@ using OnlineStats, Qwt, Distributions, StatsBase, OnlineAI
 
 nin = 1
 nout = 1
-T = 70
+T = 1000
 # x = collect(linspace(-15., 15., T))
 
 # x is a simple differenced AR(1)... y is the future val
@@ -26,7 +26,7 @@ T = length(x)
 
 
 # create liquid state machine
-params = LiquidParams(λ = 1.5, 
+params = LiquidParams(λ = 2.0, 
                       w = 5,
                       h = 4,
                       decayRateDist = Uniform(0.99, 1.0),

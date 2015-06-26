@@ -44,7 +44,8 @@ function addSynapticConnections(viznodes::Vector{LiquidVisualizationNode})
     for synapse in viznode.neuron.synapses
       connectedViznode = findMatching(viznodes, synapse.postsynapticNeuron)
       l = line!(viznode.circle, connectedViznode.circle)
-      pen!(l, 1 + 2 * abs(synapse.weight), 0, 0, 0, 0.3)
+      # pen!(l, 1 + 2 * abs(synapse.weight), 0, 0, 0, 0.3)
+      pen!(l, 1 + 2 * abs(synapse.weight), :lightGray)
     end
   end
 end

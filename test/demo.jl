@@ -33,10 +33,12 @@ function demo_anim_lsm()
   
   scene = currentScene()
   empty!(scene)
-  background!(:gray)
+  background!(:white)
 
   # create circles
-  circles = SceneItem[pen!(brush!(circle!(10), 0,0,0,0), 0) for i in 1:100]
+  n = 100
+  # colors = [makecolor(0,0,0,0) for i in 1:n]
+  circles = SceneItem[pen!(brush!(circle!(10), :white), 0) for i in 1:n]
 
   T = 0.0 : 1.0 : 400.0
   for (i,t) in enumerate(T)
@@ -46,11 +48,15 @@ function demo_anim_lsm()
       j > i && break 
       tj = T[i-j+1]
       alpha = max(0., min(exp((tj-t) / 10), 1.0))
-      brush!(c, 0, 0, 0, alpha)
+      # brush!(c, 0, 0, 0, alpha)
+      # alpha!(c, alpha)
+      # colors[j][:setAlphaF](alpha)
+      # brush!(c, colors[j])
+      brush!(c, 1-alpha, 1-alpha, 1-alpha)
       position!(c, cpos(tj))
     end
 
-    sleep(0.0001)
+    sleep(0.000001)
   end
   
   scene
