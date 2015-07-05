@@ -42,7 +42,7 @@ viz = visualize(lsm)
 
 # fit the lsm
 for t = 1:T
-  update!(lsm, vec(y[t,:]), vec(x[t,:]))
+  update!(lsm, vec(x[t,:]), vec(y[t,:]))
   update!(viz, vec(y[t,:]))
 end
 

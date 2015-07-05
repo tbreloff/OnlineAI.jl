@@ -194,7 +194,7 @@ OnlineStats.statenames(lsm::LiquidStateMachine) = [:liquidState, :nobs]
 OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
 
 
-function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
+function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF, y::VecF)
   update!(lsm.inputs, x)   # update input neurons
   update!(lsm.liquid)     # update liquid state
 
@@ -202,7 +202,7 @@ function OnlineStats.update!(lsm::LiquidStateMachine, y::VecF, x::VecF)
   # TODO: liquidState should be more flexible... multiple models, recent window averages, etc
   state = liquidState(lsm, lsm.readout)
   for (i,model) in enumerate(lsm.readoutModels)
-    update!(model, y[i], state)
+    update!(model, state, y[i])
   end
 
   lsm.n += 1
