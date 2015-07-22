@@ -20,9 +20,10 @@ end
 type LiquidVisualizationNode
   neuron::SpikingNeuron
   circle::SceneItem
+  isinput::Bool
 end
 
-function LiquidVisualizationNode(neuron::SpikingNeuron, pos::P3)
+function LiquidVisualizationNode(neuron::SpikingNeuron, pos::P3, isinput::Bool)
   # shift x/y coords based on zvalue to give a 3d-ish look
   z = pos[3]
   pos = pos + P3(z/5, z/5, 0)
@@ -35,7 +36,7 @@ function LiquidVisualizationNode(neuron::SpikingNeuron, pos::P3)
     pen!(circle, 3, :yellow)
   end
 
-  LiquidVisualizationNode(neuron, circle)
+  LiquidVisualizationNode(neuron, circle, isinput)
 end
 
   # draw lines for synapses
@@ -56,7 +57,7 @@ function visualize(input::GRFInput, pos::P2, viznodes)
   ys = getLinspace(length(input.neurons), 100)
   pt = P3(pos - P2(70, 0), -10000)
   for (i,neuron) in enumerate(input.neurons)
-    viznode = LiquidVisualizationNode(neuron, P3(pos + P2(0,ys[i])))
+    viznode = LiquidVisualizationNode(neuron, P3(pos + P2(0,ys[i])), true)
     push!(viznodes, viznode)
     pen!(line!(viznode.circle, pt), 2, :cyan)  # connect line to pt
   end
@@ -72,6 +73,7 @@ type LiquidVisualization
   pltEstVsAct::PlotWidget
   pltScatter::PlotWidget
   pltMembranePotential::PlotWidget
+  pltSpikeTrains::PlotWidget
   viznodes::Vector{LiquidVisualizationNode}
   t::Int
 end
@@ -104,7 +106,7 @@ function visualize(lsm::LiquidStateMachine)
   for neuron in liquid.neurons
     i, j, k = neuron.position
     pos = P3(xs[i], ys[j], zs[k])
-    push!(viznodes, LiquidVisualizationNode(neuron, pos))
+    push!(viznodes, LiquidVisualizationNode(neuron, pos, false))
   end
 
   addSynapticConnections(viznodes)
@@ -127,13 +129,18 @@ function visualize(lsm::LiquidStateMachine)
                               title = "Membrane Potential",
                               show = false)
 
+  pltSpikeTrains = scatter(zeros(0, 2),
+                           title = "Spike Trains",
+                           labels = ["Inputs", "Liquid"],
+                           show = false)
+
   # put all 3 together into a widget container, resize, then show
-  window = vsplitter(hsplitter(scene, pltScatter), hsplitter(pltEstVsAct, pltMembranePotential))
+  window = vsplitter(hsplitter(scene, vsplitter(pltScatter, pltSpikeTrains)), hsplitter(pltEstVsAct, pltMembranePotential))
   moveToLastScreen(window)
   resizewidget(window, screenSize(screenCount()) - P2(20,20))
   showwidget(window)
 
-  LiquidVisualization(lsm, window, scene, pltEstVsAct, pltScatter, pltMembranePotential, viznodes, 0)
+  LiquidVisualization(lsm, window, scene, pltEstVsAct, pltScatter, pltMembranePotential, pltSpikeTrains, viznodes, 0)
 end
 
 #update visualization
@@ -169,10 +176,19 @@ function OnlineStats.update!(viz::LiquidVisualization, y::VecF)
     push!(viz.pltScatter, i, e, y[i])
   end
 
+  # spike train plotting
+  for (i,viznode) in enumerate(viz.viznodes)
+    if viznode.neuron.fired
+      # line = viz.pltSpikeTrains.lines[viznode.isinput ? 1 : 2]
+      push!(viz.pltSpikeTrains, viznode.isinput ? 1 : 2, viz.t, Float64(i))
+    end
+  end
+
   # refresh the plots
   refresh(viz.pltEstVsAct)
   refresh(viz.pltScatter)
   refresh(viz.pltMembranePotential)
+  refresh(viz.pltSpikeTrains)
 
   sleep(0.0001)
 end

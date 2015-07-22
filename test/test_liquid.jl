@@ -26,11 +26,12 @@ T = length(x)
 
 
 # create liquid state machine
-params = LiquidParams(λ = 2.0, 
-                      w = 5,
+params = LiquidParams(λ = 1.0, 
+                      w = 8,
                       h = 4,
                       decayRateDist = Uniform(0.99, 1.0),
-                      pctOutput = 0.7,
+                      pctInput = 0.2,
+                      pctOutput = 0.8,
                       readout = FireWindowReadout(30),
                       baseThreshold = 1.0)
                       # readout = StateReadout())
