@@ -25,7 +25,7 @@ end
 const STANDARD_NORMAL = Normal()
 const CENTER_PDF = pdf(STANDARD_NORMAL, 0.0)
 function value(grf::GaussianReceptiveField, x::Float64)
-  pdf(STANDARD_NORMAL, (standardize(grf.variance, x) + grf.grf_offset) / grf.grf_width_factor) / CENTER_PDF
+  pdf(STANDARD_NORMAL, (OnlineStats.standardize(grf.variance, x) + grf.grf_offset) / grf.grf_width_factor) / CENTER_PDF
 end
 
 OnlineStats.update!(grf::GaussianReceptiveField, x::Float64) = update!(grf.variance, x)
@@ -82,7 +82,7 @@ function GRFInput(liquid, variance::Variance)
     push!(grfs, GaussianReceptiveField(variance, j))
 
     # neuron = GRFNeuron()
-    neuron = LIFNeuron()
+    neuron = LIFNeuron(liquid.params)
     postsynapticNeurons = sample(liquid.neurons, liquid.params.pctInput)
     neuron.synapses = [LIFSynapse(psn, weight(neuron)) for psn in postsynapticNeurons]
     push!(neurons, neuron)

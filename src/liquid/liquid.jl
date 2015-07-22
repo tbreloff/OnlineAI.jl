@@ -14,6 +14,19 @@ type LiquidParams
   pctInput::Float64
   pctOutput::Float64
   readout::Readout
+  dt::Float64         # ms - simulation time step
+  τu::Float64         # ms - membrane potential decay period
+  τq::Float64          # ms - pulse decay period
+  urest::Float64       # mV - resting membrane potential
+  ufire::Float64      # mV - membrane potential immediately after firing a spike
+  baseThreshold::Float64
+
+# const dt = 0.25         # ms - simulation time step
+# const τu = 25.0         # ms - membrane potential decay period
+# const τq = 4.0          # ms - pulse decay period
+# const urest = 0.0       # mV - resting membrane potential
+# const ufire = -0.4      # mV - membrane potential immediately after firing a spike
+# const baseThreshold = 2.0
 end
 
 function LiquidParams(; l::Int = 3,
@@ -25,8 +38,14 @@ function LiquidParams(; l::Int = 3,
                         λ::Float64 = 1.0,
                         pctInput::Float64 = 0.1,
                         pctOutput::Float64 = 0.4,
-                        readout::Readout = FireReadout())
-  LiquidParams(l, w, h, neuronType, pctInhibitory, decayRateDist, λ, pctInput, pctOutput, readout)
+                        readout::Readout = FireReadout(),
+                        dt::Float64 = 0.25,
+                        τu::Float64 = 25.0,
+                        τq::Float64 = 4.0,
+                        urest::Float64 = 0.0,
+                        ufire::Float64 = -0.4,
+                        baseThreshold::Float64 = 2.0)
+  LiquidParams(l, w, h, neuronType, pctInhibitory, decayRateDist, λ, pctInput, pctOutput, readout, dt, τu, τq, urest, ufire, baseThreshold)
 end
 
 
@@ -104,7 +123,7 @@ function Liquid{T}(::Type{T}, params::LiquidParams)
         # decayRate = rand(params.decayRateDist)
         # neuron = DiscreteLeakyIntegrateAndFireNeuron([i, j, k], excitatory, decayRate)
         # neuron = T([i, j, k], excitatory, decayRate)
-        neuron = T([i,j,k], excitatory)
+        neuron = T([i,j,k], excitatory, params)
         push!(neurons, neuron)
       end
     end
@@ -131,31 +150,36 @@ end
 
 StatsBase.sample{T<:SpikingNeuron}(neurons::Vector{T}, pct::Float64) = sample(neurons, round(Int, pct * length(neurons)))
 
-function OnlineStats.update!(liquid::Liquid)
+function OnlineStats.update!(liquid::Liquid, dt::Float64)
+
+  for neuron in liquid.neurons
+    update!(neuron, dt)
+  end
+  foreach(liquid.neurons, fire!)
 
   # update/step forward
   # println("Updating neurons")
-  foreach(liquid.neurons, update!)
+  # foreach(liquid.neurons, update!)
 
-  # now keep firing neurons until nothing fires
-  numfired = 0
-  # i = 0
-  while true
-    # i += 1
-    prevnumfired, numfired = numfired, 0
-    for neuron in liquid.neurons
-      fire!(neuron)
-      numfired += neuron.fired ? 1 : 0
-      # if neuron.fired
-      #   numfired += 1
-      # end
-      # didfire = didfire || neuron.fired
-    end
-    # println("fire loop $i $numfired $prevnumfired")
-    # !didfire && break
-    numfired == prevnumfired && break
-  end
-  # println("broken")
+  # # now keep firing neurons until nothing fires
+  # numfired = 0
+  # # i = 0
+  # while true
+  #   # i += 1
+  #   prevnumfired, numfired = numfired, 0
+  #   for neuron in liquid.neurons
+  #     fire!(neuron)
+  #     numfired += neuron.fired ? 1 : 0
+  #     # if neuron.fired
+  #     #   numfired += 1
+  #     # end
+  #     # didfire = didfire || neuron.fired
+  #   end
+  #   # println("fire loop $i $numfired $prevnumfired")
+  #   # !didfire && break
+  #   numfired == prevnumfired && break
+  # end
+  # # println("broken")
 end
 
 
@@ -178,13 +202,13 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
   liquid = Liquid(params.neuronType, params)
 
   # create input structure
-  wgt = ExponentialWeighting(1000)
+  wgt = ExponentialWeighting(10000)
   variances = [Variance(wgt) for i in 1:numInputs]
   inputs = LiquidInputs(liquid, variances)
 
   # create readout models
   # TODO: make readout model more flexible... param
-  readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.0001, wgt) for i in 1:numOutputs]
+  readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
 
   LiquidStateMachine(numInputs, numOutputs, liquid, inputs, params.readout, readoutModels, 0)
 end
@@ -194,12 +218,13 @@ OnlineStats.statenames(lsm::LiquidStateMachine) = [:liquidState, :nobs]
 OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
 
 
-function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF, y::VecF)
+function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF, y::VecF, dt::Float64 = lsm.liquid.params.dt)
   update!(lsm.inputs, x)   # update input neurons
-  update!(lsm.liquid)     # update liquid state
+  update!(lsm.liquid, dt)     # update liquid state
 
   # update readout models
   # TODO: liquidState should be more flexible... multiple models, recent window averages, etc
+  update!(lsm.readout, lsm.liquid.outputNeurons)
   state = liquidState(lsm, lsm.readout)
   for (i,model) in enumerate(lsm.readoutModels)
     update!(model, state, y[i])
