@@ -15,24 +15,19 @@ type LiquidParams
   pctOutput::Float64
   readout::Readout
   dt::Float64         # ms - simulation time step
-  τu::Float64         # ms - membrane potential decay period
-  τq::Float64          # ms - pulse decay period
+  # τu::Float64         # ms - membrane potential decay period
+  # τq::Float64          # ms - pulse decay period
+  uDecayRate::Float64    # 1/ms - equal to 1/τu = membrane potential decay rate
+  qDecayRate::Float64    # 1/ms - equal to 1/τq = pulse decay rate
   urest::Float64       # mV - resting membrane potential
   ufire::Float64      # mV - membrane potential immediately after firing a spike
   baseThreshold::Float64
-
-# const dt = 0.25         # ms - simulation time step
-# const τu = 25.0         # ms - membrane potential decay period
-# const τq = 4.0          # ms - pulse decay period
-# const urest = 0.0       # mV - resting membrane potential
-# const ufire = -0.4      # mV - membrane potential immediately after firing a spike
-# const baseThreshold = 2.0
 end
 
 function LiquidParams(; l::Int = 3,
                         w::Int = l,
                         h::Int = 5,
-                        neuronType::DataType = LIFNeuron,
+                        neuronType::DataType = SRMNeuron,
                         pctInhibitory::Float64 = 0.2,
                         decayRateDist::Distribution{Univariate,Continuous} = Uniform(0.8, 0.99),
                         λ::Float64 = 1.0,
@@ -40,12 +35,14 @@ function LiquidParams(; l::Int = 3,
                         pctOutput::Float64 = 0.4,
                         readout::Readout = FireReadout(),
                         dt::Float64 = 0.25,
-                        τu::Float64 = 25.0,
-                        τq::Float64 = 4.0,
+                        # τu::Float64 = 25.0,
+                        # τq::Float64 = 4.0,
+                        uDecayRate::Float64 = 1.0 / 25.0,
+                        qDecayRate::Float64 = 1.0 / 4.0,
                         urest::Float64 = 0.0,
                         ufire::Float64 = -0.4,
                         baseThreshold::Float64 = 2.0)
-  LiquidParams(l, w, h, neuronType, pctInhibitory, decayRateDist, λ, pctInput, pctOutput, readout, dt, τu, τq, urest, ufire, baseThreshold)
+  LiquidParams(l, w, h, neuronType, pctInhibitory, decayRateDist, λ, pctInput, pctOutput, readout, dt, uDecayRate, qDecayRate, urest, ufire, baseThreshold)
 end
 
 
@@ -61,8 +58,10 @@ type LiquidInputs{T <: LiquidInput}
 end
 
 
-function OnlineStats.update!(inputs::LiquidInputs, x::VecF)
-  map(update!, inputs.inputs, x)
+function OnlineStats.update!(inputs::LiquidInputs, x::VecF, dt::Float64)
+  for i in 1:length(inputs.inputs)
+    update!(inputs.inputs[i], x[i], dt)
+  end
 end
 
 # ---------------------------------------------------------------------
@@ -120,9 +119,6 @@ function Liquid{T}(::Type{T}, params::LiquidParams)
     for j in 1:params.w
       for k in 1:params.h
         excitatory = rand() > params.pctInhibitory
-        # decayRate = rand(params.decayRateDist)
-        # neuron = DiscreteLeakyIntegrateAndFireNeuron([i, j, k], excitatory, decayRate)
-        # neuron = T([i, j, k], excitatory, decayRate)
         neuron = T([i,j,k], excitatory, params)
         push!(neurons, neuron)
       end
@@ -137,7 +133,7 @@ function Liquid{T}(::Type{T}, params::LiquidParams)
     for n2 in neurons
       if rand() <= probabilityOfConnection(n1, n2, params.λ)
         # synapse = DelaySynapse(n2, weight(n1), delay(n1))
-        synapse = LIFSynapse(n2, weight(n1))
+        synapse = SRMSynapse(n2, weight(n1))
         push!(n1.synapses, synapse)
       end
     end
@@ -151,35 +147,10 @@ end
 StatsBase.sample{T<:SpikingNeuron}(neurons::Vector{T}, pct::Float64) = sample(neurons, round(Int, pct * length(neurons)))
 
 function OnlineStats.update!(liquid::Liquid, dt::Float64)
-
   for neuron in liquid.neurons
     update!(neuron, dt)
   end
   foreach(liquid.neurons, fire!)
-
-  # update/step forward
-  # println("Updating neurons")
-  # foreach(liquid.neurons, update!)
-
-  # # now keep firing neurons until nothing fires
-  # numfired = 0
-  # # i = 0
-  # while true
-  #   # i += 1
-  #   prevnumfired, numfired = numfired, 0
-  #   for neuron in liquid.neurons
-  #     fire!(neuron)
-  #     numfired += neuron.fired ? 1 : 0
-  #     # if neuron.fired
-  #     #   numfired += 1
-  #     # end
-  #     # didfire = didfire || neuron.fired
-  #   end
-  #   # println("fire loop $i $numfired $prevnumfired")
-  #   # !didfire && break
-  #   numfired == prevnumfired && break
-  # end
-  # # println("broken")
 end
 
 
@@ -208,7 +179,8 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
 
   # create readout models
   # TODO: make readout model more flexible... param
-  readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
+  # readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
+  readoutModels = OnlineStat[Adagrad(length(liquid.outputNeurons); reg = L2Reg(0.00001)) for i in 1:numOutputs]
 
   LiquidStateMachine(numInputs, numOutputs, liquid, inputs, params.readout, readoutModels, 0)
 end
@@ -219,7 +191,7 @@ OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
 
 
 function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF, y::VecF, dt::Float64 = lsm.liquid.params.dt)
-  update!(lsm.inputs, x)   # update input neurons
+  update!(lsm.inputs, x, dt)   # update input neurons
   update!(lsm.liquid, dt)     # update liquid state
 
   # update readout models

@@ -18,9 +18,10 @@ for i in 2:T
   x[i] += x[i-1] * 0.95
 end
 # dx = diff(x)
-lookahead = 10
-y = x[lookahead:end]
-x = x[1:end-lookahead]
+lookahead = 100
+y = x
+# y = x[lookahead:end]
+# x = x[1:end-lookahead]
 T = length(x)
 
 
@@ -36,7 +37,7 @@ params = LiquidParams(λ = 1.0,
                       baseThreshold = 1.0)
                       # readout = StateReadout())
 lsm = LiquidStateMachine(params, nin, nout)
-liquid = lsm.liquid
+# liquid = lsm.liquid
 
 
 # set up visualization
@@ -44,8 +45,8 @@ viz = visualize(lsm)
 
 
 # fit the lsm
-for t = 1:T
-  update!(lsm, vec(x[t,:]), vec(y[t,:]))
+for t = lookahead:T
+  update!(lsm, vec(x[t-lookahead+1,:]), vec(y[t,:]))
   update!(viz, vec(y[t,:]))
 end
 

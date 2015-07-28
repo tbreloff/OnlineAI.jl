@@ -1,30 +1,24 @@
 
 # Leaky Integrate and Fire (LIF)
 
-type LIFSynapse <: Synapse
+type SRMSynapse <: Synapse
   postsynapticNeuron::SpikingNeuron
   weight::Float64
 end
 
 # transmit pulses to postsynaptic neurons
-function fire!(synapse::LIFSynapse)
-  neuron = synapse.postsynapticNeuron
+function fire!(synapse::SRMSynapse)
+  psn = synapse.postsynapticNeuron
   
   # increase pulse of the postsynaptic neuron
-  neuron.q += synapse.weight / neuron.τq
+  psn.q += synapse.weight * psn.qDecayRate
 
   # make sure we won't send current negative with negative weights
-  neuron.q = max(0.0, neuron.q)
-
-  # # add pulse to postsynaptic neuron (unless it just fired)
-  # if !neuron.fired
-  #   neuron.q += pulse
-  #   neuron.u += pulse
-  # end
+  psn.q = max(0.0, psn.q)
 end
 
-Base.print(io::IO, s::LIFSynapse) = print(io, "LIFSynapse{post=$(s.postsynapticNeuron), wgt=$(s.weight)}")
-Base.show(io::IO, s::LIFSynapse) = print(io, s)
+Base.print(io::IO, s::SRMSynapse) = print(io, "SRMSynapse{post=$(s.postsynapticNeuron), wgt=$(s.weight)}")
+Base.show(io::IO, s::SRMSynapse) = print(io, s)
 
 
 # ---------------------------------------------------------------------
@@ -43,55 +37,63 @@ Base.show(io::IO, s::LIFSynapse) = print(io, s)
 # const ufire = -0.4      # mV - membrane potential immediately after firing a spike
 # const baseThreshold = 2.0
 
-type LIFNeuron <: SpikingNeuron
+
+"""
+Spike Response Model (SRM) Neuron.  In my model, we update our membrane potential (u) by decaying u
+towards urest with exponential weighting uDecayRate (equal to 1/τu).  At the same time we add to u:
+    'integral over qₜ --> qₜ₊₁'
+where q also decays towards 0.0 with exponential weighting qDecayRate (equal to 1/τq)
+"""
+type SRMNeuron <: SpikingNeuron
   position::VecI
   excitatory::Bool
   u::Float64      # membrane potential level (Vm)
   q::Float64      # pulse current level
   ϑ::Float64      # membrane potential threshold
   fired::Bool     # did it fire this period?
-  synapses::Vector{LIFSynapse}
+  synapses::Vector{SRMSynapse}
   
-  τu::Float64
-  τq::Float64
+  # τu::Float64
+  # τq::Float64
+  uDecayRate::Float64
+  qDecayRate::Float64
   urest::Float64
   ufire::Float64
 end
 
-function LIFNeuron(pos::VecI, exitatory::Bool, params)
-  LIFNeuron(pos, exitatory, params.urest, 0.0, params.baseThreshold, false, LIFSynapse[], params.τu, params.τq, params.urest, params.ufire)
+function SRMNeuron(pos::VecI, exitatory::Bool, params)
+  SRMNeuron(pos, exitatory, params.urest, 0.0, params.baseThreshold, false, SRMSynapse[], params.uDecayRate, params.qDecayRate, params.urest, params.ufire)
 end
 
-LIFNeuron(params) = LIFNeuron(Int[0,0,0], true, params)
+SRMNeuron(params) = SRMNeuron(Int[0,0,0], true, params)
 
 
-Base.print(io::IO, n::LIFNeuron) = 
-  print(io, "LIFNeuron{pos=$(n.position), exite=$(n.excitatory), u=$(n.u), q=$(n.q), fired=$(n.fired), nsyn=$(length(n.synapses))}")
-Base.show(io::IO, n::LIFNeuron) = print(io, n)
-
-
-# integralToInf(q::Float64) = q * τq
+Base.print(io::IO, n::SRMNeuron) = 
+  print(io, "SRMNeuron{pos=$(n.position), exite=$(n.excitatory), u=$(n.u), q=$(n.q), fired=$(n.fired), nsyn=$(length(n.synapses))}")
+Base.show(io::IO, n::SRMNeuron) = print(io, n)
 
 
 # decay q and u, then add (q * dt) to u
-function OnlineStats.update!(neuron::LIFNeuron, dt::Float64)
+function OnlineStats.update!(neuron::SRMNeuron, dt::Float64)
   neuron.fired = false
 
+  if neuron.qDecayRate > 0.0
+    # decay the pulse, but save the first value so we can calculate the value of the integral of q over this time interval
+    prevq = neuron.q
+    neuron.q = OnlineStats.smooth(neuron.q, 0.0, dt * neuron.qDecayRate)
 
-  # update the pulse
-  prevq = neuron.q
-  neuron.q = OnlineStats.smooth(neuron.q, 0.0, dt / neuron.τq)
-  # dq = neuron.q * (1.0 - dt / neuron.τq)
+    # update neuron.u += du, where du is the integral of the pulse equation during the previous "dt" ms
+    # note: use the difference of integrals of the pulse from t -> Inf, and t+1 -> Inf
+    du = (prevq - neuron.q) / neuron.qDecayRate
+  else
+    # constant pulse over this time interval
+    du = neuron.q * dt
+  end
 
-  # TODO: update neuron.u += du, where du is the integral of the pulse equation during the previous "dt" ms
-  # note: use the difference of integrals of the pulse from t -> Inf, and t+1 -> Inf
-  # du = integralToInf(prevq) - integralToInf(neuron.q)
-  # du = neuron.q * dt
-  du = neuron.τq * (prevq - neuron.q)
-  neuron.u = OnlineStats.smooth(neuron.u, neuron.urest, dt / neuron.τu) + du
+  neuron.u = OnlineStats.smooth(neuron.u, neuron.urest, dt * neuron.uDecayRate) + du
 end
 
-function fire!(neuron::LIFNeuron)
+function fire!(neuron::SRMNeuron)
   if neuron.u >= neuron.ϑ
     neuron.fired = true
     neuron.u = neuron.ufire

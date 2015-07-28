@@ -82,9 +82,10 @@ function GRFInput(liquid, variance::Variance)
     push!(grfs, GaussianReceptiveField(variance, j))
 
     # neuron = GRFNeuron()
-    neuron = LIFNeuron(liquid.params)
+    neuron = SRMNeuron(liquid.params)
+    neuron.qDecayRate = 0.0
     postsynapticNeurons = sample(liquid.neurons, liquid.params.pctInput)
-    neuron.synapses = [LIFSynapse(psn, weight(neuron)) for psn in postsynapticNeurons]
+    neuron.synapses = [SRMSynapse(psn, weight(neuron)) for psn in postsynapticNeurons]
     push!(neurons, neuron)
   end
 
@@ -92,12 +93,12 @@ function GRFInput(liquid, variance::Variance)
 end
 
 # increase neurons' u's by the value of the grf, then fire when threshold crossed
-function OnlineStats.update!(input::GRFInput, x::Float64)
+function OnlineStats.update!(input::GRFInput, x::Float64, dt::Float64)
   update!(input.variance, x)
   for (j,grf) in enumerate(input.grfs)
     neuron = input.neurons[j]
-    neuron.u += value(grf, x)
-    neuron.fired = false
+    neuron.q = value(grf, x)
+    update!(neuron, dt)
     fire!(neuron)
   end
 end

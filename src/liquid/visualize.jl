@@ -169,6 +169,9 @@ function OnlineStats.update!(viz::LiquidVisualization, y::VecF)
   end
 
   # readout plotting
+  ####################################################
+  # TODO the prediction should really be the prediction from 100 periods ago... not the current prediction!!
+  ####################################################
   est = predict(viz.lsm)
   for (i,e) in enumerate(est)
     push!(viz.pltEstVsAct, i, viz.t, y[i])
