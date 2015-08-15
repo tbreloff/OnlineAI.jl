@@ -8,6 +8,9 @@ using OnlineStats
 using Qwt
 using StatsBase
 
+import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
+                    VecF, MatF, AVec, AMat, AVecF, AMatF
+
 export Activation,
        IdentityActivation,
        SigmoidActivation,
@@ -43,7 +46,7 @@ export Activation,
 
 
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
-abstract Node
+abstract Node <: OnlineStat
 
 
 include("utils.jl")
