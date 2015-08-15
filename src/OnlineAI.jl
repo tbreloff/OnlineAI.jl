@@ -1,12 +1,12 @@
 
 module OnlineAI
 
-
+using Reexport
 using Distributions
-using QuickStructs
-using OnlineStats
-using Qwt
-using StatsBase
+@reexport using QuickStructs
+@reexport using OnlineStats
+@reexport using Qwt
+# using StatsBase
 
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
                     VecF, MatF, AVec, AMat, AVecF, AMatF
