@@ -20,8 +20,8 @@ export Activation,
        TanhActivation,
        SoftsignActivation,
 
-       forward,
-       backward,
+       # forward,
+       # backward,
 
        Layer,
        # buildLayer,

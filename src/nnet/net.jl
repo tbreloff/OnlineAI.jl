@@ -41,26 +41,16 @@ end
 # given a vector of errors (y - yhat), update network weights
 function backward(net::NeuralNet, errors::AVecF)
 
+  # update δᵢ starting from the output layer
   updateSensitivities(net.layers[end], errors)
   for i in length(net.layers)-1:-1:1
     updateSensitivities(net.layers[i:i+1]...)
   end
 
+  # now update the weights
   for layer in net.layers
     updateWeights(layer, net.solver)
   end
-
-  # # update δ (sensitivities)
-  # finalδ!(net.layers[end], errors)
-  # for i in length(net.layers)-1:-1:1
-  #   hiddenδ!(net.layers[i], net.layers[i+1])
-  # end
-
-  # # update weights
-  # for layer in net.layers
-  #   update!(layer, net.η, net.μ)
-  # end
-
 end
 
 
@@ -81,16 +71,24 @@ end
 
 # batch version
 function OnlineStats.update!(net::NeuralNet, x::MatF, y::MatF)
-  @assert size(x,2) == net.nin
-  @assert size(y,2) == net.nout
-  @assert size(x,1) == size(y,1)
+  @assert ncols(x) == net.nin
+  @assert ncols(y) == net.nout
+  @assert nrows(x) == nrows(y)
 
   Float64[update!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
-  # yhat = AVecF[]
-  # for i in 1:size(x,1)
-  #   output = update!(net, row(x,i), row(y,i))
-  #   push!(yhat, output)
-  # end
-  # yhat
 end
+
+function StatsBase.predict(net::NeuralNet, x::AVecF)
+  forward(net, x)
+end
+
+function StatsBase.predict(net::NeuralNet, x::AMatF)
+  yhat = zeros(nrows(x), net.layers[end].nout)
+  for i in 1:nrows(x)
+    row!(yhat, i, predict(net, row(x, i)))
+  end
+  yhat
+end
+
+
 
