@@ -13,7 +13,7 @@ type SolverStats
   validationError::Float64
 end
 
-function buildSolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter=10000, onbreak=donothing) 
+function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter=10000, onbreak=donothing) 
   SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
 end
 

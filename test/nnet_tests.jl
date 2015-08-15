@@ -14,13 +14,13 @@ function testxor(maxiter::Int)
   data = buildSolverData(inputs, targets)
   datasets = DataSets(data, data, data)
 
-  net = buildNeuralNet([2,2,1]; η=0.5, μ=0.1)
+  net = NeuralNet([2,2,1]; solver = NNetSolver(η=0.5, μ=0.1))
 
-  params = buildSolverParams(maxiter=maxiter, minerror=1e-6)
+  params = SolverParams(maxiter=maxiter, minerror=1e-6)
   solve!(net, params, datasets)
 
   for d in data
-    output = feedforward!(net, d.input)
+    output = forward(net, d.input)
     println("Result: input=$(d.input) target=$(d.target) output=$output")
   end
 

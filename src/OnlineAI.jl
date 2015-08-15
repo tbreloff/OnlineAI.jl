@@ -17,47 +17,52 @@ export Activation,
        TanhActivation,
        SoftsignActivation,
 
+       forward,
+       backward,
+
        Layer,
-       buildLayer,
-       feedforward!,
+       # buildLayer,
+       # feedforward!,
        # update!,
 
        NeuralNet,
-       buildNeuralNet,
+       # buildNeuralNet,
        totalerror,
 
        SolverData,
        DataVec,
-       buildSolverData,
+       # buildSolverData,
        splitSolverData,
        # sample,
        DataSets,
 
        SolverParams,
        SolverStats,
-       buildSolverParams,
+       # buildSolverParams,
        solve!,
 
-       buildNet,
-       buildClassifierNet,
-       buildRegressionNet,
+       # buildNet,
+       # buildClassifierNet,
+       # buildRegressionNet,
 
        foreach
 
 
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
-abstract Node <: OnlineStat
+abstract NNetStat <: OnlineStat
+nobs(o::NNetStat) = 0
+# abstract Node <: OnlineStat
 
 
 include("utils.jl")
-include("activations.jl")
-include("node.jl")
-include("layer.jl")
-include("net.jl")
-include("lstm.jl")
-include("data.jl")
-include("solver.jl")
-include("build.jl")
+include("nnet/activations.jl")
+# include("nnet/node.jl")
+include("nnet/layer.jl")
+include("nnet/net.jl")
+# include("nnet/lstm.jl")
+include("nnet/data.jl")
+include("nnet/solver.jl")
+include("nnet/build.jl")
 
 # ----------------------------------------------------------------------
 
