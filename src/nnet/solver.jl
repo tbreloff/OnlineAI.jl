@@ -1,3 +1,21 @@
+# solver should contain all algorithm-specific parameters and methods.
+# at a minimum, we need to be able to compute the weight updates for a layer
+
+type NNetSolver
+  η::Float64 # learning rate
+  μ::Float64 # momentum
+  λ::Float64 # L2 penalty term
+end
+
+NNetSolver(; η=1e-2, μ=0.0, λ=0.0001) = NNetSolver(η, μ, λ)
+
+# calc update to weight matrix.  TODO: generalize penalty
+function ΔW(solver::NNetSolver, gradients::AMatF, w::AMatF, dw::AMatF)
+  map(x->println(sizes(x)), Any[gradients, w, dw])
+  -solver.η * (gradients + solver.λ * w) + solver.μ * dw
+end
+
+# -------------------------------------
 
 
 type SolverParams
@@ -17,12 +35,12 @@ function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter
   SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
 end
 
-OnlineStats.update!(net::NeuralNet, data::SolverData) = update!(net, data.input, data.target)
-totalerror(net::NeuralNet, data::SolverData) = totalerror(net, data.input, data.target)
-totalerror(net::NeuralNet, dataset::DataVec) = sum([totalerror(net, data) for data in dataset])
+OnlineStats.update!(net::NNetStat, data::SolverData) = update!(net, data.input, data.target)
+totalerror(net::NNetStat, data::SolverData) = totalerror(net, data.input, data.target)
+totalerror(net::NNetStat, dataset::DataVec) = sum([totalerror(net, data) for data in dataset])
 
 
-function solve!(net::NeuralNet, params::SolverParams, datasets::DataSets)
+function solve!(net::NNetStat, params::SolverParams, datasets::DataSets)
 
   stats = SolverStats(0, 0.0)
 

@@ -2,13 +2,14 @@
 module NNetTest
 
 using OnlineAI, FactCheck
+const AI = OnlineAI
 
 
 function testxor(maxiter::Int)
 
   # all xor inputs and results
   inputs = float([0 0; 0 1; 1 0; 1 1])
-  targets = Float64[(sum(row(inputs,i))==1.0)*0.8+0.1 for i in 1:size(inputs,1)]
+  targets = Float64[(sum(AI.row(inputs,i))==1.0)*0.8+0.1 for i in 1:size(inputs,1)]
 
   # all sets are the same
   data = buildSolverData(inputs, targets)

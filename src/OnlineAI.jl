@@ -25,25 +25,26 @@ export Activation,
        # feedforward!,
        # update!,
 
+       NNetSolver,
        NeuralNet,
        # buildNeuralNet,
        totalerror,
 
        SolverData,
        DataVec,
-       # buildSolverData,
+       buildSolverData,
        splitSolverData,
        # sample,
        DataSets,
 
        SolverParams,
        SolverStats,
-       # buildSolverParams,
+       buildSolverParams,
        solve!,
 
-       # buildNet,
-       # buildClassifierNet,
-       # buildRegressionNet,
+       buildNet,
+       buildClassifierNet,
+       buildRegressionNet,
 
        foreach
 
@@ -51,17 +52,17 @@ export Activation,
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
 abstract NNetStat <: OnlineStat
 nobs(o::NNetStat) = 0
-# abstract Node <: OnlineStat
+abstract Node
 
 
 include("utils.jl")
 include("nnet/activations.jl")
+include("nnet/data.jl")
+include("nnet/solver.jl")
 # include("nnet/node.jl")
 include("nnet/layer.jl")
 include("nnet/net.jl")
 # include("nnet/lstm.jl")
-include("nnet/data.jl")
-include("nnet/solver.jl")
 include("nnet/build.jl")
 
 # ----------------------------------------------------------------------

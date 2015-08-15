@@ -2,8 +2,10 @@
 
 # typealias VecF Vector{Float64}
 # typealias MatF Matrix{Float64}
-# typealias VecI Vector{Int}
-# typealias MatI Matrix{Int}
+typealias VecI Vector{Int}
+typealias MatI Matrix{Int}
+typealias IntIterable AVec{Int}
+typealias FloatIterable AVecF
 # typealias IntIterable Union(VecI, StepRange{Int,Int}, UnitRange{Int})
 # typealias FloatIterable Union(VecF, FloatRange{Float64})
 

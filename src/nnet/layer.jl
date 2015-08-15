@@ -20,7 +20,7 @@ end
 
 function Layer(nin::Integer, nout::Integer, activation::Activation)
   w = hcat((rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout)), zeros(nout))  # TODO: more generic initialization
-  Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout), zeros(nout), zeros(nout))
+  Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout))
 end
 
 Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout)}")
@@ -38,7 +38,7 @@ Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout)}")
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
 function forward(layer::Layer, x::AVecF)
-  layer.x = vcat(collect(x), 0.0)
+  layer.x = vcat(collect(x), 1.0)
   layer.Σ = layer.w * layer.x  # inner product
   forward(layer.activation, layer.Σ)     # activate
 end
@@ -65,8 +65,10 @@ function updateSensitivities(layer::Layer, err::AVecF)
 end
 
 # this is the backward step for a hidden layer
+# notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateSensitivities(layer::Layer, nextlayer::Layer)
-  layer.δ = (nextlayer.w * nextlayer.δ) .* backward(layer.activation, layer.Σ)
+  map(x->println(size(x)), Any[nextlayer.w, nextlayer.δ, layer.Σ])
+  layer.δ = (nextlayer.w' * nextlayer.δ)[1:end-1] .* backward(layer.activation, layer.Σ)
 end
 
 function updateWeights(layer::Layer, solver::NNetSolver)

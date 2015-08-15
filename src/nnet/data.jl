@@ -7,16 +7,16 @@ end
 
 typealias DataVec Vector{SolverData}
 
-function buildSolverData(inputs::MatF, targets, indices::IntIterable = 1:size(inputs,1))
+function buildSolverData(inputs::AMatF, targets, indices::AVec{Int} = 1:size(inputs,1))
   @assert size(inputs,1) == size(targets,1)
   sdata = SolverData[]
   for i in indices
-    push!(sdata, SolverData(row(inputs,i), row(targets,i)))
+    push!(sdata, SolverData(vec(inputs[i,:]), vec(targets[i,:])))
   end
   sdata
 end
 
-function splitSolverData(inputs::MatF, targets, pctValidation::Float64, pctTest::Float64, randomize::Bool = false)
+function splitSolverData(inputs::AMatF, targets, pctValidation::Real, pctTest::Real, randomize::Bool = false)
   n = size(inputs,1)
   indices = collect(1:n)
   if randomize

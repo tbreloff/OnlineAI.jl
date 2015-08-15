@@ -10,7 +10,7 @@ backward(activation::IdentityActivation, Σ::Float64) = 1.0
 
 immutable SigmoidActivation <: Activation end
 forward(activation::SigmoidActivation, Σ::Float64) = 1.0 / (1.0 + exp(-Σ))
-backward(activation::SigmidActivation, Σ::Float64) = (s = forward(activation, Σ); s * (1.0 - s))
+backward(activation::SigmoidActivation, Σ::Float64) = (s = forward(activation, Σ); s * (1.0 - s))
 
 immutable TanhActivation <: Activation end
 forward(activation::TanhActivation, Σ::Float64) = tanh(Σ)

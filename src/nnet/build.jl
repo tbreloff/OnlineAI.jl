@@ -1,18 +1,17 @@
 
-function buildNet(numInputs::Int, numOutputs::Int, hiddenStructure::VecI;
+function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec{Int};
                   hiddenActivation::Activation = SigmoidActivation(),
                   finalActivation::Activation = SigmoidActivation(),
-                  η::Float64 = 0.02,
-                  μ::Float64 = 0.2)
+                  solver = NNetSolver())
   layers = Layer[]
   nin = numInputs
   for nout in hiddenStructure
-    push!(layers, buildLayer(nin, nout, hiddenActivation))
+    push!(layers, Layer(nin, nout, hiddenActivation))
     nin = nout
   end
-  push!(layers, buildLayer(nin, numOutputs, finalActivation))
+  push!(layers, Layer(nin, numOutputs, finalActivation))
 
-  NeuralNet(layers, η, μ)
+  NeuralNet(layers, solver)
 end
 
 buildClassifierNet(args...; kwargs...) = buildNet(args...; kwargs..., finalActivation = SigmoidActivation())

@@ -1,20 +1,3 @@
-# solver should contain all algorithm-specific parameters and methods.
-# at a minimum, we need to be able to compute the weight updates for a layer
-
-type NNetSolver
-  η::Float64 # learning rate
-  μ::Float64 # momentum
-  λ::Float64 # L2 penalty term
-end
-
-NNetSolver(; η=1e-2, μ=0.0, λ=0.0001) = NNetSolver(η, μ, λ)
-
-# calc update to weight matrix.  TODO: generalize penalty
-function ΔW(solver::NNetSolver, gradients::AVecF, w::AMatF, dw::AMatF)
-  -solver.η * (gradients + solver.λ * w) + solver.μ * dw
-end
-
-# -------------------------------------
 
 type NeuralNet <: NNetStat
   layers::Vector{Layer}  # note: this doesn't include input layer!!
@@ -33,7 +16,7 @@ function NeuralNet(structure::AVec{Int}; solver = NNetSolver(), activation::Acti
     push!(layers, Layer(nin, nout, activation))
   end
 
-  NeuralNet(layers, NNetSolver(η, μ))
+  NeuralNet(layers, solver)
 end
 
 function Base.show(io::IO, net::NeuralNet)
@@ -58,16 +41,25 @@ end
 # given a vector of errors (y - yhat), update network weights
 function backward(net::NeuralNet, errors::AVecF)
 
-  # update δ (sensitivities)
-  finalδ!(net.layers[end], errors)
+  updateSensitivities(net.layers[end], errors)
   for i in length(net.layers)-1:-1:1
-    hiddenδ!(net.layers[i], net.layers[i+1])
+    updateSensitivities(net.layers[i:i+1]...)
   end
 
-  # update weights
   for layer in net.layers
-    update!(layer, net.η, net.μ)
+    updateWeights(layer, net.solver)
   end
+
+  # # update δ (sensitivities)
+  # finalδ!(net.layers[end], errors)
+  # for i in length(net.layers)-1:-1:1
+  #   hiddenδ!(net.layers[i], net.layers[i+1])
+  # end
+
+  # # update weights
+  # for layer in net.layers
+  #   update!(layer, net.η, net.μ)
+  # end
 
 end
 
@@ -78,7 +70,7 @@ function totalerror(net::NeuralNet, x::AVecF, y::AVecF)
 end
 
 
-# online version
+# online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x)
   errors = y - yhat
@@ -93,11 +85,12 @@ function OnlineStats.update!(net::NeuralNet, x::MatF, y::MatF)
   @assert size(y,2) == net.nout
   @assert size(x,1) == size(y,1)
 
-  yhat = AVecF[]
-  for i in 1:size(x,1)
-    output = update!(net, row(x,i), row(y,i))
-    push!(yhat, output)
-  end
-  yhat
+  Float64[update!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
+  # yhat = AVecF[]
+  # for i in 1:size(x,1)
+  #   output = update!(net, row(x,i), row(y,i))
+  #   push!(yhat, output)
+  # end
+  # yhat
 end
 
