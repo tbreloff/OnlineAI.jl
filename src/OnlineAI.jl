@@ -11,6 +11,9 @@ using Distributions
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
                     VecF, MatF, AVec, AMat, AVecF, AMatF
 
+export row, col, row!, col!, rows, cols, nrows, ncols,
+       VecF, MatF, AVec, AMat, AVecF, AMatF
+
 export Activation,
        IdentityActivation,
        SigmoidActivation,

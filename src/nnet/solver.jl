@@ -11,7 +11,7 @@ NNetSolver(; η=1e-2, μ=0.0, λ=0.0001) = NNetSolver(η, μ, λ)
 
 # calc update to weight matrix.  TODO: generalize penalty
 function ΔW(solver::NNetSolver, gradients::AMatF, w::AMatF, dw::AMatF)
-  map(x->println(sizes(x)), Any[gradients, w, dw])
+  # map(x->println(size(x)), Any[gradients, w, dw])
   -solver.η * (gradients + solver.λ * w) + solver.μ * dw
 end
 

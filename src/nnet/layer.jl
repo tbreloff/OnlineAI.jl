@@ -20,6 +20,7 @@ end
 
 function Layer(nin::Integer, nout::Integer, activation::Activation)
   w = hcat((rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout)), zeros(nout))  # TODO: more generic initialization
+  nin += 1  # account for bias term
   Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout))
 end
 
@@ -67,7 +68,7 @@ end
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateSensitivities(layer::Layer, nextlayer::Layer)
-  map(x->println(size(x)), Any[nextlayer.w, nextlayer.δ, layer.Σ])
+  # map(x->println(size(x)), Any[nextlayer.w, nextlayer.δ, layer.Σ])
   layer.δ = (nextlayer.w' * nextlayer.δ)[1:end-1] .* backward(layer.activation, layer.Σ)
 end
 
