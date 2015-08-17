@@ -72,7 +72,7 @@ end
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateSensitivities(layer::Layer, nextlayer::Layer)
   # layer.nextr = nextlayer.r
-  layer.δ = nextlayer(nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
+  layer.δ = (nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
   # layer.δ = (nextlayer.w' * nextlayer.δ) .* backward(layer.activation, layer.Σ)
 end
 
