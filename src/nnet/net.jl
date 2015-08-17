@@ -21,7 +21,7 @@ function NeuralNet(structure::AVec{Int}; solver = NNetSolver(), activation::Acti
 end
 
 function Base.show(io::IO, net::NeuralNet)
-  println(io, "NeuralNet{η=$(net.η), μ=$(net.μ), layers:")
+  println(io, "NeuralNet{solver=$(net.solver), layers:")
   for layer in net.layers
     println(io, "    ", layer)
   end

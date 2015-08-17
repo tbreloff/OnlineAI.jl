@@ -28,7 +28,7 @@ function Layer(nin::Integer, nout::Integer, activation::Activation, p::Float64 =
   # Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout))
 
   w = initialWeights(nin, nout)
-  Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]...)
+  Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:5]...)
 end
 
 Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout)}")
@@ -38,8 +38,16 @@ Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout)}")
 function forward(layer::Layer, x::AVecF, istraining::Bool)
   # layer.x = addOnes(x)
   layer.x = collect(x)
-  layer.r = istraining ? float(rand(layer.nin) .<= layer.p) : ones(layer.nin)  # apply dropout
-  layer.Σ = layer.w * (layer.x .* layer.r) + layer.b  # inner product
+  # layer.r = istraining ? float(rand(layer.nin) .<= layer.p) : ones(layer.nin)  # apply dropout
+  # layer.Σ = layer.w * (layer.x .* layer.r) + layer.b  # inner product
+  if istraining
+    layer.r = float(rand(layer.nin) .<= layer.p)
+    layer.Σ = layer.w * (layer.x .* layer.r) + layer.b
+  else
+    layer.r = ones(layer.nin)
+    layer.Σ = layer.p * (layer.w * layer.x) + layer.b
+  end
+
   forward(layer.activation, layer.Σ)     # activate
 end
 
@@ -53,7 +61,7 @@ end
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateSensitivities(layer::Layer, nextlayer::Layer)
-  layer.δ = (nextlayer.w' * nextlayer.δ)[1:end-1] .* backward(layer.activation, layer.Σ)
+  layer.δ = nextlayer.r .* (nextlayer.w' * nextlayer.δ) .* backward(layer.activation, layer.Σ)
 end
 
 function updateWeights(layer::Layer, solver::NNetSolver)
@@ -62,6 +70,10 @@ function updateWeights(layer::Layer, solver::NNetSolver)
   dw = ΔW(solver, layer.δ * (layer.x .* layer.r)', layer.w, layer.dw)
   layer.w += dw
   layer.dw = dw
+
+  db = Δb(solver, layer.δ, layer.db)
+  layer.b += db
+  layer.db = db
 end
 
 

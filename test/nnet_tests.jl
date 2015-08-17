@@ -19,6 +19,7 @@ function testxor(maxiter::Int)
                            ncols(targets),
                            hiddenLayerNodes;
                            solver = NNetSolver(η=0.3, μ=0.1, λ=1e-5))
+  show(net)
 
   params = SolverParams(maxiter=maxiter, minerror=1e-6)
   solve!(net, params, datasets)

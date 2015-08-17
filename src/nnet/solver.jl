@@ -31,6 +31,10 @@ function ΔW(solver::NNetSolver, gradients::AMatF, w::AMatF, dw::AMatF)
   -solver.η * (gradients + solver.λ * w) + solver.μ * dw
 end
 
+function Δb(solver::NNetSolver, δ::AVecF, db::AVecF)
+  -solver.η * δ + solver.μ * db
+end
+
 # -------------------------------------
 
 
