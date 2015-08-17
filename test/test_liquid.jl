@@ -9,7 +9,7 @@ using OnlineStats, Qwt, Distributions, StatsBase, OnlineAI
 
 nin = 1
 nout = 1
-T = 1000
+T = 2000
 # x = collect(linspace(-15., 15., T))
 
 # x is a simple differenced AR(1)... y is the future val
@@ -45,10 +45,17 @@ viz = visualize(lsm)
 
 
 # fit the lsm
-for t = lookahead:T
+plotiter = 10
+# anim = animation(viz.window, "/Users/tom/Pictures/gifs")
+for (i,t) = enumerate(lookahead:T)
   update!(lsm, vec(x[t-lookahead+1,:]), vec(y[t,:]))
-  update!(viz, vec(y[t,:]))
+  
+  if i % plotiter == 0
+    update!(viz, vec(y[t,:]))
+    # saveframe(anim)
+  end
 end
+# makegif(anim)
 
 
 

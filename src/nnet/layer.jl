@@ -18,7 +18,8 @@ type Layer{A <: Activation}
   δ::VecF  # nout x 1 -- sensitivities (calculated during backward pass)
   Σ::VecF  # nout x 1 -- inner products (calculated during forward pass)
   r::VecF  # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
-  used::Vector{Bool}  # nout x 1 -- is each node retained?  this applies to this layer's nodes, where r applies to incoming weights
+  nextr::VecF  # nout x 1 -- retention of the nodes of this layer (as opposed to r which applies to the incoming weights)
+  # used::Vector{Bool}  # nout x 1 -- is each node retained?  this applies to this layer's output nodes, where r applies to incoming weights
 end
 
 initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
@@ -30,7 +31,7 @@ function Layer(nin::Integer, nout::Integer, activation::Activation, p::Float64 =
   # Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout))
 
   w = initialWeights(nin, nout, activation)
-  Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:5]..., fill(true, nout))
+  Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout)) #fill(true, nout))
 end
 
 Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) r=$(l.r)}")
@@ -70,24 +71,33 @@ end
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateSensitivities(layer::Layer, nextlayer::Layer)
-  layer.used = nextlayer.r .> 0.0
-  layer.δ = nextlayer.r .* (nextlayer.w' * nextlayer.δ) .* backward(layer.activation, layer.Σ)
+  # layer.nextr = nextlayer.r
+  layer.δ = nextlayer(nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
   # layer.δ = (nextlayer.w' * nextlayer.δ) .* backward(layer.activation, layer.Σ)
 end
 
 # TODO: update weights/bias one column at a time... skipping over the dropped out nodes
 function updateWeights(layer::Layer, solver::NNetSolver)
+  
+  # calc the full dw matrix and db vector as if no dropout
   dw = ΔW(solver, layer.δ * layer.x', layer.w, layer.dw)
   db = Δb(solver, layer.δ, layer.db)
-  for iIn in 1:layer.nin
-    for iNode in 1:layer.nout
-      if layer.used[iNode]
+
+  for iOut in 1:layer.nout
+
+    if layer.nextr[iOut] > 0.0
+      
+      # if this node is retained, we can update incoming bias
+      layer.b[iOut] += db[iOut]
+      layer.db[iOut] = db[iOut]
+      
+      for iIn in 1:layer.nin
+        
+        # if this input node is retained, then we can also update the weight
         if layer.r[iIn] > 0.0
-          layer.w[iNode,iIn] += dw[iNode,iIn]
-          layer.dw[iNode,iIn] = dw[iNode,iIn]
+          layer.w[iOut,iIn] += dw[iOut,iIn]
+          layer.dw[iOut,iIn] = dw[iOut,iIn]
         end
-        layer.b[iNode] += db[iNode]
-        layer.db[iNode] = db[iNode]
       end
     end
   end

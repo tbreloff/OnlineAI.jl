@@ -43,6 +43,11 @@ end
 # given a vector of errors (y - yhat), update network weights
 function backward(net::NeuralNet, errors::AVecF)
 
+  # update nextr
+  for i in 1:length(net.layers)-1
+    net.layers[i].nextr = net.layers[i+1].r
+  end
+
   # update δᵢ starting from the output layer
   updateSensitivities(net.layers[end], errors)
   for i in length(net.layers)-1:-1:1

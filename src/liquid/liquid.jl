@@ -180,7 +180,7 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
   # create readout models
   # TODO: make readout model more flexible... param
   # readoutModels = OnlineStat[OnlineFLS(length(liquid.outputNeurons), 0.00001, wgt) for i in 1:numOutputs]
-  readoutModels = OnlineStat[Adagrad(length(liquid.outputNeurons); reg = L2Reg(0.00001)) for i in 1:numOutputs]
+  readoutModels = OnlineStat[Adagrad(length(liquid.outputNeurons); penalty = L2Penalty(0.00001)) for i in 1:numOutputs]
 
   LiquidStateMachine(numInputs, numOutputs, liquid, inputs, params.readout, readoutModels, 0)
 end

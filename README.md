@@ -48,7 +48,8 @@ NNet:
 - [x] Basic feedforward network
 - [x] Backprop working
 - [x] Standard activations/layers (Identity, Sigmoid, Tanh, Softsign)
-- [ ] Other activations/layers (Softmax, ReLU, Dropout)
+- [ ] Other activations/layers (Softmax, ReLU, LReLU)
+- [ ] Dropout regularization
 - [x] Basic data management (train/validate/test splitting)
 - [ ] Advanced data cleaning/transformations (handling NaNs, map multinomal classes to dummies, standardizing)
 - [x] Basic gradient descent solver (early stopping, momentum, L2 penalty)
