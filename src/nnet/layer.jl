@@ -7,57 +7,42 @@ type Layer{A <: Activation}
   nin::Int
   nout::Int
   activation::A
+  p::Float64  # dropout retention probability
 
   # the state of the layer
   x::VecF  # nin x 1 -- input 
   w::MatF  # nout x nin -- weights connecting previous layer to this layer
   dw::MatF # nout x nin -- last changes in the weights (used for momentum)
-  # b::VecF  # nout x 1 -- bias terms
-  # db::VecF # nout x 1 -- last changes in bias terms (used for momentum)
+  b::VecF  # nout x 1 -- bias terms
+  db::VecF # nout x 1 -- last changes in bias terms (used for momentum)
   δ::VecF  # nout x 1 -- sensitivities (calculated during backward pass)
   Σ::VecF  # nout x 1 -- inner products (calculated during forward pass)
+  r::VecF  # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
 end
 
-function Layer(nin::Integer, nout::Integer, activation::Activation)
-  w = hcat((rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout)), zeros(nout))  # TODO: more generic initialization
-  nin += 1  # account for bias term
-  Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout))
+initialWeights(nin::Int, nout::Int) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
+
+function Layer(nin::Integer, nout::Integer, activation::Activation, p::Float64 = 1.0)
+  # w = hcat(initialWeights(nin, nout, zeros(nout))  # TODO: more generic initialization
+  # nin += 1  # account for bias term
+  # Layer(nin, nout, activation, zeros(nin), w, zeros(nout, nin), zeros(nout), zeros(nout))
+
+  w = initialWeights(nin, nout)
+  Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]...)
 end
 
 Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout)}")
 
 
-# initialWeights(nin::Int, nout::Int) = vcat((rand(nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout)), 0.0)
-
-
-# function buildLayer(nin::Int, nout::Int, activation::Activation = SigmoidActivation())
-#   nodes = [Perceptron(initialWeights(nin, nout), activation) for j in 1:nout]
-#   Layer(nin, nout, nodes)
-# end
-
-
-
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
-function forward(layer::Layer, x::AVecF)
-  layer.x = vcat(collect(x), 1.0)
-  layer.Σ = layer.w * layer.x  # inner product
+function forward(layer::Layer, x::AVecF, istraining::Bool)
+  # layer.x = addOnes(x)
+  layer.x = collect(x)
+  layer.r = istraining ? float(rand(layer.nin) .<= layer.p) : ones(layer.nin)  # apply dropout
+  layer.Σ = layer.w * (layer.x .* layer.r) + layer.b  # inner product
   forward(layer.activation, layer.Σ)     # activate
 end
 
-
-# function hiddenδ!(node::Perceptron, weightedδ::Float64)
-#   node.δ = node.dA(node.Σ) * weightedδ
-# end
-
-# function finalδ!(node::Perceptron, err::Float64)
-#   node.δ = -node.dA(node.Σ) * err  # this probably needs to change for different loss functions?
-# end
-
-# function OnlineStats.update!(node::Perceptron, η::Float64, μ::Float64)
-#   dw = -η * node.δ * node.x + μ * node.dw
-#   node.w += dw
-#   node.dw = dw
-# end
 
 # backward step for the final (output) layer
 # TODO: this should be generalized to different loss functions
@@ -68,37 +53,15 @@ end
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateSensitivities(layer::Layer, nextlayer::Layer)
-  # map(x->println(size(x)), Any[nextlayer.w, nextlayer.δ, layer.Σ])
   layer.δ = (nextlayer.w' * nextlayer.δ)[1:end-1] .* backward(layer.activation, layer.Σ)
 end
 
 function updateWeights(layer::Layer, solver::NNetSolver)
   # ΔW is a function which takes the gradients of the inputs, the weights and last weight change,
   # then computes the update to the weight matrix
-  dw = ΔW(solver, layer.δ * layer.x', layer.w, layer.dw)
+  dw = ΔW(solver, layer.δ * (layer.x .* layer.r)', layer.w, layer.dw)
   layer.w += dw
   layer.dw = dw
 end
 
 
-# δ(layer::Layer, j::Int) = layer.nodes[j].δ
-# δ(layer::Layer) = Float64[δ(layer, j) for j in 1:layer.nout]
-
-# function hiddenδ!(layer::Layer, nextlayer::Layer)
-#   for j in 1:layer.nout
-#     weightedNextδ = dot(δ(nextlayer), Float64[node.w[j] for node in nextlayer.nodes])
-#     hiddenδ!(layer.nodes[j], weightedNextδ)
-#   end
-# end
-
-# function finalδ!(layer::Layer, errors::VecF)
-#   for j in 1:layer.nout
-#     finalδ!(layer.nodes[j], errors[j])
-#   end
-# end
-
-# function OnlineStats.update!(layer::Layer, η::Float64, μ::Float64)
-#   for node in layer.nodes
-#     update!(node, η, μ)
-#   end
-# end

@@ -13,7 +13,8 @@ function NeuralNet(structure::AVec{Int}; solver = NNetSolver(), activation::Acti
   layers = Layer[]
   for i in 1:length(structure)-1
     nin, nout = structure[i:i+1]
-    push!(layers, Layer(nin, nout, activation))
+    pDropout = getDropoutProb(solver, i==1)
+    push!(layers, Layer(nin, nout, activation, pDropout))
   end
 
   NeuralNet(layers, solver)
@@ -29,10 +30,10 @@ end
 
 
 # produces a vector of yhat (estimated outputs) from the network
-function forward(net::NeuralNet, x::AVecF)
+function forward(net::NeuralNet, x::AVecF, istraining::Bool = false)
   yhat = x
   for layer in net.layers
-    yhat = forward(layer, yhat)
+    yhat = forward(layer, yhat, istraining)
   end
   yhat
 end
@@ -62,7 +63,7 @@ end
 
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
-  yhat = forward(net, x)
+  yhat = forward(net, x, true)
   errors = y - yhat
   backward(net, errors)
   yhat

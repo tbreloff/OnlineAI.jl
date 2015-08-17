@@ -1,17 +1,33 @@
 # solver should contain all algorithm-specific parameters and methods.
 # at a minimum, we need to be able to compute the weight updates for a layer
 
+type DropoutStrategy
+  on::Bool 
+  pInput::Float64  # the probability that a node is used for the weights from inputs
+  pHidden::Float64  # the probability that a node is used for hidden layers
+end
+
+DropoutStrategy(; on=false, pInput=0.8, pHidden=0.5) = DropoutStrategy(on, pInput, pHidden)
+
+
+# ----------------------------------------
+
 type NNetSolver
   η::Float64 # learning rate
   μ::Float64 # momentum
   λ::Float64 # L2 penalty term
+  dropout::DropoutStrategy
 end
 
-NNetSolver(; η=1e-2, μ=0.0, λ=0.0001) = NNetSolver(η, μ, λ)
+NNetSolver(; η=1e-2, μ=0.0, λ=0.0001, dropout=DropoutStrategy()) = NNetSolver(η, μ, λ, dropout)
+
+# get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
+function getDropoutProb(solver::NNetSolver, isinput::Bool)
+  solver.dropout.on ? (isinput ? solver.dropout.pInput : solver.dropout.pHidden) : 1.0
+end
 
 # calc update to weight matrix.  TODO: generalize penalty
 function ΔW(solver::NNetSolver, gradients::AMatF, w::AMatF, dw::AMatF)
-  # map(x->println(size(x)), Any[gradients, w, dw])
   -solver.η * (gradients + solver.λ * w) + solver.μ * dw
 end
 

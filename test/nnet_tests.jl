@@ -2,7 +2,6 @@
 module NNetTest
 
 using OnlineAI, FactCheck
-const AI = OnlineAI
 
 
 function testxor(maxiter::Int)

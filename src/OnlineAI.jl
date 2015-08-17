@@ -6,6 +6,7 @@ using Distributions
 @reexport using QuickStructs
 @reexport using OnlineStats
 @reexport using Qwt
+@reexport using CTechCommon
 # using StatsBase
 
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
