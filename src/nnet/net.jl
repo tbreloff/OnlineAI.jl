@@ -27,6 +27,7 @@ function Base.show(io::IO, net::NeuralNet)
   end
   println(io, "}")
 end
+Base.print(io::IO, net::NeuralNet) = show(io, net)
 
 
 # produces a vector of yhat (estimated outputs) from the network

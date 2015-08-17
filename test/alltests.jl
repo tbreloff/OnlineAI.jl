@@ -1,8 +1,8 @@
 module test_OnlineAI
 
-reload("OnlineAI")
+# reload("OnlineAI")
 using OnlineAI
-include("../src/utils.jl")
+# include("../src/utils.jl")
 
 function testxor(maxiter::Int)
 
@@ -37,7 +37,7 @@ sinfunction(x) = sin(x) / 2 + sin(x*4) / 4
 
 function updatesinplot(net::NeuralNet, params::SolverParams, datasets::DataSets, stats::SolverStats)
 
-  setdata(plt.lines[1], xxx, Float64[feedforward!(net, [f])[1] for f in xxx])
+  setdata(plt.lines[1], xxx, Float64[predict(net, [f])[1] for f in xxx])
   setdata(plt.lines[2], xxx, map(sinfunction,xxx))
   title(plt, @sprintf("Update: %4d  Error: %10.4f", stats.numiter, stats.validationError))
 
@@ -74,7 +74,8 @@ function testsin(maxiter::Int, dogif = false)
   global anim = animation(sp, "/tmp/png")
   global shoulddogif = dogif
 
-  inputs = mat(collect(linspace(-maxx,maxx,1000)))
+  inputs = collect(linspace(-maxx,maxx,1000))
+  inputs = reshape(inputs, length(inputs), 1)
   targets = map(sinfunction, inputs)
 
   # all sets are the same
@@ -82,9 +83,9 @@ function testsin(maxiter::Int, dogif = false)
   datasets = DataSets(data, sample(data,30), data)
 
   # net = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
-  net = buildRegressionNet(1, 1, [30,30]; hiddenActivation = SoftsignActivation(), η = 0.05)
+  net = buildRegressionNet(1, 1, [30,30]; hiddenActivation = ReLUActivation(), solver=NNetSolver(η = 0.05, dropout=DropoutStrategy(on=false)))
 
-  params = buildSolverParams(maxiter=maxiter, onbreak=updatesinplot, displayiter=10000, minerror=1e-3)
+  params = SolverParams(maxiter=maxiter, onbreak=updatesinplot, displayiter=10000, minerror=1e-3)
   solve!(net, params, datasets)
 
   shoulddogif && makegif(anim)

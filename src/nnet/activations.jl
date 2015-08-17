@@ -20,6 +20,16 @@ immutable SoftsignActivation <: Activation end
 forward(activation::SoftsignActivation, Σ::Float64) = Σ / (1.0 + abs(Σ))
 backward(activation::SoftsignActivation, Σ::Float64) = 1.0 / (1.0 + abs(Σ))^2
 
+# Rectified Linear Unit
+immutable ReLUActivation <: Activation end
+forward(activation::ReLUActivation, Σ::Float64) = max(0.0, Σ)
+backward(activation::ReLUActivation, Σ::Float64) = float(Σ > 0.0)
+
+# Leaky Rectified Linear Unit: modified derivative to fix "dying ReLU" problem
+immutable LReLUActivation <: Activation end
+forward(activation::LReLUActivation, Σ::Float64) = max(0.0, Σ)
+backward(activation::LReLUActivation, Σ::Float64) = Σ > 0.0 ? 1.0 : 0.01 * Σ
+
 
 
 # immutable Activation

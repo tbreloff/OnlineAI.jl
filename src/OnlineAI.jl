@@ -20,6 +20,8 @@ export Activation,
        SigmoidActivation,
        TanhActivation,
        SoftsignActivation,
+       ReLUActivation,
+       LReLUActivation,
 
        # forward,
        # backward,
@@ -41,9 +43,11 @@ export Activation,
        # sample,
        DataSets,
 
+       DropoutStrategy,
+       NNetSolver,
        SolverParams,
        SolverStats,
-       buildSolverParams,
+       
        solve!,
 
        buildNet,

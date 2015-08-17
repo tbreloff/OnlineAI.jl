@@ -76,7 +76,7 @@ function solve!(net::NNetStat, params::SolverParams, datasets::DataSets)
     # # check for convergence
     if i % params.erroriter == 0
       stats.validationError = totalerror(net, datasets.validationSet)
-      println("Status: iter=$i toterr=$(stats.validationError)")
+      println("Status: iter=$i toterr=$(stats.validationError)  $net")
       if stats.validationError <= params.minerror
         println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(params.minerror)")
         return
