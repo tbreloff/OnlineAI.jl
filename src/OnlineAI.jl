@@ -72,6 +72,7 @@ include("nnet/layer.jl")
 include("nnet/net.jl")
 # include("nnet/lstm.jl")
 include("nnet/build.jl")
+include("nnet/visualize.jl")
 
 # ----------------------------------------------------------------------
 
