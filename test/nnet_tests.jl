@@ -41,7 +41,7 @@ facts("NNet") do
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.03)
 
-  net, output = testxor(100000, hiddenLayerNodes=[2], solver=NNetSolver(η=0.3, μ=0.0, λ=0.0, dropout=OnlineAI.DropoutStrategy(on=true,pInput=1.0,pHidden=0.5)))
+  net, output = testxor(10000, hiddenLayerNodes=[2], solver=NNetSolver(η=0.3, μ=0.0, λ=0.0, dropout=OnlineAI.DropoutStrategy(on=true,pInput=1.0,pHidden=0.5)))
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.03)
 
