@@ -5,8 +5,12 @@ type LayerViz
   lines::Matrix{SceneItem}
 end
 
-function OnlineStats.update!(layerviz::LayerViz)
+# updates the color of the circles, and color/size of the weight connections
+function OnlineStats.update!(layerviz::LayerViz, bigweight::Float64)
   # TODO: change the colors of the circles (activations) and the line widths (weights)
+  # TODO: if we dropped out this node, color it black
+  # TODO: add input values to a textbox hovering above the input lines
+  # TODO: add Σ and activation values inside the circles of the nodes
 end
 
 # ----------------------
@@ -26,13 +30,11 @@ function visualize(net::NeuralNet)
   radius = min(maxHorizontalRadius, maxVerticalRadius)
 
   # get the x positions (first position is the inputs... won't need circles there)
-  # xs = getLinspace(L+1, W / 2 - radius - 20)
   xs = getCenters(L+1, W)
 
   # create the layer visualizations
-  # vizs = [LayerViz(net.layers[i], SceneItem[], SceneItem[]) for i in 1:L]
   defaultBrush!(:red)
-  z = -500
+  z = -500 # anything negative is fine... use this to put the lines behind the circles
 
   # add the nodes and weight connections
   vizs = LayerViz[]
@@ -62,4 +64,9 @@ end
 type NetViz
   net::NeuralNet
   layervizs::Vector{LayerViz}
+end
+
+
+function OnlineStats.update!(viz::NetViz)
+  map(update!, viz.layervizs)
 end
