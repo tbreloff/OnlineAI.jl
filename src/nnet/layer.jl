@@ -22,8 +22,8 @@ type Layer{A <: Activation}
   # used::Vector{Bool}  # nout x 1 -- is each node retained?  this applies to this layer's output nodes, where r applies to incoming weights
 end
 
-# initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
-initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
+initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
+# initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
 # initialWeights(nin::Int, nout::Int, activation::Union(ReLUActivation,LReLUActivation)) = zeros(nout, nin)
 
 function Layer(nin::Integer, nout::Integer, activation::Activation, p::Float64 = 1.0)

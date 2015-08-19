@@ -11,6 +11,7 @@ function testxor(maxiter::Int; hiddenLayerNodes = [2], activation=SigmoidActivat
   targets = float(sum(inputs,2) .== 1)
 
   # all sets are the same
+  inputs = inputs .- mean(inputs,1)
   data = buildSolverData(float(inputs), targets)
   datasets = DataSets(data, data, data)
 
