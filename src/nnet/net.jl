@@ -36,17 +36,18 @@ function forward(net::NeuralNet, x::AVecF, istraining::Bool = false)
   for layer in net.layers
     yhat = forward(layer, yhat, istraining)
   end
+
+  # update nextr
+  for i in 1:length(net.layers)-1
+    net.layers[i].nextr = net.layers[i+1].r
+  end
+
   yhat
 end
 
 
 # given a vector of errors (y - yhat), update network weights
 function backward(net::NeuralNet, errors::AVecF)
-
-  # update nextr
-  for i in 1:length(net.layers)-1
-    net.layers[i].nextr = net.layers[i+1].r
-  end
 
   # update δᵢ starting from the output layer
   updateSensitivities(net.layers[end], errors)
