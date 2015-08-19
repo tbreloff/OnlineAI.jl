@@ -52,9 +52,9 @@ function visualize(net::NeuralNet)
   W, H = size(scene)
   
   # figure out the biggest circle radius we can use
-  maxHorizontalRadius = W / (L+2) / 3
-  maxVerticalRadius = H / (maxnodes+1) / 3
-  radius = min(maxHorizontalRadius, maxVerticalRadius)
+  maxHorizontalRadius = W / (L+2) / 2.5
+  # maxVerticalRadius = H / (maxnodes+1) / 3
+  # radius = min(maxHorizontalRadius, maxVerticalRadius)
 
   # get the x positions (first position is the inputs... won't need circles there)
   xs = getCenters(L+1, W)
@@ -71,6 +71,7 @@ function visualize(net::NeuralNet)
     xIn, xOut = xs[i:i+1]
     ysIn, ysOut = map(n->getCenters(n, H), (layer.nin, layer.nout))
 
+    radius = min(maxHorizontalRadius, H / (layer.nout+1) / 2.5)
     circles = [circle!(radius, P2(xOut, ysOut[iOut])) for iOut in 1:layer.nout]
     wgtlines = [line!(circles[iOut], P3(xIn, ysIn[iIn], z)) for iOut in 1:layer.nout, iIn in 1:layer.nin]
 
