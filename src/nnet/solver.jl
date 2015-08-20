@@ -60,7 +60,7 @@ totalerror(net::NNetStat, data::DataPoint) = totalerror(net, data.x, data.y)
 totalerror(net::NNetStat, dataset::DataPoints) = sum([totalerror(net, data) for data in dataset])
 
 
-function solve!(net::NNetStat, params::SolverParams, traindata::DataPoints, validationdata::DataPoints)
+function solve!(net::NNetStat, params::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
 
   stats = SolverStats(0, 0.0)
 
