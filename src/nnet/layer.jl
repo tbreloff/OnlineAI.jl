@@ -81,23 +81,26 @@ end
 function updateWeights(layer::Layer, solver::NNetSolver)
   
   # calc the full dw matrix and db vector as if no dropout
-  dw = ΔW(solver, layer.δ * layer.x', layer.w, layer.dw)
-  db = Δb(solver, layer.δ, layer.db)
+  # dw = ΔW(solver, layer.δ * layer.x', layer.w, layer.dw)
+  # db = Δb(solver, layer.δ, layer.db)
 
   for iOut in 1:layer.nout
 
     if layer.nextr[iOut] > 0.0
       
       # if this node is retained, we can update incoming bias
-      layer.b[iOut] += db[iOut]
-      layer.db[iOut] = db[iOut]
+      δi = layer.δ[iOut]
+      dbi = Δbi(solver, δi, layer.db[iOut])
+      layer.b[iOut] += dbi
+      layer.db[iOut] = dbi
       
       for iIn in 1:layer.nin
         
         # if this input node is retained, then we can also update the weight
         if layer.r[iIn] > 0.0
-          layer.w[iOut,iIn] += dw[iOut,iIn]
-          layer.dw[iOut,iIn] = dw[iOut,iIn]
+          dwij = ΔWij(solver, δi * layer.x[iIn], layer.w[iOut,iIn], layer.dw[iOut,iIn])
+          layer.w[iOut,iIn] += dwij
+          layer.dw[iOut,iIn] = dwij
         end
       end
     end
