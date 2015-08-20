@@ -55,12 +55,12 @@ function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter
   SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
 end
 
-OnlineStats.update!(net::NNetStat, data::SolverData) = update!(net, data.input, data.target)
-totalerror(net::NNetStat, data::SolverData) = totalerror(net, data.input, data.target)
-totalerror(net::NNetStat, dataset::DataVec) = sum([totalerror(net, data) for data in dataset])
+OnlineStats.update!(net::NNetStat, data::DataPoint) = update!(net, data.x, data.y)
+totalerror(net::NNetStat, data::DataPoint) = totalerror(net, data.x, data.y)
+totalerror(net::NNetStat, dataset::DataPoints) = sum([totalerror(net, data) for data in dataset])
 
 
-function solve!(net::NNetStat, params::SolverParams, datasets::DataSets)
+function solve!(net::NNetStat, params::SolverParams, traindata::DataPoints, validationdata::DataPoints)
 
   stats = SolverStats(0, 0.0)
 
@@ -70,12 +70,12 @@ function solve!(net::NNetStat, params::SolverParams, datasets::DataSets)
     stats.numiter += 1
 
     # randomly sample one data item and update the network
-    data = sample(datasets.trainingSet)
+    data = sample(traindata)
     update!(net, data)
 
     # # check for convergence
     if i % params.erroriter == 0
-      stats.validationError = totalerror(net, datasets.validationSet)
+      stats.validationError = totalerror(net, validationdata)
       println("Status: iter=$i toterr=$(stats.validationError)  $net")
       if stats.validationError <= params.minerror
         println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(params.minerror)")
@@ -84,7 +84,7 @@ function solve!(net::NNetStat, params::SolverParams, datasets::DataSets)
     end
 
     if i % params.displayiter == 0
-      params.onbreak(net, params, datasets, stats)
+      params.onbreak(net, params, stats)
     end
   end
 

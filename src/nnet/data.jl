@@ -1,55 +1,86 @@
 
 
-type SolverData
-  input::VecF
-  target::VecF
+type DataPoint
+  x::VecF
+  y::VecF
 end
 
-typealias DataVec Vector{SolverData}
+type DataPoints <: AbstractVector{DataPoint}
+  data::Vector{DataPoint}
+end
 
-function buildSolverData(inputs::AMatF, targets, indices::AVec{Int} = 1:size(inputs,1))
-  @assert size(inputs,1) == size(targets,1)
-  sdata = SolverData[]
-  for i in indices
-    push!(sdata, SolverData(vec(inputs[i,:]), vec(targets[i,:])))
+function DataPoints(x::AMatF, y::AMatF, indices::AVecI = 1:nrows(x))
+  DataPoints([DataPoint(vec(x[i,:]), vec(y[i,:])) for i in indices])
+end
+
+function DataPoints(x::AMat, y::AVec, indices::AVecI = 1:nrows(x))
+  DataPoints([DataPoint(float(vec(x[i,:])), float(vec(y[i,:]))) for i in indices])
+end
+
+
+Base.getindex(dps::DataPoints, i::Int) = dps.data[i]
+Base.getindex(dps::DataPoints, a::AVecI) = DataPoints(dps.data[a])
+Base.setindex!(dps::DataPoints, dp::DataPoint, i::Int) = (dps.data[i] = dp)
+Base.push!(dps::DataPoints, dp::DataPoint) = push!(dps.data, dp)
+Base.append!(dps::DataPoints, dps2::DataPoints) = append!(dps.data, dps2.data)
+Base.length(dps::DataPoints) = length(dps.data)
+Base.size(dps::DataPoints) = size(dps.data)
+
+function splitDataPoints(dps::DataPoints, pct::Real)
+  r1, r2 = splitRange(length(dps), pct)
+  DataPoints[r1], DataPoints[r2]
+end
+
+Distributions.sample(dps::DataPoints) = dps[sample(1:length(dps))]
+Distributions.sample(dps::DataPoints, n::Int) = dps[sample(1:length(dps), n)]
+
+Base.shuffle(dps::DataPoints) = DataPoints(shuffle(dps.data))
+Base.shuffle!(dps::DataPoints) = shuffle!(dps.data)
+
+# --------------------------------------------------------
+
+"separate a dataset into one DataPoint for each y value"
+type DataPartitions
+  partitions::Vector{DataPoints}
+  numSamples::Int
+end
+
+function DataPartitions(dps::DataPoints)
+  partitions = DataPoints[]
+  for dp in dps
+    
+    matched = false
+    for part in partitions
+      if dp.y == part[1].y
+        push!(part, dp)
+        matched = true
+        break
+      end
+    end
+    
+    if !matched
+      push!(partitions, DataPoints([dp]))
+    end
   end
-  sdata
+
+  DataPartitions(partitions, 0)
 end
 
-function splitSolverData(inputs::AMatF, targets, pctValidation::Real, pctTest::Real, randomize::Bool = false)
-  n = size(inputs,1)
-  indices = collect(1:n)
-  if randomize
-    indices = shuffle(indices)
-  end
-
-  testSize = round(Int, n * pctTest)
-  validationSize = round(Int, n * pctValidation)
-
-  trainindices = indices[1:n-testSize-validationSize]
-  validindices = indices[n-testSize-validationSize+1:n-testSize]
-  testindices = indices[n-testSize+1:n]
-
-  [buildSolverData(inputs, targets, indices) for indices in (trainindices, validindices, testindices)]
+# sample from each y value equally
+function Distributions.sample(partitions::DataPartitions)
+  parts = partitions.partitions
+  dps = parts[(partitions.numSamples%length(parts))+1]
+  partitions.numSamples += 1
+  sample(dps)
 end
 
-function Distributions.sample(datalist::DataVec)
-  j = abs(rand(Int)) % length(datalist) + 1
-  datalist[j]
-end
+Distributions.sample(partitions::DataPartitions, n::Int) = DataPoints([sample(partitions) for i in 1:n])
 
-function Distributions.sample(datalist::DataVec, n::Int)
-  SolverData[sample(datalist) for i in 1:n]
-end
-
-function Base.shuffle(datalist::DataVec)
-  indices = collect(1:length(datalist))
-  datalist[shuffle(indices)]
-end
+# --------------------------------------------------------
 
 type DataSets
-  trainingSet::DataVec
-  validationSet::DataVec
-  testSet::DataVec
+  trainingSet::DataPoints
+  validationSet::DataPoints
+  testSet::DataPoints
 end
 

@@ -36,10 +36,14 @@ export Activation,
        # buildNeuralNet,
        totalerror,
 
-       SolverData,
-       DataVec,
-       buildSolverData,
-       splitSolverData,
+       DataPoint,
+       DataPoints,
+       splitDataPoints,
+
+       DataPartitions,
+
+       # buildSolverData,
+       # splitSolverData,
        # sample,
        DataSets,
 

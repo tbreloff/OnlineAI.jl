@@ -12,8 +12,7 @@ function testxor(maxiter::Int; hiddenLayerNodes = [2], activation=SigmoidActivat
 
   # all sets are the same
   inputs = inputs .- mean(inputs,1)
-  data = buildSolverData(float(inputs), targets)
-  datasets = DataSets(data, data, data)
+  data = DataPoints(inputs, targets)
 
   # hiddenLayerNodes = [2]
   net = buildRegressionNet(ncols(inputs),
@@ -24,12 +23,12 @@ function testxor(maxiter::Int; hiddenLayerNodes = [2], activation=SigmoidActivat
   show(net)
 
   params = SolverParams(maxiter=maxiter, minerror=1e-6)
-  solve!(net, params, datasets)
+  solve!(net, params, data, data)
 
   # output = Float64[predict(net, d.input)[1] for d in data]
-  output = vec(predict(net, float(inputs)))
+  output = vec(predict(net, inputs))
   for (o, d) in zip(output, data)
-    println("Result: input=$(d.input) target=$(d.target) output=$o")
+    println("Result: input=$(d.x) target=$(d.y) output=$o")
   end
 
   net, output
