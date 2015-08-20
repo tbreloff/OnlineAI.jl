@@ -42,7 +42,7 @@ function errorMultiplier(model::WeightedClassificationErrorModel, y::Float64, yh
 end
 
 function cost(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
-  yhat * (yhat >= 0 ? (1 - model.ρ) * (1 - y) : model.ρ * y)
+  yhat * errorMultiplier(model, y, yhat)
 end
 
 
