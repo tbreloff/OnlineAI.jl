@@ -47,10 +47,12 @@ end
 
 
 # given a vector of errors (y - yhat), update network weights
-function backward(net::NeuralNet, errors::AVecF)
+function backward(net::NeuralNet, errmult::AVecF)
 
   # update δᵢ starting from the output layer
-  updateSensitivities(net.layers[end], errors)
+  updateSensitivities(net.layers[end], errmult)
+  # map(l->(isnan(l.w[1,1]) ? error(show(l)) : show(l.w)), net.layers)
+
   for i in length(net.layers)-1:-1:1
     updateSensitivities(net.layers[i:i+1]...)
   end
@@ -62,17 +64,25 @@ function backward(net::NeuralNet, errors::AVecF)
 end
 
 
-function totalerror(net::NeuralNet, x::AVecF, y::AVecF)
+function cost(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x)
-  0.5 * sumabs2(y - yhat)
+  println("$yhat $y")
+  cost(net.solver.errorModel, y, yhat)
 end
+# function totalerror(net::NeuralNet, x::AVecF, y::AVecF)
+#   yhat = forward(net, x)
+#   0.5 * sumabs2(y - yhat)
+# end
 
 
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x, true)
-  errors = y - yhat
-  backward(net, errors)
+  # errors = y - yhat
+
+  errmult = errorMultiplier(net.solver.errorModel, y, yhat)
+
+  backward(net, errmult)
   yhat
 end
 

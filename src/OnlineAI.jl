@@ -34,7 +34,8 @@ export Activation,
        NNetSolver,
        NeuralNet,
        # buildNeuralNet,
-       totalerror,
+       # totalerror,
+
 
        DataPoint,
        DataPoints,
@@ -46,6 +47,13 @@ export Activation,
        # splitSolverData,
        # sample,
        DataSets,
+
+       ErrorModel,
+       L2ErrorModel,
+       WeightedClassificationErrorModel,
+
+       cost,
+       totalCost,
 
        DropoutStrategy,
        NNetSolver,
@@ -71,9 +79,9 @@ include("utils.jl")
 include("nnet/activations.jl")
 include("nnet/data.jl")
 include("nnet/solver.jl")
-# include("nnet/node.jl")
 include("nnet/layer.jl")
 include("nnet/net.jl")
+# include("nnet/node.jl")
 # include("nnet/lstm.jl")
 include("nnet/build.jl")
 include("nnet/visualize.jl")

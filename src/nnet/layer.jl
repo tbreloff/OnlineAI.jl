@@ -65,8 +65,11 @@ end
 
 # backward step for the final (output) layer
 # TODO: this should be generalized to different loss functions
-function updateSensitivities(layer::Layer, err::AVecF)
-  layer.δ = -err .* backward(layer.activation, layer.Σ)
+
+# note: errorMult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
+function updateSensitivities(layer::Layer, errorMult::AVecF)
+  # layer.δ = -err .* backward(layer.activation, layer.Σ)
+  layer.δ = errorMult .* backward(layer.activation, layer.Σ)
 end
 
 # this is the backward step for a hidden layer

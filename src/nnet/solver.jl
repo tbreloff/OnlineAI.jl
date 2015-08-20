@@ -10,16 +10,67 @@ end
 DropoutStrategy(; on=false, pInput=0.8, pHidden=0.5) = DropoutStrategy(on, pInput, pHidden)
 
 
+
+# -------------------------------------
+
+
+abstract ErrorModel
+
+"typical sum of squared errors"
+immutable L2ErrorModel <: ErrorModel end
+
+"returns M from the equation δ = M .* f'(Σ) ... used in the gradient update"
+errorMultiplier(::L2ErrorModel, y::Float64, yhat::Float64) = yhat - y
+
+"cost function"
+cost(::L2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2
+cost(::L2ErrorModel, y::AVecF, yhat::AVecF) = 0.5 * sumabs2(y - yhat)
+
+#-------------
+
+"""
+custom weighted classification error.  has a parameter 0 ≤ ρ ≤ 1 which determines the relative
+importance of sensitivity vs specificity... assumes f(Σ) can take positive and negative values,
+and also assumes that y ∈ {0,1}
+"""
+immutable WeightedClassificationErrorModel <: ErrorModel
+  ρ::Float64
+end
+
+function errorMultiplier(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
+  yhat >= 0 ? (1 - model.ρ) * (1 - y) : -model.ρ * y
+end
+
+function cost(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
+  yhat * (yhat >= 0 ? (1 - model.ρ) * (1 - y) : model.ρ * y)
+end
+
+
+#-------------
+
+
+function errorMultiplier(model::ErrorModel, y::AVecF, yhat::AVecF)
+  Float64[errorMultiplier(model, y[i], yhat[i]) for i in length(y)]
+end
+
+function cost(model::ErrorModel, y::AVecF, yhat::AVecF)
+  sum([cost(model, y[i], yhat[i]) for i in 1:length(y)])
+end
+
+
 # ----------------------------------------
 
-type NNetSolver
+type NNetSolver{EM<:ErrorModel}
   η::Float64 # learning rate
   μ::Float64 # momentum
   λ::Float64 # L2 penalty term
   dropout::DropoutStrategy
+  errorModel::EM
 end
 
-NNetSolver(; η=1e-2, μ=0.0, λ=0.0001, dropout=DropoutStrategy()) = NNetSolver(η, μ, λ, dropout)
+function NNetSolver(; η=1e-2, μ=0.0, λ=0.0001, dropout=DropoutStrategy(), errorModel=L2ErrorModel())
+  NNetSolver(η, μ, λ, dropout, errorModel)
+end
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
 function getDropoutProb(solver::NNetSolver, isinput::Bool)
@@ -43,6 +94,7 @@ function Δbi(solver::NNetSolver, δi::Float64, dbi::Float64)
   -solver.η * δi + solver.μ * dbi
 end
 
+
 # -------------------------------------
 
 
@@ -64,8 +116,10 @@ function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter
 end
 
 OnlineStats.update!(net::NNetStat, data::DataPoint) = update!(net, data.x, data.y)
-totalerror(net::NNetStat, data::DataPoint) = totalerror(net, data.x, data.y)
-totalerror(net::NNetStat, dataset::DataPoints) = sum([totalerror(net, data) for data in dataset])
+
+
+totalCost(net::NNetStat, data::DataPoint) = cost(net, data.x, data.y)
+totalCost(net::NNetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
 
 
 function solve!(net::NNetStat, params::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
@@ -83,7 +137,7 @@ function solve!(net::NNetStat, params::SolverParams, traindata::Union(DataPoints
 
     # # check for convergence
     if i % params.erroriter == 0
-      stats.validationError = totalerror(net, validationdata)
+      stats.validationError = totalCost(net, validationdata)
       println("Status: iter=$i toterr=$(stats.validationError)  $net")
       if stats.validationError <= params.minerror
         println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(params.minerror)")
