@@ -39,7 +39,7 @@ function Δb(solver::NNetSolver, δ::AVecF, db::AVecF)
   -solver.η * δ + solver.μ * db
 end
 
-function Δbi(solver::NNetSolver, δi::Float64, db::Float64)
+function Δbi(solver::NNetSolver, δi::Float64, dbi::Float64)
   -solver.η * δi + solver.μ * dbi
 end
 
