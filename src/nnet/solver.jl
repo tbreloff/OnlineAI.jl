@@ -29,6 +29,17 @@ cost(::L2ErrorModel, y::AVecF, yhat::AVecF) = 0.5 * sumabs2(y - yhat)
 #-------------
 
 """
+Typical sum of squared errors, but scaled by ρ*y.  We implicitly assume that y ∈ {0,1}.
+"""
+immutable WeighhtedL2ErrorModel <: ErrorModel
+  ρ::Float64
+end
+errorMultiplier(::WeightedL2ErrorModel, y::Float64, yhat::Float64) = (yhat - y) * model.ρ * y
+cost(::WeightedL2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2 * model.ρ * y
+
+#-------------
+
+"""
 custom weighted classification error.  has a parameter 0 ≤ ρ ≤ 1 which determines the relative
 importance of sensitivity vs specificity... assumes f(Σ) can take positive and negative values,
 and also assumes that y ∈ {0,1}
