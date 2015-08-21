@@ -50,6 +50,7 @@ export Activation,
 
        ErrorModel,
        L2ErrorModel,
+       WeightedL2ErrorModel,
        WeightedClassificationErrorModel,
 
        cost,
