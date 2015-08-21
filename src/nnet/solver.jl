@@ -34,8 +34,8 @@ Typical sum of squared errors, but scaled by ρ*y.  We implicitly assume that y 
 immutable WeightedL2ErrorModel <: ErrorModel
   ρ::Float64
 end
-errorMultiplier(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = (yhat - y) * model.ρ * y
-cost(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2 * model.ρ * y
+errorMultiplier(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = (yhat - y) * (y > 0 ? model.ρ : 1)
+cost(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2 * (y > 0 ? model.ρ : 1)
 
 #-------------
 
