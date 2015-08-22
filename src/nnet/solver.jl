@@ -41,9 +41,9 @@ cost(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) 
 
 immutable CrossEntropyErrorModel <: ErrorModel end
 
-errorMultiplier(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = y - yhat # binary case
+errorMultiplier(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = yhat - y # binary case
 function errorMultiplier(model::CrossEntropyErrorModel, y::AVecF, yhat::AVecF) # softmax case
-  (length(y) == 1 ? Float64[errorMultiplier(model, y[1], yhat[1])] : y - yhat), false
+  (length(y) == 1 ? Float64[errorMultiplier(model, y[1], yhat[1])] : yhat - y), false
 end
 
 cost(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = -log(y > 0.0 ? yhat : (1.0 - yhat)) # binary case

@@ -22,6 +22,7 @@ function testxor(maxiter::Int; hiddenLayerNodes = [2],
                            ncols(targets),
                            hiddenLayerNodes;
                            hiddenActivation = hiddenActivation,
+                           finalActivation = finalActivation,
                            solver = solver)
   show(net)
 
