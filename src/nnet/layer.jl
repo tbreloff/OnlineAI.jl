@@ -29,7 +29,7 @@ function Layer(nin::Integer, nout::Integer, activation::Activation, p::Float64 =
   Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout)) #fill(true, nout))
 end
 
-Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) r=$(l.r)}")
+Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) δ=$(l.δ) Σ=$(l.Σ) a=$(forward(l.activation,l.Σ))}")
 
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
@@ -54,11 +54,8 @@ end
 
 
 # backward step for the final (output) layer
-# TODO: this should be generalized to different loss functions
-
 # note: errorMult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
 function updateSensitivities(layer::Layer, errorMult::AVecF, multiplyDerivative::Bool)
-  # layer.δ = -err .* backward(layer.activation, layer.Σ)
   layer.δ = multiplyDerivative ? errorMult .* backward(layer.activation, layer.Σ) : errorMult
 end
 

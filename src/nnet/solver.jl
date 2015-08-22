@@ -130,14 +130,14 @@ function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter
   SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
 end
 
-OnlineStats.update!(net::NNetStat, data::DataPoint) = update!(net, data.x, data.y)
+OnlineStats.update!(net::NetStat, data::DataPoint) = update!(net, data.x, data.y)
 
 
-totalCost(net::NNetStat, data::DataPoint) = cost(net, data.x, data.y)
-totalCost(net::NNetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
+totalCost(net::NetStat, data::DataPoint) = cost(net, data.x, data.y)
+totalCost(net::NetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
 
 
-function solve!(net::NNetStat, solverParams::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
+function solve!(net::NetStat, solverParams::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
 
   stats = SolverStats(0, 0.0)
 
