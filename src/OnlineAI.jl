@@ -23,57 +23,41 @@ export Activation,
        ReLUActivation,
        LReLUActivation,
 
-       # forward,
-       # backward,
-
        Layer,
-       # buildLayer,
-       # feedforward!,
-       # update!,
-
-       NNetSolver,
        NeuralNet,
-       # buildNeuralNet,
-       # totalerror,
-
 
        DataPoint,
        DataPoints,
        splitDataPoints,
-
        DataPartitions,
-
-       # buildSolverData,
-       # splitSolverData,
-       # sample,
        DataSets,
 
        ErrorModel,
        L2ErrorModel,
        WeightedL2ErrorModel,
        CrossEntropyErrorModel,
-       # WeightedClassificationErrorModel,
 
        cost,
        totalCost,
 
        DropoutStrategy,
-       NNetSolver,
+       Dropout,
+       NoDropout,
+       
+       NetParams,
+       
        SolverParams,
        SolverStats,
-       
        solve!,
 
        buildNet,
        buildClassifierNet,
-       buildRegressionNet,
-
-       foreach
+       buildRegressionNet
 
 
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
-abstract NNetStat <: OnlineStat
-nobs(o::NNetStat) = 0
+abstract NetStat <: OnlineStat
+nobs(o::NetStat) = 0
 abstract Node
 
 
@@ -83,7 +67,6 @@ include("nnet/data.jl")
 include("nnet/solver.jl")
 include("nnet/layer.jl")
 include("nnet/net.jl")
-# include("nnet/node.jl")
 # include("nnet/lstm.jl")
 include("nnet/build.jl")
 include("nnet/visualize.jl")

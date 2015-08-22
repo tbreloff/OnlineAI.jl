@@ -1,14 +1,17 @@
-# solver should contain all algorithm-specific parameters and methods.
+# params should contain all algorithm-specific parameters and methods.
 # at a minimum, we need to be able to compute the weight updates for a layer
 
-type DropoutStrategy
-  on::Bool 
+abstract DropoutStrategy
+
+immutable Dropout <: DropoutStrategy
+  # on::Bool 
   pInput::Float64  # the probability that a node is used for the weights from inputs
   pHidden::Float64  # the probability that a node is used for hidden layers
 end
+Dropout(; pInput=0.8, pHidden=0.5) = Dropout(pInput, pHidden)
 
-DropoutStrategy(; on=false, pInput=0.8, pHidden=0.5) = DropoutStrategy(on, pInput, pHidden)
 
+immutable NoDropout <: DropoutStrategy end
 
 
 # -------------------------------------
@@ -56,26 +59,6 @@ function cost(model::CrossEntropyErrorModel, y::AVecF, yhat::AVecF) # softmax ca
   C
 end
 
-#-------------
-
-
-# """
-# custom weighted classification error.  has a parameter 0 ≤ ρ ≤ 1 which determines the relative
-# importance of sensitivity vs specificity... assumes f(Σ) can take positive and negative values,
-# and also assumes that y ∈ {0,1}
-# """
-# immutable WeightedClassificationErrorModel <: ErrorModel
-#   ρ::Float64
-# end
-
-# function errorMultiplier(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
-#   yhat >= 0 ? (1 - model.ρ) * (1 - y) : -model.ρ * y
-# end
-
-# function cost(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
-#   yhat * errorMultiplier(model, y, yhat)
-# end
-
 
 #-------------
 
@@ -92,38 +75,38 @@ end
 
 # ----------------------------------------
 
-type NNetSolver{EM<:ErrorModel}
+type NetParams{D<:DropoutStrategy, EM<:ErrorModel}
   η::Float64 # learning rate
   μ::Float64 # momentum
   λ::Float64 # L2 penalty term
-  dropout::DropoutStrategy
+  dropoutStrategy::D
   errorModel::EM
 end
 
-function NNetSolver(; η=1e-2, μ=0.0, λ=0.0001, dropout=DropoutStrategy(), errorModel=L2ErrorModel())
-  NNetSolver(η, μ, λ, dropout, errorModel)
+function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), errorModel=L2ErrorModel())
+  NetParams(η, μ, λ, dropout, errorModel)
 end
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
-function getDropoutProb(solver::NNetSolver, isinput::Bool)
-  solver.dropout.on ? (isinput ? solver.dropout.pInput : solver.dropout.pHidden) : 1.0
-end
+getDropoutProb(params::NetParams, isinput::Bool) = getDropoutProb(params.dropoutStrategy, isinput)
+getDropoutProb(strat::NoDropout, isinput::Bool) = 1.0
+getDropoutProb(strat::Dropout, isinput::Bool) = isinput ? strat.pInput : strat.pHidden
 
 # calc update to weight matrix.  TODO: generalize penalty
-function ΔW(solver::NNetSolver, gradients::AMatF, w::AMatF, dw::AMatF)
-  -solver.η * (gradients + solver.λ * w) + solver.μ * dw
+function ΔW(params::NetParams, gradients::AMatF, w::AMatF, dw::AMatF)
+  -params.η * (gradients + params.λ * w) + params.μ * dw
 end
 
-function ΔWij(solver::NNetSolver, gradient::Float64, wij::Float64, dwij::Float64)
-  -solver.η * (gradient + solver.λ * wij) + solver.μ * dwij
+function ΔWij(params::NetParams, gradient::Float64, wij::Float64, dwij::Float64)
+  -params.η * (gradient + params.λ * wij) + params.μ * dwij
 end
 
-function Δb(solver::NNetSolver, δ::AVecF, db::AVecF)
-  -solver.η * δ + solver.μ * db
+function Δb(params::NetParams, δ::AVecF, db::AVecF)
+  -params.η * δ + params.μ * db
 end
 
-function Δbi(solver::NNetSolver, δi::Float64, dbi::Float64)
-  -solver.η * δi + solver.μ * dbi
+function Δbi(params::NetParams, δi::Float64, dbi::Float64)
+  -params.η * δi + params.μ * dbi
 end
 
 
@@ -154,12 +137,12 @@ totalCost(net::NNetStat, data::DataPoint) = cost(net, data.x, data.y)
 totalCost(net::NNetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
 
 
-function solve!(net::NNetStat, params::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
+function solve!(net::NNetStat, solverParams::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
 
   stats = SolverStats(0, 0.0)
 
   # loop through maxiter times
-  for i in 1:params.maxiter
+  for i in 1:solverParams.maxiter
 
     stats.numiter += 1
 
@@ -168,17 +151,17 @@ function solve!(net::NNetStat, params::SolverParams, traindata::Union(DataPoints
     update!(net, data)
 
     # # check for convergence
-    if i % params.erroriter == 0
+    if i % solverParams.erroriter == 0
       stats.validationError = totalCost(net, validationdata)
       println("Status: iter=$i toterr=$(stats.validationError)  $net")
-      if stats.validationError <= params.minerror
-        println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(params.minerror)")
+      if stats.validationError <= solverParams.minerror
+        println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(solverParams.minerror)")
         return
       end
     end
 
-    if i % params.displayiter == 0
-      params.onbreak(net, params, stats)
+    if i % solverParams.displayiter == 0
+      solverParams.onbreak(net, solverParams, stats)
     end
   end
 

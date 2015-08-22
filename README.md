@@ -16,15 +16,17 @@ data = buildSolverData(float(inputs), targets)
 datasets = DataSets(data, data, data)
 
 # create the network with one 2-node hidden layer
-# the solver defines some hyperparameters:
+# the params defines some hyperparameters:
 #   η := gradient descent speed
 #   μ := momentum term
 #   λ := L2-penalty param
+#   dropoutStrategy
+#   errorModel
 hiddenLayerNodes = [2]
 net = buildRegressionNet(ncols(inputs),
                          ncols(targets),
                          hiddenLayerNodes;
-                         solver = NNetSolver(η=0.3, μ=0.1, λ=1e-5))
+                         params = NetParams(η=0.3, μ=0.1, λ=1e-5))
 
 # some extra params for the solve iterations
 params = SolverParams(maxiter=maxiter, minerror=1e-6)
@@ -52,7 +54,7 @@ NNet:
 - [x] Dropout regularization
 - [x] Basic data management (train/validate/test splitting)
 - [ ] Advanced data cleaning/transformations (handling NaNs, map multinomal classes to dummies, standardizing)
-- [x] Basic gradient descent solver (early stopping, momentum, L2 penalty)
+- [x] Basic gradient descent params (early stopping, momentum, L2 penalty)
 - [x] Easy network building methods (buildClassifierNet, buildRegressionNet)
 - [ ] Advanced network building methods (ReLU + dropout, multinomal classification)
 - [ ] Generalized penalty functions

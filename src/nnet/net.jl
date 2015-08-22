@@ -1,7 +1,7 @@
 
-type NeuralNet <: NNetStat
+type NeuralNet <: NetStat
   layers::Vector{Layer}  # note: this doesn't include input layer!!
-  solver::NNetSolver
+  params::NetParams
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   # i.e. only allow cross entropy error with sigmoid activation
@@ -10,21 +10,21 @@ end
 
 # simple constructor which creates all layers the same for given list of node counts.
 # structure should include neuron counts for all layers, including input and output
-function NeuralNet(structure::AVec{Int}; solver = NNetSolver(), activation::Activation = TanhActivation())
+function NeuralNet(structure::AVec{Int}; params = NetParams(), activation::Activation = TanhActivation())
   @assert length(structure) > 1
 
   layers = Layer[]
   for i in 1:length(structure)-1
     nin, nout = structure[i:i+1]
-    pDropout = getDropoutProb(solver, i==1)
+    pDropout = getDropoutProb(params, i==1)
     push!(layers, Layer(nin, nout, activation, pDropout))
   end
 
-  NeuralNet(layers, solver)
+  NeuralNet(layers, params)
 end
 
 function Base.show(io::IO, net::NeuralNet)
-  println(io, "NeuralNet{solver=$(net.solver), layers:")
+  println(io, "NeuralNet{params=$(net.params), layers:")
   for layer in net.layers
     println(io, "    ", layer)
   end
@@ -62,21 +62,21 @@ function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
 
   # now update the weights
   for layer in net.layers
-    updateWeights(layer, net.solver)
+    updateWeights(layer, net.params)
   end
 end
 
 
 function cost(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x)
-  cost(net.solver.errorModel, y, yhat)
+  cost(net.params.errorModel, y, yhat)
 end
 
 
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x, true)
-  errmult, multiplyDerivative = errorMultiplier(net.solver.errorModel, y, yhat)
+  errmult, multiplyDerivative = errorMultiplier(net.params.errorModel, y, yhat)
   backward(net, errmult, multiplyDerivative)
   yhat
 end

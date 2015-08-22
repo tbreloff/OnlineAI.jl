@@ -7,7 +7,7 @@ using OnlineAI, FactCheck
 function testxor(maxiter::Int; hiddenLayerNodes = [2],
                                hiddenActivation = SigmoidActivation(),
                                finalActivation = SigmoidActivation(),
-                               solver = NNetSolver(η=0.3, μ=0.1, λ=1e-5))
+                               params = NetParams(η=0.3, μ=0.1, λ=1e-5))
 
   # all xor inputs and results
   inputs = [0 0; 0 1; 1 0; 1 1]
@@ -23,7 +23,7 @@ function testxor(maxiter::Int; hiddenLayerNodes = [2],
                            hiddenLayerNodes;
                            hiddenActivation = hiddenActivation,
                            finalActivation = finalActivation,
-                           solver = solver)
+                           params = params)
   show(net)
 
   params = SolverParams(maxiter=maxiter, minerror=1e-6)
@@ -41,11 +41,11 @@ end
 
 facts("NNet") do
 
-  net, output = testxor(10000, solver=NNetSolver(η=0.3, μ=0.1, λ=1e-5, errorModel=CrossEntropyErrorModel()))
+  net, output = testxor(10000, params=NetParams(η=0.3, μ=0.1, λ=1e-5, errorModel=CrossEntropyErrorModel()))
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.03)
 
-  net, output = testxor(10000, hiddenLayerNodes=[2], solver=NNetSolver(η=0.3, μ=0.0, λ=0.0, dropout=OnlineAI.DropoutStrategy(on=true,pInput=1.0,pHidden=0.5)))
+  net, output = testxor(10000, hiddenLayerNodes=[2], params=NetParams(η=0.3, μ=0.0, λ=0.0, dropout=OnlineAI.DropoutStrategy(on=true,pInput=1.0,pHidden=0.5)))
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.03)
 
