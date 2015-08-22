@@ -81,7 +81,7 @@ immutable FixedMomentum <: MomentumModel
 end
 momentum(model::FixedMomentum) = model.μ
 
-immutable DecayMomentum <: MomentumModel
+type DecayMomentum <: MomentumModel
   μ::Float64
   decayRate::Float64
 end
@@ -104,7 +104,7 @@ immutable FixedLearningRate <: LearningRateModel
 end
 learningRate(model::FixedLearningRate) = model.η
 
-immutable DecayLearningRate <: LearningRateModel
+type DecayLearningRate <: LearningRateModel
   η::Float64
   decayRate::Float64
 end
@@ -141,17 +141,17 @@ getDropoutProb(strat::Dropout, isinput::Bool) = isinput ? strat.pInput : strat.p
 
 # calc update to weight matrix.  TODO: generalize penalty
 function ΔW(params::NetParams, gradients::AMatF, w::AMatF, dw::AMatF)
-  -leaningRate(params.η) * (gradients + params.λ * w) + momentum(params.μ) * dw
+  -learningRate(params.η) * (gradients + params.λ * w) + momentum(params.μ) * dw
 end
 
 function ΔWij(params::NetParams, gradient::Float64, wij::Float64, dwij::Float64)
-  -leaningRate(params.η) * (gradient + params.λ * wij) + momentum(params.μ) * dwij
+  -learningRate(params.η) * (gradient + params.λ * wij) + momentum(params.μ) * dwij
 end
 
 function Δb(params::NetParams, δ::AVecF, db::AVecF)
-  -leaningRate(params.η) * δ + momentum(params.μ) * db
+  -learningRate(params.η) * δ + momentum(params.μ) * db
 end
 
 function Δbi(params::NetParams, δi::Float64, dbi::Float64)
-  -leaningRate(params.η) * δi + momentum(params.μ) * dbi
+  -learningRate(params.η) * δi + momentum(params.μ) * dbi
 end
