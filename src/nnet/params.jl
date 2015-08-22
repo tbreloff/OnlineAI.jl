@@ -82,17 +82,17 @@ end
 momentum(model::FixedMomentum) = model.μ
 
 type DecayMomentum <: MomentumModel
-  μ::Float64
-  decayRate::Float64
+  μ_high::Float64
+  μ_low::Float64
+  numPeriods::Int
+  n::Int
 end
-function DecayMomentum(μ_start::Float64, μ_end::Float64, numPeriods::Int)
-  decayRate = exp(log(μ_end / μ_start) / numPeriods)
-  DecayMomentum(μ_start, decayRate)
-end
+DecayMomentum(μ_high::Float64, μ_low::Float64, numPeriods::Int) = DecayMomentum(μ_high, μ_low, numPeriods, 0)
 
 function momentum(model::DecayMomentum)
-  model.μ *= model.decayRate
-  model.μ
+  μ = model.μ_low + (model.μ_high - model.μ_low) / min(model.n, model.numPeriods)
+  model.n += 1
+  μ
 end
 
 # ----------------------------------------
@@ -104,18 +104,18 @@ immutable FixedLearningRate <: LearningRateModel
 end
 learningRate(model::FixedLearningRate) = model.η
 
-type DecayLearningRate <: LearningRateModel
-  η::Float64
-  decayRate::Float64
+type DecayLearningRate <: MomentumModel
+  η_high::Float64
+  η_low::Float64
+  numPeriods::Int
+  n::Int
 end
-function DecayLearningRate(η_start::Float64, η_end::Float64, numPeriods::Int)
-  decayRate = exp(log(η_end / η_start) / numPeriods)
-  DecayLearningRate(η_start, decayRate)
-end
+DecayLearningRate(η_high::Float64, η_low::Float64, numPeriods::Int) = DecayLearningRate(η_high, η_low, numPeriods, 0)
 
 function learningRate(model::DecayLearningRate)
-  model.η *= model.decayRate
-  model.η
+  η = model.η_low + (model.η_high - model.η_low) / min(model.n, model.numPeriods)
+  model.n += 1
+  η
 end
 
 # ----------------------------------------
