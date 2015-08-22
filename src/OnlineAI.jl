@@ -44,6 +44,11 @@ export Activation,
        Dropout,
        NoDropout,
 
+       MomentumModel,
+       FixedMomentum,
+       DecayMomentum,
+       momentum,
+
        NetParams,
        
        SolverParams,

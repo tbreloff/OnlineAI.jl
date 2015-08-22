@@ -72,19 +72,38 @@ function cost(model::ErrorModel, y::AVecF, yhat::AVecF)
   sum([cost(model, y[i], yhat[i]) for i in 1:length(y)])
 end
 
+# ----------------------------------------
+
+abstract MomentumModel
+
+immutable FixedMomentum <: MomentumModel
+  μ::Float64
+end
+momentum(model::FixedMomentum) = model.μ
+
+immutable DecayMomentum <: MomentumModel
+  μ::Float64
+  decayRate::Float64
+end
+
+function momentum(model::FixedMomentum)
+  model.μ *= model.decayRate
+  model.μ
+end
 
 # ----------------------------------------
 
-type NetParams{D<:DropoutStrategy, EM<:ErrorModel}
+type NetParams{M<:MomentumModel, D<:DropoutStrategy, EM<:ErrorModel}
   η::Float64 # learning rate
-  μ::Float64 # momentum
+  # μ::Float64 # momentum
+  momentum::M
   λ::Float64 # L2 penalty term
   dropoutStrategy::D
   errorModel::EM
 end
 
-function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), errorModel=L2ErrorModel())
-  NetParams(η, μ, λ, dropout, errorModel)
+function NetParams(; η=1e-2, momentum=FixedMomentum(0.0), λ=0.0001, dropout=NoDropout(), errorModel=L2ErrorModel())
+  NetParams(η, momentum, λ, dropout, errorModel)
 end
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
