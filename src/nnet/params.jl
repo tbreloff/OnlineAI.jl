@@ -85,25 +85,53 @@ immutable DecayMomentum <: MomentumModel
   μ::Float64
   decayRate::Float64
 end
+function DecayMomentum(μ_start::Float64, μ_end::Float64, numPeriods::Int)
+  decayRate = exp(log(μ_end / μ_start) / numPeriods)
+  DecayMomentum(μ_start, decayRate)
+end
 
-function momentum(model::FixedMomentum)
+function momentum(model::DecayMomentum)
   model.μ *= model.decayRate
   model.μ
 end
 
 # ----------------------------------------
 
-type NetParams{M<:MomentumModel, D<:DropoutStrategy, EM<:ErrorModel}
-  η::Float64 # learning rate
-  # μ::Float64 # momentum
-  momentum::M
-  λ::Float64 # L2 penalty term
-  dropoutStrategy::D
-  errorModel::EM
+abstract LearningRateModel
+
+immutable FixedLearningRate <: LearningRateModel
+  η::Float64
+end
+learningRate(model::FixedLearningRate) = model.η
+
+immutable DecayLearningRate <: LearningRateModel
+  η::Float64
+  decayRate::Float64
+end
+function DecayLearningRate(η_start::Float64, η_end::Float64, numPeriods::Int)
+  decayRate = exp(log(η_end / η_start) / numPeriods)
+  DecayLearningRate(η_start, decayRate)
 end
 
-function NetParams(; η=1e-2, momentum=FixedMomentum(0.0), λ=0.0001, dropout=NoDropout(), errorModel=L2ErrorModel())
-  NetParams(η, momentum, λ, dropout, errorModel)
+function learningRate(model::DecayLearningRate)
+  model.η *= model.decayRate
+  model.η
+end
+
+# ----------------------------------------
+
+type NetParams{LEARN<:LearningRateModel, MOM<:MomentumModel, DROP<:DropoutStrategy, ERR<:ErrorModel}
+  η::LEARN # learning rate
+  μ::MOM
+  λ::Float64 # L2 penalty term
+  dropoutStrategy::DROP
+  errorModel::ERR
+end
+
+function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), errorModel=L2ErrorModel())
+  η = typeof(η) <: Real ? FixedLearningRate(Float64(η)) : η  # convert numbers to FixedLearningRate
+  μ = typeof(μ) <: Real ? FixedMomentum(Float64(μ)) : μ  # convert numbers to FixedMomentum
+  NetParams(η, μ, λ, dropout, errorModel)
 end
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
@@ -113,17 +141,17 @@ getDropoutProb(strat::Dropout, isinput::Bool) = isinput ? strat.pInput : strat.p
 
 # calc update to weight matrix.  TODO: generalize penalty
 function ΔW(params::NetParams, gradients::AMatF, w::AMatF, dw::AMatF)
-  -params.η * (gradients + params.λ * w) + params.μ * dw
+  -leaningRate(params.η) * (gradients + params.λ * w) + momentum(params.μ) * dw
 end
 
 function ΔWij(params::NetParams, gradient::Float64, wij::Float64, dwij::Float64)
-  -params.η * (gradient + params.λ * wij) + params.μ * dwij
+  -leaningRate(params.η) * (gradient + params.λ * wij) + momentum(params.μ) * dwij
 end
 
 function Δb(params::NetParams, δ::AVecF, db::AVecF)
-  -params.η * δ + params.μ * db
+  -leaningRate(params.η) * δ + momentum(params.μ) * db
 end
 
 function Δbi(params::NetParams, δi::Float64, dbi::Float64)
-  -params.η * δi + params.μ * dbi
+  -leaningRate(params.η) * δi + momentum(params.μ) * dbi
 end

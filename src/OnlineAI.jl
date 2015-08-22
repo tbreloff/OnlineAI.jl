@@ -49,6 +49,11 @@ export Activation,
        DecayMomentum,
        momentum,
 
+       LearningRateModel,
+       FixedLearningRate,
+       DecayLearningRate,
+       learningRate,
+
        NetParams,
        
        SolverParams,
