@@ -1,8 +1,4 @@
 
-
-# -------------------------------------
-
-
 type SolverParams
   maxiter::Int
   erroriter::Int

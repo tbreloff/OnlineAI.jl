@@ -43,7 +43,7 @@ export Activation,
        DropoutStrategy,
        Dropout,
        NoDropout,
-       
+
        NetParams,
        
        SolverParams,
@@ -64,6 +64,7 @@ abstract Node
 include("utils.jl")
 include("nnet/activations.jl")
 include("nnet/data.jl")
+include("nnet/params.jl")
 include("nnet/solver.jl")
 include("nnet/layer.jl")
 include("nnet/net.jl")
