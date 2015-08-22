@@ -4,7 +4,10 @@ module NNetTest
 using OnlineAI, FactCheck
 
 
-function testxor(maxiter::Int; hiddenLayerNodes = [2], activation=SigmoidActivation(), solver = NNetSolver(η=0.3, μ=0.1, λ=1e-5))
+function testxor(maxiter::Int; hiddenLayerNodes = [2],
+                               hiddenActivation = SigmoidActivation(),
+                               finalActivation = SigmoidActivation(),
+                               solver = NNetSolver(η=0.3, μ=0.1, λ=1e-5))
 
   # all xor inputs and results
   inputs = [0 0; 0 1; 1 0; 1 1]
@@ -18,7 +21,7 @@ function testxor(maxiter::Int; hiddenLayerNodes = [2], activation=SigmoidActivat
   net = buildRegressionNet(ncols(inputs),
                            ncols(targets),
                            hiddenLayerNodes;
-                           hiddenActivation = activation,
+                           hiddenActivation = hiddenActivation,
                            solver = solver)
   show(net)
 
@@ -37,7 +40,7 @@ end
 
 facts("NNet") do
 
-  net, output = testxor(10000)
+  net, output = testxor(10000, solver=NNetSolver(η=0.3, μ=0.1, λ=1e-5, errorModel=CrossEntropyErrorModel()))
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.03)
 

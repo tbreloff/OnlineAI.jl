@@ -39,29 +39,50 @@ cost(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) 
 
 #-------------
 
-"""
-custom weighted classification error.  has a parameter 0 ≤ ρ ≤ 1 which determines the relative
-importance of sensitivity vs specificity... assumes f(Σ) can take positive and negative values,
-and also assumes that y ∈ {0,1}
-"""
-immutable WeightedClassificationErrorModel <: ErrorModel
-  ρ::Float64
+immutable CrossEntropyErrorModel <: ErrorModel end
+
+errorMultiplier(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = y - yhat # binary case
+function errorMultiplier(model::CrossEntropyErrorModel, y::AVecF, yhat::AVecF) # softmax case
+  (length(y) == 1 ? Float64[errorMultiplier(model, y[1], yhat[1])] : y - yhat), false
 end
 
-function errorMultiplier(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
-  yhat >= 0 ? (1 - model.ρ) * (1 - y) : -model.ρ * y
+cost(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = -log(y > 0.0 ? yhat : (1.0 - yhat)) # binary case
+function cost(model::CrossEntropyErrorModel, y::AVecF, yhat::AVecF) # softmax case
+  length(y) == 1 && return cost(model, y[1], yhat[1])
+  C = 0.0
+  for (i,yi) in enumerate(y)
+    C -= yi * log(yhat[i])
+  end
+  C
 end
-
-function cost(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
-  yhat * errorMultiplier(model, y, yhat)
-end
-
 
 #-------------
 
 
+# """
+# custom weighted classification error.  has a parameter 0 ≤ ρ ≤ 1 which determines the relative
+# importance of sensitivity vs specificity... assumes f(Σ) can take positive and negative values,
+# and also assumes that y ∈ {0,1}
+# """
+# immutable WeightedClassificationErrorModel <: ErrorModel
+#   ρ::Float64
+# end
+
+# function errorMultiplier(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
+#   yhat >= 0 ? (1 - model.ρ) * (1 - y) : -model.ρ * y
+# end
+
+# function cost(model::WeightedClassificationErrorModel, y::Float64, yhat::Float64)
+#   yhat * errorMultiplier(model, y, yhat)
+# end
+
+
+#-------------
+
+# note: the vector version of errorMultiplier also returns a boolean which is true when we
+#       need to multiply this value by f'(Σ) when calculating the sensitivities δ
 function errorMultiplier(model::ErrorModel, y::AVecF, yhat::AVecF)
-  Float64[errorMultiplier(model, y[i], yhat[i]) for i in length(y)]
+  Float64[errorMultiplier(model, y[i], yhat[i]) for i in length(y)], true
 end
 
 function cost(model::ErrorModel, y::AVecF, yhat::AVecF)

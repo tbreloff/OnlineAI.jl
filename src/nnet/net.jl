@@ -2,6 +2,9 @@
 type NeuralNet <: NNetStat
   layers::Vector{Layer}  # note: this doesn't include input layer!!
   solver::NNetSolver
+
+  # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
+  # i.e. only allow cross entropy error with sigmoid activation
 end
 
 
@@ -47,10 +50,10 @@ end
 
 
 # given a vector of errors (y - yhat), update network weights
-function backward(net::NeuralNet, errmult::AVecF)
+function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
 
   # update δᵢ starting from the output layer using the error multiplier
-  updateSensitivities(net.layers[end], errmult)
+  updateSensitivities(net.layers[end], errmult, multiplyDerivative)
 
   # now update the remaining sensitivities using bakckprop
   for i in length(net.layers)-1:-1:1
@@ -73,8 +76,8 @@ end
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x, true)
-  errmult = errorMultiplier(net.solver.errorModel, y, yhat)
-  backward(net, errmult)
+  errmult, multiplyDerivative = errorMultiplier(net.solver.errorModel, y, yhat)
+  backward(net, errmult, multiplyDerivative)
   yhat
 end
 
