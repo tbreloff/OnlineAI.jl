@@ -6,7 +6,7 @@ using OnlineAI, FactCheck
 
 function testxor(; hiddenLayerNodes = [2],
                    hiddenActivation = SigmoidActivation(),
-                   finalActivation = SigmoidActivation(),
+                   finalActivation = IdentityActivation(),
                    params = NetParams(η=0.3, μ=0.1, λ=1e-5),
                    solverParams = SolverParams(maxiter=10000, minerror=1e-6))
 

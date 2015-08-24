@@ -65,6 +65,9 @@ function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
   for layer in net.layers
     updateWeights(layer, net.params)
   end
+
+  # update our η, μ, etc
+  update!(net.params)
 end
 
 

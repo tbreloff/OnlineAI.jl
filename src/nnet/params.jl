@@ -17,6 +17,7 @@ immutable NoDropout <: DropoutStrategy end
 # ----------------------------------------
 
 abstract MomentumModel
+OnlineStats.update!(model::MomentumModel) = nothing
 
 immutable FixedMomentum <: MomentumModel
   μ::Float64
@@ -32,15 +33,16 @@ type DecayMomentum <: MomentumModel
 end
 DecayMomentum(μ_high::Float64, μ_low::Float64, numPeriods::Int) = DecayMomentum(μ_high, μ_low, numPeriods, 0)
 
-function momentum(model::DecayMomentum)
-  μ = model.μ_low + (model.μ_high - model.μ_low) / min(model.n, model.numPeriods)
-  model.n += 1
-  μ
-end
+momentum(model::DecayMomentum) = (α = min(model.n / model.numPeriods, 1); model.μ_low * α + model.μ_high * (1-α))
+OnlineStats.update!(model::DecayMomentum) = (model.n += 1; nothing)
+
+Base.print(io::IO, model::DecayMomentum) = print(io, "decay_μ{$(momentum(model))}")
+Base.show(io::IO, model::DecayMomentum) = print(io, model)
 
 # ----------------------------------------
 
 abstract LearningRateModel
+OnlineStats.update!(model::LearningRateModel) = nothing
 
 immutable FixedLearningRate <: LearningRateModel
   η::Float64
@@ -48,7 +50,7 @@ end
 learningRate(model::FixedLearningRate) = model.η
 
 doc"linear decay from η_high to η_low over numPeriods"
-type DecayLearningRate <: MomentumModel
+type DecayLearningRate <: LearningRateModel
   η_high::Float64
   η_low::Float64
   numPeriods::Int
@@ -56,11 +58,11 @@ type DecayLearningRate <: MomentumModel
 end
 DecayLearningRate(η_high::Float64, η_low::Float64, numPeriods::Int) = DecayLearningRate(η_high, η_low, numPeriods, 0)
 
-function learningRate(model::DecayLearningRate)
-  η = model.η_low + (model.η_high - model.η_low) / min(model.n, model.numPeriods)
-  model.n += 1
-  η
-end
+learningRate(model::DecayLearningRate) = (α = min(model.n / model.numPeriods, 1); model.η_low * α + model.η_high * (1-α))
+OnlineStats.update!(model::DecayLearningRate) = (model.n += 1; nothing)
+
+Base.print(io::IO, model::DecayLearningRate) = print(io, "decay_η{$(learningRate(model))}")
+Base.show(io::IO, model::DecayLearningRate) = print(io, model)
 
 # ----------------------------------------
 
@@ -99,3 +101,6 @@ end
 function Δbi(params::NetParams, δi::Float64, dbi::Float64)
   -learningRate(params.η) * δi + momentum(params.μ) * dbi
 end
+
+
+OnlineStats.update!(params::NetParams) = (update!(params.η); update!(params.μ))

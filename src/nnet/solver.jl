@@ -1,15 +1,25 @@
 
+
+doc"""
+Various parameters for the solve! call.
+  maxiter := maximum total number of iterations
+  erroriter := number of iterations between updating the SolverStats object and checking stopping conditions
+  breakiter := number of iterations between the `onbreak` callback
+  stopepochs := number of epochs (1 epoch == 1 update to stats) without improvement for early stopping
+  minerror := when validation error drops below this, stop
+  onbreak := callback function, run once every breakiter iterations. function args: (net::NeuralNet, solverParams::SolverParams, stats::SolverStats)
+"""
 type SolverParams
-  maxiter::Int
-  erroriter::Int
+  maxiter::Int   # maximum total number of iterations
+  erroriter::Int  # number of iterations be
+  breakiter::Int
+  stopepochs::Int
   minerror::Float64
-  displayiter::Int
-  maxEpochWithoutImprovement::Int
   onbreak::Function
 end
 
-function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter=10000, maxEpochWithoutImprovement=100, onbreak=donothing) 
-  SolverParams(maxiter, erroriter, minerror, displayiter, maxEpochWithoutImprovement, onbreak)
+function SolverParams(; maxiter=1000, erroriter=1000, breakiter=10000, stopepochs=100, minerror=1e-5, onbreak=donothing) 
+  SolverParams(maxiter, erroriter, breakiter, stopepochs, minerror, onbreak)
 end
 
 # ------------------------------------------------------------------------
@@ -33,7 +43,7 @@ Base.show(io::IO, stats::SolverStats) = print(io, string(stats))
 
 function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler, validationdata::DataSampler)
 
-  stats = SolverStats(0, 0.0)
+  stats = SolverStats()
 
   # loop through maxiter times
   for i in 1:solverParams.maxiter
@@ -63,7 +73,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
         stats.epochSinceImprovement += 1
 
         # early stopping... no improvement
-        if stats.epochSinceImprovement >= solverParams.maxEpochWithoutImprovement
+        if stats.epochSinceImprovement >= solverParams.stopepochs
           println("Early stopping: $stats")
           return
         end
@@ -71,7 +81,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
       end
     end
 
-    if i % solverParams.displayiter == 0
+    if i % solverParams.breakiter == 0
       solverParams.onbreak(net, solverParams, stats)
     end
   end
