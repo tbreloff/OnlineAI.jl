@@ -21,7 +21,7 @@ datasets = DataSets(data, data, data)
 #   μ := momentum term
 #   λ := L2-penalty param
 #   dropoutStrategy
-#   errorModel
+#   costModel
 hiddenLayerNodes = [2]
 net = buildRegressionNet(ncols(inputs),
                          ncols(targets),
@@ -50,7 +50,7 @@ NNet:
 - [x] Basic feedforward network
 - [x] Backprop working
 - [x] Standard activations/layers (Identity, Sigmoid, Tanh, Softsign)
-- [ ] Other activations/layers (Softmax, ReLU, LReLU)
+- [x] Other activations/layers (Softmax, ReLU, LReLU)
 - [x] Dropout regularization
 - [x] Basic data management (train/validate/test splitting)
 - [ ] Advanced data cleaning/transformations (handling NaNs, map multinomal classes to dummies, standardizing)
@@ -61,6 +61,7 @@ NNet:
 - [ ] Online algo: handle sequential data properly (unbiased validation/test data)
 - [ ] Cross-validation framework
 - [ ] Visualization tools (network design, connection weights, fit plots)
+- [ ] Ensembles
 
 Experimental:
 

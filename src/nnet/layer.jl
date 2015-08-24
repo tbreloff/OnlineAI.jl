@@ -54,9 +54,9 @@ end
 
 
 # backward step for the final (output) layer
-# note: errorMult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
-function updateSensitivities(layer::Layer, errorMult::AVecF, multiplyDerivative::Bool)
-  layer.δ = multiplyDerivative ? errorMult .* backward(layer.activation, layer.Σ) : errorMult
+# note: costMult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
+function updateSensitivities(layer::Layer, costMult::AVecF, multiplyDerivative::Bool)
+  layer.δ = multiplyDerivative ? costMult .* backward(layer.activation, layer.Σ) : costMult
 end
 
 # this is the backward step for a hidden layer

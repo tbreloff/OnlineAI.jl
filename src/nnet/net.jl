@@ -69,14 +69,14 @@ end
 
 function cost(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x)
-  cost(net.params.errorModel, y, yhat)
+  cost(net.params.costModel, y, yhat)
 end
 
 
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward(net, x, true)
-  errmult, multiplyDerivative = errorMultiplier(net.params.errorModel, y, yhat)
+  errmult, multiplyDerivative = costMultiplier(net.params.costModel, y, yhat)
   backward(net, errmult, multiplyDerivative)
   yhat
 end

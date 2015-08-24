@@ -44,6 +44,7 @@ forward(activation::LReLUActivation, Σ::Float64) = max(0.0, Σ)
 backward(activation::LReLUActivation, Σ::Float64) = Σ > 0.0 ? 1.0 : activation.ρ * Σ
 
 doc"""
+UNTESTED
 f(Σᵢ) = exp(Σᵢ) / Z
   where Z := sum(exp(Σ))
 Note: we expect the target vector to be a multinomal indicator vector, where 
