@@ -33,6 +33,7 @@ immutable DenoisingAutoencoder <: PretrainStrategy end
 
 
 function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSampler;
+                    tiedweights::Bool = true,
                     maxiter::Int = 1000,
                     dropout::DropoutStrategy = Dropout(pInput=0.7,pHidden=0.0),  # this is the "denoising" part, which throws out some of the inputs
                     encoderParams::NetParams = NetParams(η=0.1, μ=0.0, λ=0.0001, dropout=dropout),
@@ -40,7 +41,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
                     inputActivation::Activation = IdentityActivation())
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
-  dps = [DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)]
+  dps = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)])
   sampler = SimpleSampler(dps)
 
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
