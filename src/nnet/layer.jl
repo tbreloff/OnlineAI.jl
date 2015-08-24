@@ -4,7 +4,7 @@
 # forward value is f(wx + b), where f is the activation function
 # Σ := wx + b
 # note: w is a parameter for the case of tied weights (it can be a TransposeView!)
-type Layer{A <: Activation, MAT <: AbstractMatrix}
+type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}}
   nin::Int
   nout::Int
   activation::A
@@ -12,7 +12,7 @@ type Layer{A <: Activation, MAT <: AbstractMatrix}
 
   # the state of the layer
   x::VecF  # nin x 1 -- input 
-  w::MAT  # nout x nin -- weights connecting previous layer to this layer
+  w::MATF  # nout x nin -- weights connecting previous layer to this layer
   dw::MatF # nout x nin -- last changes in the weights (used for momentum)
   b::VecF  # nout x 1 -- bias terms
   db::VecF # nout x 1 -- last changes in bias terms (used for momentum)

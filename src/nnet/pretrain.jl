@@ -45,6 +45,13 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     # build a neural net which maps: nin -> nout -> nin
     outputActivation = layer.activation
     autoencoder = buildNet(layer.nin, layer.nin, [layer.nout]; hiddenActivation=inputActivation, finalActivation=outputActivation, params=encoderParams)
+
+    # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
+    if tiedweights
+      l = autoencoder.layers[2]
+      autoencoder.layers[2] = Layer(l.nin, l.nout, l.activation, l.p, l.x, TransposeView(autoencoder.layers[1].w, l.dw, l.b, l.db, l.δ, l.Σ, l.r, l.nextr)
+    end
+
     println("netlayer: $layer  oact: $outputActivation  autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
