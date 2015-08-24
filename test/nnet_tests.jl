@@ -56,4 +56,9 @@ facts("NNet") do
 end # facts
 
 
+function test_pretrain()
+  
+end
+
+
 end # module

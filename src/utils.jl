@@ -9,6 +9,18 @@ typealias FloatIterable AVecF
 # typealias IntIterable Union(VecI, StepRange{Int,Int}, UnitRange{Int})
 # typealias FloatIterable Union(VecF, FloatRange{Float64})
 
+# --------------------------------------------------------
+
+immutable TransposeView{T} <: AbstractMatrix{T}
+  mat::Matrix{T}
+end
+Base.getindex(v::TransposeView, i::Integer, j::Integer) = v.mat[j,i]
+Base.setindex!{T}(v::TransposeView{T}, val::T, i::Integer, j::Integer) = (v.mat[j,i] = val)
+Base.length(v::TransposeView) = length(v.mat)
+Base.size(v::TransposeView) = (ncols(v.mat), nrows(v.mat))
+
+
+
 
 ####################################################
 

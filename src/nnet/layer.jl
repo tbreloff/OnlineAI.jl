@@ -3,7 +3,8 @@
 # ninᵢ := noutᵢ₋₁ + 1  (we add the bias term automatically, so there's one extra input)
 # forward value is f(wx + b), where f is the activation function
 # Σ := wx + b
-type Layer{A <: Activation}
+# note: w is a parameter for the case of tied weights (it can be a TransposeView!)
+type Layer{A <: Activation, MAT <: AbstractMatrix}
   nin::Int
   nout::Int
   activation::A
@@ -11,7 +12,7 @@ type Layer{A <: Activation}
 
   # the state of the layer
   x::VecF  # nin x 1 -- input 
-  w::MatF  # nout x nin -- weights connecting previous layer to this layer
+  w::MAT  # nout x nin -- weights connecting previous layer to this layer
   dw::MatF # nout x nin -- last changes in the weights (used for momentum)
   b::VecF  # nout x 1 -- bias terms
   db::VecF # nout x 1 -- last changes in bias terms (used for momentum)

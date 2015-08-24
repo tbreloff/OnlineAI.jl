@@ -87,7 +87,8 @@ export
 include("nnet/net.jl")
 
 export
-  pretrain
+  pretrain,
+  DenoisingAutoencoder
 include("nnet/pretrain.jl")
 
 # include("nnet/lstm.jl")

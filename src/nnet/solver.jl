@@ -62,7 +62,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
 
       if stats.validationError <= solverParams.minerror
         println("Converged, breaking: $stats")
-        return
+        return stats
       end
 
       # check for improvement in validation error
@@ -75,7 +75,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
         # early stopping... no improvement
         if stats.epochSinceImprovement >= solverParams.stopepochs
           println("Early stopping: $stats")
-          return
+          return stats
         end
 
       end
@@ -87,6 +87,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
   end
 
   println("Maxiter reached: $stats")
+  stats
 end
 
 
