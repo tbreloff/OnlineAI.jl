@@ -41,8 +41,11 @@ export
   DataPoint,
   DataPoints,
   splitDataPoints,
-  DataPartitions,
-  DataSets
+  DataSampler,
+  SimpleSampler,
+  SubsetSampler,
+  splitDataSamplers,
+  StratifiedSampler
 include("nnet/data.jl")
 
 export
@@ -82,6 +85,10 @@ include("nnet/layer.jl")
 export
   NeuralNet
 include("nnet/net.jl")
+
+export
+  pretrain
+include("nnet/pretrain.jl")
 
 # include("nnet/lstm.jl")
 

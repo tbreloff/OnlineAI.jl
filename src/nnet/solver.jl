@@ -4,26 +4,34 @@ type SolverParams
   erroriter::Int
   minerror::Float64
   displayiter::Int
+  maxEpochWithoutImprovement::Int
   onbreak::Function
 end
 
+function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter=10000, maxEpochWithoutImprovement=100, onbreak=donothing) 
+  SolverParams(maxiter, erroriter, minerror, displayiter, maxEpochWithoutImprovement, onbreak)
+end
+
+# ------------------------------------------------------------------------
+
+
 type SolverStats
   numiter::Int
+  trainError::Float64
   validationError::Float64
+  bestValidationError::Float64
+  epochSinceImprovement::Int
 end
+SolverStats() = SolverStats(0, Inf, Inf, Inf, 0)
 
-function SolverParams(; maxiter=1000, erroriter=1000, minerror=1e-5, displayiter=10000, onbreak=donothing) 
-  SolverParams(maxiter, erroriter, minerror, displayiter, onbreak)
-end
-
-OnlineStats.update!(net::NetStat, data::DataPoint) = update!(net, data.x, data.y)
-
-
-totalCost(net::NetStat, data::DataPoint) = cost(net, data.x, data.y)
-totalCost(net::NetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
+Base.string(stats::SolverStats) = "SolverStats{n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError)}"
+Base.print(io::IO, stats::SolverStats) = print(io, string(stats))
+Base.show(io::IO, stats::SolverStats) = print(io, string(stats))
 
 
-function solve!(net::NetStat, solverParams::SolverParams, traindata::Union(DataPoints,DataPartitions), validationdata::DataPoints)
+# ------------------------------------------------------------------------
+
+function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler, validationdata::DataSampler)
 
   stats = SolverStats(0, 0.0)
 
@@ -38,11 +46,28 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::Union(DataP
 
     # # check for convergence
     if i % solverParams.erroriter == 0
+      stats.trainError = totalCost(net, traindata)
       stats.validationError = totalCost(net, validationdata)
-      println("Status: iter=$i toterr=$(stats.validationError)  $net")
+      println("Status: $stats  $net")
+
       if stats.validationError <= solverParams.minerror
-        println("Breaking: niter=$i, toterr=$(stats.validationError), minerr=$(solverParams.minerror)")
+        println("Converged, breaking: $stats")
         return
+      end
+
+      # check for improvement in validation error
+      if stats.validationError < stats.bestValidationError
+        stats.bestValidationError = stats.validationError
+        stats.epochSinceImprovement = 0
+      else
+        stats.epochSinceImprovement += 1
+
+        # early stopping... no improvement
+        if stats.epochSinceImprovement >= solverParams.maxEpochWithoutImprovement
+          println("Early stopping: $stats")
+          return
+        end
+
       end
     end
 
@@ -51,7 +76,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::Union(DataP
     end
   end
 
-  println("maxiter reached")
+  println("Maxiter reached: $stats")
 end
 
 

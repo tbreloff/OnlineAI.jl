@@ -1,10 +1,11 @@
 
-
+doc"A single input/output pair"
 type DataPoint
   x::VecF
   y::VecF
 end
 
+doc"A list of input/output data points"
 type DataPoints <: AbstractVector{DataPoint}
   data::Vector{DataPoint}
 end
@@ -37,50 +38,102 @@ Distributions.sample(dps::DataPoints, n::Int) = dps[sample(1:length(dps), n)]
 Base.shuffle(dps::DataPoints) = DataPoints(shuffle(dps.data))
 Base.shuffle!(dps::DataPoints) = shuffle!(dps.data)
 
+
+# --------------------------------------------------------
+
+doc"""
+Generic approach to sampling data.  Allows for many different approaches in a unified framework.
+DataSamplers should implement the Distributions.sample method which returns a DataPoint object, 
+and a DataPoints constructor which returns a DataPoints object with unique DataPoints.
+"""
+abstract DataSampler
+
+# return a DataPoints object with n samples from the sampler
+Distributions.sample(sampler::DataSampler, n::Int) = DataPoints(DataPoint[sample(sampler) for i in 1:n])
+
+doc"Sample the whole data set"
+immutable SimpleSampler <: DataSampler
+  data::DataPoints
+end
+
+Distributions.sample(sampler::SimpleSampler) = sample(sampler.data)
+DataPoints(sampler::SimpleSampler) = sampler.data
+
+# --------------------------------------------------------
+
+doc"Sample from a subset of the data (defined by the range)"
+immutable SubsetSampler <: DataSampler
+  data::DataPoints
+  range::AVecI
+end
+
+# sample from the range
+Distributions.sample(sampler::SubsetSampler) = sampler.data[sample(sampler.range)]
+
+DataPoints(sampler::SubsetSampler) = sampler.data[range]
+
+doc"Create 2 SubsetSampler, one for the first pct of the data and the other for the remaining (1-pct)."
+function splitDataSamplers(data::DataPoints, pct::Real)
+  r1, r2 = splitRange(length(data), pct)
+  SubsetSampler(data, r1), SubsetSampler(data, r2)
+end
+
 # --------------------------------------------------------
 
 "separate a dataset into one DataPoint for each y value"
-type DataPartitions
-  partitions::Vector{DataPoints}
-  numSamples::Int
+type StratifiedSampler <: DataSampler
+  data::DataPoints
+  idxlist::VecI
+  # dpslist::Vector{DataPoints}
+  n::Int  # current bucket
 end
 
-function DataPartitions(dps::DataPoints)
-  partitions = DataPoints[]
-  for dp in dps
+function StratifiedSampler(dps::DataPoints)
+  # dpslist = DataPoints[]
+  idxlist = VecI[]
+  for (i,dp) in enumerate(dps)
     
     matched = false
-    for part in partitions
-      if dp.y == part[1].y
-        push!(part, dp)
+    for indices in idxlist
+      if dp.y == dps[indices[1]].y
+        push!(indices, i)
         matched = true
         break
       end
     end
     
     if !matched
-      push!(partitions, DataPoints([dp]))
+      push!(idxlist, [i])
     end
   end
 
-  DataPartitions(partitions, 0)
+  StratifiedSampler(dps, idxlist, 1)
 end
 
 # sample from each y value equally
-function Distributions.sample(partitions::DataPartitions)
-  parts = partitions.partitions
-  dps = parts[(partitions.numSamples%length(parts))+1]
-  partitions.numSamples += 1
-  sample(dps)
+function Distributions.sample(sampler::StratifiedSampler)
+
+  # get the right bucket
+  indices = sampler.idxlist[sampler.n]
+
+  # update the bucket number
+  sampler.n += 1
+  if sampler.n > length(sampler.idxlist)
+    sampler.n = 1 # reset
+  end
+
+  # do the sample
+  sampler.data[sample(indices)]
 end
 
-Distributions.sample(partitions::DataPartitions, n::Int) = DataPoints([sample(partitions) for i in 1:n])
+DataPoints(sampler::StratifiedSampler) = sampler.data
+
 
 # --------------------------------------------------------
 
-type DataSets
-  trainingSet::DataPoints
-  validationSet::DataPoints
-  testSet::DataPoints
-end
+# type DataSets
+#   trainingSet::DataPoints
+#   validationSet::DataPoints
+#   testSet::DataPoints
+# end
 

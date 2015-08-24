@@ -32,6 +32,7 @@ function Base.show(io::IO, net::NeuralNet)
 end
 Base.print(io::IO, net::NeuralNet) = show(io, net)
 
+# ------------------------------------------------------------------------
 
 # produces a vector of yhat (estimated outputs) from the network
 function forward(net::NeuralNet, x::AVecF, istraining::Bool = false)
@@ -67,10 +68,7 @@ function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
 end
 
 
-function cost(net::NeuralNet, x::AVecF, y::AVecF)
-  yhat = forward(net, x)
-  cost(net.params.costModel, y, yhat)
-end
+# ------------------------------------------------------------------------
 
 
 # online version... returns the feedforward estimate before updating
@@ -90,6 +88,20 @@ function OnlineStats.update!(net::NeuralNet, x::MatF, y::MatF)
 
   Float64[update!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
 end
+
+OnlineStats.update!(net::NetStat, data::DataPoint) = update!(net, data.x, data.y)
+
+# ------------------------------------------------------------------------
+
+function cost(net::NeuralNet, x::AVecF, y::AVecF)
+  yhat = forward(net, x)
+  cost(net.params.costModel, y, yhat)
+end
+totalCost(net::NetStat, data::DataPoint) = cost(net, data.x, data.y)
+totalCost(net::NetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
+totalCost(net::NetStat, sampler::DataSampler) = totalCost(net, DataPoints(sampler))
+
+# ------------------------------------------------------------------------
 
 function StatsBase.predict(net::NeuralNet, x::AVecF)
   forward(net, x)

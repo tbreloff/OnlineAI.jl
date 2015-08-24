@@ -17,6 +17,7 @@ function testxor(; hiddenLayerNodes = [2],
   # all sets are the same
   inputs = inputs .- mean(inputs,1)
   data = DataPoints(inputs, targets)
+  sampler = SimpleSampler(data)
 
   # hiddenLayerNodes = [2]
   net = buildRegressionNet(ncols(inputs),
@@ -27,7 +28,7 @@ function testxor(; hiddenLayerNodes = [2],
                            params = params)
   show(net)
 
-  solve!(net, solverParams, data, data)
+  solve!(net, solverParams, sampler, sampler)
 
   # output = Float64[predict(net, d.input)[1] for d in data]
   output = vec(predict(net, inputs))

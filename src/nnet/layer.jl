@@ -65,7 +65,7 @@ function updateSensitivities(layer::Layer, nextlayer::Layer)
   layer.δ = (nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
 end
 
-# TODO: update weights/bias one column at a time... skipping over the dropped out nodes
+# update weights/bias one column at a time... skipping over the dropped out nodes
 function updateWeights(layer::Layer, params::NetParams)
 
   for iOut in 1:layer.nout
