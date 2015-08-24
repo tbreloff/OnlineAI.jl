@@ -44,7 +44,7 @@ facts("NNet") do
   minerror = 0.05
   solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
 
-  net, output = testxor(params=NetParams(η=0.2, μ=0.0, λ=0.0, errorModel=CrossEntropyErrorModel()), solverParams=solverParams)
+  net, output = testxor(params=NetParams(η=0.2, μ=0.0, λ=0.0, errorModel=CrossEntropyCostModel()), solverParams=solverParams)
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
 

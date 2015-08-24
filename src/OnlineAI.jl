@@ -15,54 +15,6 @@ import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
 export row, col, row!, col!, rows, cols, nrows, ncols,
        VecF, MatF, AVec, AMat, AVecF, AMatF
 
-export Activation,
-       IdentityActivation,
-       SigmoidActivation,
-       TanhActivation,
-       SoftsignActivation,
-       ReLUActivation,
-       LReLUActivation,
-
-       Layer,
-       NeuralNet,
-
-       DataPoint,
-       DataPoints,
-       splitDataPoints,
-       DataPartitions,
-       DataSets,
-
-       ErrorModel,
-       L2ErrorModel,
-       WeightedL2ErrorModel,
-       CrossEntropyErrorModel,
-
-       cost,
-       totalCost,
-
-       DropoutStrategy,
-       Dropout,
-       NoDropout,
-
-       MomentumModel,
-       FixedMomentum,
-       DecayMomentum,
-       momentum,
-
-       LearningRateModel,
-       FixedLearningRate,
-       DecayLearningRate,
-       learningRate,
-
-       NetParams,
-       
-       SolverParams,
-       SolverStats,
-       solve!,
-
-       buildNet,
-       buildClassifierNet,
-       buildRegressionNet
 
 
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
@@ -70,16 +22,77 @@ abstract NetStat <: OnlineStat
 nobs(o::NetStat) = 0
 abstract Node
 
+# ------------------------------------------------
 
 include("utils.jl")
+
+export 
+  Activation,
+  IdentityActivation,
+  SigmoidActivation,
+  TanhActivation,
+  SoftsignActivation,
+  ReLUActivation,
+  LReLUActivation,
+  SoftmaxActivation
 include("nnet/activations.jl")
+
+export
+  DataPoint,
+  DataPoints,
+  splitDataPoints,
+  DataPartitions,
+  DataSets
 include("nnet/data.jl")
+
+export
+  CostModel,
+  L2CostModel,
+  WeightedL2CostModel,
+  CrossEntropyCostModel,
+  cost,
+  totalCost
+include("nnet/costs.jl")
+
+export
+  DropoutStrategy,
+  Dropout,
+  NoDropout,
+  MomentumModel,
+  FixedMomentum,
+  DecayMomentum,
+  momentum,
+  LearningRateModel,
+  FixedLearningRate,
+  DecayLearningRate,
+  learningRate,
+  NetParams
 include("nnet/params.jl")
+
+export
+  SolverParams,
+  SolverStats,
+  solve!
 include("nnet/solver.jl")
+
+export
+  Layer
 include("nnet/layer.jl")
+
+export
+  NeuralNet
 include("nnet/net.jl")
+
 # include("nnet/lstm.jl")
+
+export
+  buildNet,
+  buildClassifierNet,
+  buildRegressionNet
 include("nnet/build.jl")
+
+export
+  visualize
 include("nnet/visualize.jl")
 
 # ----------------------------------------------------------------------
@@ -108,7 +121,6 @@ export GaussianReceptiveField,
        LiquidStateMachine,
        liquidState,
 
-       visualize,
        LiquidVisualization,
        LiquidVisualizationNode
 
@@ -123,5 +135,6 @@ include("liquid/neurons.jl")
 include("liquid/input.jl")
 include("liquid/visualize.jl")
 
+# ------------------------------------------------
 
 end

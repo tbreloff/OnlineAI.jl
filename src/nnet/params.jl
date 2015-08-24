@@ -14,64 +14,6 @@ Dropout(; pInput=0.8, pHidden=0.5) = Dropout(pInput, pHidden)
 immutable NoDropout <: DropoutStrategy end
 
 
-# -------------------------------------
-
-
-abstract ErrorModel
-
-"typical sum of squared errors"
-immutable L2ErrorModel <: ErrorModel end
-
-"returns M from the equation δ = M .* f'(Σ) ... used in the gradient update"
-errorMultiplier(::L2ErrorModel, y::Float64, yhat::Float64) = yhat - y
-
-"cost function"
-cost(::L2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2
-cost(::L2ErrorModel, y::AVecF, yhat::AVecF) = 0.5 * sumabs2(y - yhat)
-
-#-------------
-
-"""
-Typical sum of squared errors, but scaled by ρ*y.  We implicitly assume that y ∈ {0,1}.
-"""
-immutable WeightedL2ErrorModel <: ErrorModel
-  ρ::Float64
-end
-errorMultiplier(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = (yhat - y) * (y > 0 ? model.ρ : 1)
-cost(model::WeightedL2ErrorModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2 * (y > 0 ? model.ρ : 1)
-
-#-------------
-
-immutable CrossEntropyErrorModel <: ErrorModel end
-
-errorMultiplier(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = yhat - y # binary case
-function errorMultiplier(model::CrossEntropyErrorModel, y::AVecF, yhat::AVecF) # softmax case
-  (length(y) == 1 ? Float64[errorMultiplier(model, y[1], yhat[1])] : yhat - y), false
-end
-
-cost(model::CrossEntropyErrorModel, y::Float64, yhat::Float64) = -log(y > 0.0 ? yhat : (1.0 - yhat)) # binary case
-function cost(model::CrossEntropyErrorModel, y::AVecF, yhat::AVecF) # softmax case
-  length(y) == 1 && return cost(model, y[1], yhat[1])
-  C = 0.0
-  for (i,yi) in enumerate(y)
-    C -= yi * log(yhat[i])
-  end
-  C
-end
-
-
-#-------------
-
-# note: the vector version of errorMultiplier also returns a boolean which is true when we
-#       need to multiply this value by f'(Σ) when calculating the sensitivities δ
-function errorMultiplier(model::ErrorModel, y::AVecF, yhat::AVecF)
-  Float64[errorMultiplier(model, y[i], yhat[i]) for i in length(y)], true
-end
-
-function cost(model::ErrorModel, y::AVecF, yhat::AVecF)
-  sum([cost(model, y[i], yhat[i]) for i in 1:length(y)])
-end
-
 # ----------------------------------------
 
 abstract MomentumModel
@@ -81,6 +23,7 @@ immutable FixedMomentum <: MomentumModel
 end
 momentum(model::FixedMomentum) = model.μ
 
+doc"linear decay from μ_high to μ_low over numPeriods"
 type DecayMomentum <: MomentumModel
   μ_high::Float64
   μ_low::Float64
@@ -104,6 +47,7 @@ immutable FixedLearningRate <: LearningRateModel
 end
 learningRate(model::FixedLearningRate) = model.η
 
+doc"linear decay from η_high to η_low over numPeriods"
 type DecayLearningRate <: MomentumModel
   η_high::Float64
   η_low::Float64
@@ -120,18 +64,18 @@ end
 
 # ----------------------------------------
 
-type NetParams{LEARN<:LearningRateModel, MOM<:MomentumModel, DROP<:DropoutStrategy, ERR<:ErrorModel}
+type NetParams{LEARN<:LearningRateModel, MOM<:MomentumModel, DROP<:DropoutStrategy, ERR<:CostModel}
   η::LEARN # learning rate
   μ::MOM
   λ::Float64 # L2 penalty term
   dropoutStrategy::DROP
-  errorModel::ERR
+  costModel::ERR
 end
 
-function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), errorModel=L2ErrorModel())
+function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), costModel=L2CostModel())
   η = typeof(η) <: Real ? FixedLearningRate(Float64(η)) : η  # convert numbers to FixedLearningRate
   μ = typeof(μ) <: Real ? FixedMomentum(Float64(μ)) : μ  # convert numbers to FixedMomentum
-  NetParams(η, μ, λ, dropout, errorModel)
+  NetParams(η, μ, λ, dropout, costModel)
 end
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
