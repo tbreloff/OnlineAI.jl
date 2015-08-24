@@ -3,6 +3,15 @@ module NNetTest
 
 using OnlineAI, FactCheck
 
+function xor_data()
+  inputs = [0 0; 0 1; 1 0; 1 1]
+  targets = float(sum(inputs,2) .== 1)
+
+  # all sets are the same
+  inputs = inputs .- mean(inputs,1)
+  DataPoints(inputs, targets)
+end
+
 
 function testxor(; hiddenLayerNodes = [2],
                    hiddenActivation = SigmoidActivation(),
@@ -56,8 +65,11 @@ facts("NNet") do
 end # facts
 
 
-function test_pretrain()
-  
+function test_pretrain(net; kwargs...)
+  data = xor_data()
+  sampler = SimpleSampler(data)
+
+  stats = pretrain(net, sampler; kwargs...)
 end
 
 

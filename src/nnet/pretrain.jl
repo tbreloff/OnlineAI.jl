@@ -9,6 +9,10 @@ and Stacked Sparse (Denoising) Autoencoders.
 """
 abstract PretrainStrategy
 
+
+# default
+pretrain(net::NeuralNet, sampler::DataSampler; kwargs...) = pretrain(DenoisingAutoencoder, net, sampler; kwargs...)
+
 # -----------------------------------------------------------------
 
 immutable DenoisingAutoencoder <: PretrainStrategy end
@@ -49,7 +53,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
     if tiedweights
       l = autoencoder.layers[2]
-      autoencoder.layers[2] = Layer(l.nin, l.nout, l.activation, l.p, l.x, TransposeView(autoencoder.layers[1].w, l.dw, l.b, l.db, l.δ, l.Σ, l.r, l.nextr)
+      autoencoder.layers[2] = Layer(l.nin, l.nout, l.activation, l.p, l.x, TransposeView(autoencoder.layers[1].w), l.dw, l.b, l.db, l.δ, l.Σ, l.r, l.nextr)
     end
 
     println("netlayer: $layer  oact: $outputActivation  autoenc: $autoencoder")
@@ -72,6 +76,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
       newx = forward(autoencoderlayer, dps[i].x, false)
       dps[i] = DataPoint(newx, newx)
     end
+    println()
 
   end
 
