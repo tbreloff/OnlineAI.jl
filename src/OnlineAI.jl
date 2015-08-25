@@ -100,6 +100,10 @@ export
 include("nnet/build.jl")
 
 export
+  Ensemble
+include("nnet/ensembles.jl")
+
+export
   visualize
 include("nnet/visualize.jl")
 
