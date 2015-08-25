@@ -51,6 +51,7 @@ include("nnet/data.jl")
 export
   CostModel,
   L2CostModel,
+  L1CostModel,
   WeightedL2CostModel,
   CrossEntropyCostModel,
   cost,

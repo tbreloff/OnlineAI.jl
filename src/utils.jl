@@ -14,12 +14,21 @@ typealias FloatIterable AVecF
 immutable TransposeView{T} <: AbstractMatrix{T}
   mat::Matrix{T}
 end
-Base.getindex(v::TransposeView, i::Integer, j::Integer) = v.mat[j,i]
-Base.setindex!{T}(v::TransposeView{T}, val::T, i::Integer, j::Integer) = (v.mat[j,i] = val)
-Base.length(v::TransposeView) = length(v.mat)
-Base.size(v::TransposeView) = (ncols(v.mat), nrows(v.mat))
+Base.getindex(tv::TransposeView, i::Integer, j::Integer) = tv.mat[j,i]
+Base.setindex!{T}(tv::TransposeView{T}, val::T, i::Integer, j::Integer) = (tv.mat[j,i] = val)
+Base.length(tv::TransposeView) = length(tv.mat)
+Base.size(tv::TransposeView) = (ncols(tv.mat), nrows(tv.mat))
 
+import Base: *, ctranspose
+function *{T<:Real}(tv::TransposeView{T}, v::AVec{T})
+  res = similar(v, T, nrows(tv))
+  for i in 1:nrows(tv)
+    res[i] = dot(col(tv.mat, i), v)
+  end
+  res
+end
 
+ctranspose(tv::TransposeView) = tv.mat
 
 
 ####################################################

@@ -17,19 +17,6 @@ pretrain(net::NeuralNet, sampler::DataSampler; kwargs...) = pretrain(DenoisingAu
 
 immutable DenoisingAutoencoder <: PretrainStrategy end
 
-# immutable DenoisingAutoencoder <: PretrainStrategy
-#   net::NeuralNet
-#   params::NetParams
-#   solverParams::SolverParams
-# end
-
-# doc"""
-# Using the NeuralNet layer and the parameters, construct a new NeuralNet which represents an autoencoder and
-# which shares the weight/bias with the Layer
-# """
-# function makeAutoencoderNet(::Type{DenoisingAutoencoder}, layer::Layer, encoderParams::NetParams, solverParams::SolverParams)
-#   outputlayer = Layer()
-# end
 
 
 function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSampler;
@@ -42,6 +29,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
   dps = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)])
+  println(dps)
   sampler = SimpleSampler(dps)
 
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
@@ -77,7 +65,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
       newx = forward(autoencoderlayer, dps[i].x, false)
       dps[i] = DataPoint(newx, newx)
     end
-    println()
+    println(dps)
 
   end
 

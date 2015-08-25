@@ -41,6 +41,10 @@ Base.show(io::IO, stats::SolverStats) = print(io, string(stats))
 
 # ------------------------------------------------------------------------
 
+doc"""
+Batch stochastic gradient descent solver.  Sample from training data to update net, stop if converged
+or if validation error is not improving.  Returns SolverStats summary object.
+"""
 function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler, validationdata::DataSampler)
 
   stats = SolverStats()
@@ -60,11 +64,6 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
       stats.validationError = totalCost(net, validationdata)
       println("Status: $stats  $net")
 
-      if stats.validationError <= solverParams.minerror
-        println("Converged, breaking: $stats")
-        return stats
-      end
-
       # check for improvement in validation error
       if stats.validationError < stats.bestValidationError
         stats.bestValidationError = stats.validationError
@@ -77,10 +76,16 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
           println("Early stopping: $stats")
           return stats
         end
+      end
 
+      # check if our error is low enough
+      if stats.validationError <= solverParams.minerror
+        println("Converged, breaking: $stats")
+        return stats
       end
     end
 
+    # take a break?
     if i % solverParams.breakiter == 0
       solverParams.onbreak(net, solverParams, stats)
     end

@@ -5,6 +5,15 @@ type NeuralNet <: NetStat
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   # i.e. only allow cross entropy error with sigmoid activation
+  function NeuralNet(layers::Vector{Layer}, params::NetParams)
+
+    # do some sanity checking on activation/costmodel combos
+    if isa(params.costModel, CrossEntropyCostModel)
+      @assert isa(layers[end].activation, layers[end].nout > 1 ? SoftmaxActivation : SigmoidActivation)
+    end
+
+    new(layers, params)
+  end
 end
 
 

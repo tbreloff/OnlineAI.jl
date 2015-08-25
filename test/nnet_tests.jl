@@ -54,7 +54,7 @@ facts("NNet") do
   minerror = 0.05
   solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
 
-  net, output = testxor(params=NetParams(η=0.2, μ=0.0, λ=0.0, costModel=CrossEntropyCostModel()), solverParams=solverParams)
+  net, output = testxor(params=NetParams(η=0.2, μ=0.0, λ=0.0, costModel=L1CostModel()), solverParams=solverParams)
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
 
@@ -65,11 +65,20 @@ facts("NNet") do
 end # facts
 
 
-function test_pretrain(net; kwargs...)
+function test_pretrain(; solve=true, pretr=true, netparams=NetParams(η=0.2), kwargs...)
   data = xor_data()
   sampler = SimpleSampler(data)
 
-  stats = pretrain(net, sampler; kwargs...)
+  net = buildRegressionNet(2,1,[2]; params=netparams)
+  if pretr
+    pretrain(net, sampler; kwargs...)
+  end
+
+  if solve
+    solve!(net, SolverParams(maxiter=10000), sampler, sampler)
+  end
+
+  net, Float64[predict(net,d.x)[1] for d in data]
 end
 
 

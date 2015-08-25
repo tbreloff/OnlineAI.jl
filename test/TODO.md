@@ -4,11 +4,8 @@
 - cross validation (data.jl)
 
 - data samplers
-  - generic class structure to sample from a data set.
   - maybe they can be OnlineStats, so that update! will add to the dataset
     - on this thought, we can stream data to a sampler which probablistically retains a limited subset of data points
-  - there should obviously be a "sample" method
-  - maybe do a TestTrainSplitSampler, which would sample from certain ranges, but accessing a single source of datapoints
 
 - ensembles
   - should give a list of models, or parameter search.  update each model for a data point

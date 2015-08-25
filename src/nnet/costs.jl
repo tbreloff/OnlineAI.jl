@@ -33,8 +33,8 @@ costMultiplier(::L2CostModel, y::Float64, yhat::Float64) = yhat - y
 "cost = sumabs(yhat-y)"
 immutable L1CostModel <: CostModel end
 
-cost(::L1CostModel, y::Float64, yhat::Float64) = y - yhat
-costMultiplier(::L1CostModel, y::Float64, yhat::Float64) = 1.0
+cost(::L1CostModel, y::Float64, yhat::Float64) = abs(y - yhat)
+costMultiplier(::L1CostModel, y::Float64, yhat::Float64) = sign(yhat - y)
 
 #-------------
 
