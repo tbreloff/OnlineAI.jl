@@ -23,7 +23,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
                     tiedweights::Bool = true,
                     maxiter::Int = 1000,
                     dropout::DropoutStrategy = Dropout(pInput=0.7,pHidden=0.0),  # this is the "denoising" part, which throws out some of the inputs
-                    encoderParams::NetParams = NetParams(η=0.1, μ=0.0, λ=0.0001, dropout=dropout),
+                    encoderParams::NetParams = NetParams(η=1.0, μ=0.0, λ=1e-5, dropout=dropout),
                     solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=typemax(Int), breakiter=typemax(Int)),  #probably don't set this manually??
                     inputActivation::Activation = IdentityActivation())
 

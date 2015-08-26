@@ -101,6 +101,8 @@ include("nnet/build.jl")
 
 export
   Constant,
+  HiddenLayerSampler,
+  VectorSampler,
   ParameterSampler,
   Ensemble
 include("nnet/ensembles.jl")

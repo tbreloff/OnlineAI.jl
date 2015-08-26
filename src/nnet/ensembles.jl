@@ -9,6 +9,33 @@ end
 StatsBase.sample(c::Constant) = c.c
 
 
+immutable HiddenLayerSampler <: DiscreteMultivariateDistribution
+  numlayers::AVecI
+  numnodes::AVecI
+end
+function StatsBase.sample(hls::HiddenLayerSampler)
+  numlayers = sample(hls.numlayers)
+  Int[sample(hls.numnodes) for i in 1:numlayers]
+end
+
+
+immutable VectorSampler{T} <: DiscreteUnivariateDistribution
+  vec::AVec{T}
+  probs::VecF
+end
+VectorSampler(vec::AVec) = VectorSampler(vec, fill(1.0 / length(vec), length(vec)))
+function StatsBase.sample(vs::VectorSampler)
+  r = rand()
+  totp = 0.0
+  for (i,p) in enumerate(vs.probs)
+    totp += p
+    if r <= totp
+      return vs.vec[i]
+    end
+  end
+  error("probs don't sum to 1?? $r $totp $vs")
+end
+
 # -----------------------------------------------------------------------------
 
 
@@ -25,7 +52,7 @@ when randomly choosing a parameter set.  Example:
 """
 type ParameterSampler
   syms::Vector{Symbol}
-  dists::Vector{Distribution}
+  dists::Vector
 end
 StatsBase.sample(ps::ParameterSampler) = [(ps.syms[i], sample(dist)) for (i,dist) in enumerate(ps.dists)]
 
@@ -35,12 +62,12 @@ StatsBase.sample(ps::ParameterSampler) = [(ps.syms[i], sample(dist)) for (i,dist
 
 
 doc"""
-Create N models, all using the `buildFn`, which handles creating the model with the constant args/kwargs,
+Create numModels models, all using the `buildFn`, which handles creating the model with the constant args/kwargs,
 and a random sampling of the parameters from the parameter sampler.
 Note we assume all parameters we care about setting are keyword params.
 """
-function generateModels{M<:OnlineStat}(buildFn::Function, ps::ParameterSampler, N::Integer)
-  OnlineStat[buildFn(; sample(ps)...) for i in 1:N]
+function generateModels(buildFn::Function, ps::ParameterSampler, numModels::Integer)
+  OnlineStat[buildFn(; sample(ps)...) for i in 1:numModels]
 end
 
 # -----------------------------------------------------------------------------
@@ -62,7 +89,10 @@ type Ensemble{STAT} <: OnlineStat
   aggs::Vector{STAT}  # one aggregation model for each target variable... each agg maps nummodels vars to numtargets vars
 end
 
-Ensemble{M<:OnlineStat, AGG}(buildFn::Function, ps::ParameterSampler, N::Integer, args...; kwargs...) = Ensemble(generateModels(buildFn, ps, N, args...; kwargs...), )
+# the build function should take only keyword arguments to build, which can be populated with a ParameterSampler
+function Ensemble{AGG<:OnlineStat}(::Type{AGG}, buildFn::Function, ps::ParameterSampler, numModels::Int, nout::Int, args...; kwargs...)
+  Ensemble(generateModels(buildFn, ps, numModels), AGG[AGG(args...; kwargs...) for i in 1:nout])
+end
 
 
 StatsBase.predict(models::Vector{OnlineStat}, x::AVecF) = [predict(model, x) for model in models]
