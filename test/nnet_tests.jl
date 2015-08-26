@@ -17,7 +17,8 @@ function testxor(; hiddenLayerNodes = [2],
                    hiddenActivation = SigmoidActivation(),
                    finalActivation = IdentityActivation(),
                    params = NetParams(),
-                   solverParams = SolverParams(maxiter=10000))
+                   solverParams = SolverParams(maxiter=10000),
+                   inputTransformer = IdentityTransformer())
 
   # all xor inputs and results
   inputs = [0 0; 0 1; 1 0; 1 1]
@@ -35,13 +36,12 @@ function testxor(; hiddenLayerNodes = [2],
                            hiddenActivation = hiddenActivation,
                            finalActivation = finalActivation,
                            params = params,
-                           solverParams = solverParams)
-                           # inputTransformer = x -> x[1:1])
+                           solverParams = solverParams,
+                           inputTransformer = inputTransformer)
   show(net)
 
   stats = solve!(net, sampler, sampler)
 
-  # output = Float64[predict(net, d.input)[1] for d in data]
   output = vec(predict(net, inputs))
   for (o, d) in zip(output, data)
     println("Result: input=$(d.x) target=$(d.y) output=$o")
@@ -57,7 +57,7 @@ facts("NNet") do
   solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
 
   net, output, stats = testxor(params=NetParams(μ=0.0, λ=0.0, costModel=L1CostModel()), solverParams=solverParams)
-  @fact net --> anything
+  # @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
 
 end # facts

@@ -47,21 +47,26 @@ A `ParameterSampler` holds vectors of keyword parameter names and the distributi
 when randomly choosing a parameter set.  Example:
 
 ```
-  ps = ParameterSampler([:x, :y], [Constant(1), Normal()])
+  ps = ParameterSampler(Dict(:x => Constant(1), :y => Normal()))
 ```
 """
 type ParameterSampler
   d::Dict
-  # syms::Vector{Symbol}
-  # dists::Vector
 end
-# StatsBase.sample(ps::ParameterSampler) = [(ps.syms[i], sample(dist)) for (i,dist) in enumerate(ps.dists)]
 StatsBase.sample(ps::ParameterSampler) = [(s,sample(dist)) for (s,dist) in ps.d]
 
 
 
 # -----------------------------------------------------------------------------
 
+doc"""
+Creates a `VectorTransformer` by sampling (N times) both a transform type and the index that it maps to.
+
+Note that we call `unique` so as not to duplicate data, so we may actually return less than N samples.
+"""
+function generateTransforms(transformSampler::VectorSampler{DataType}, indices::AVecI, N::Int)
+  VectorTransformer(unique(Transformation[sample(transformSampler)(sample(indices)) for i in 1:N]))
+end
 
 doc"""
 Create numModels models, all using the `buildFn`, which handles creating the model with the constant args/kwargs,

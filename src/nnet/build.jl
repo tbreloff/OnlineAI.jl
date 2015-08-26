@@ -4,7 +4,7 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
                   finalActivation::Activation = SigmoidActivation(),
                   params = NetParams(),
                   solverParams = SolverParams(),
-                  inputTransformer::Function = nop)
+                  inputTransformer::Transformer = IdentityTransformer())
   layers = Layer[]
   nin = numInputs
 

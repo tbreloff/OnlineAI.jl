@@ -35,14 +35,17 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
   for layer in net.layers[1:end-1]
 
-    # build a neural net which maps: nin -> nout -> nin
+    # some setup
     outputActivation = layer.activation
+    inputTransformer = layer === first(net.layers) ? net.inputTransformer : IdentityTransformer()
+
+    # build a neural net which maps: nin -> nout -> nin
     autoencoder = buildNet(layer.nin, layer.nin, [layer.nout];
                             hiddenActivation = inputActivation,
                             finalActivation = outputActivation,
                             params = encoderParams,
                             solverParams = solverParams,
-                            inputTransformer = (layer === first(net.layers) ? net.inputTransformer : nop))
+                            inputTransformer = ())
 
     # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
     l1, l2 = autoencoder.layers
@@ -66,9 +69,8 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     inputActivation = outputActivation
 
     # feed the data forward to the next layer
-    transformX = layer === first(net.layers)
     for i in 1:length(dps)
-      x = (transformX ? net.inputTransformer : nop)(dps[i].x)
+      x = transform(inputTransformer, dps[i].x)
       newx = forward(l1, x, false)
       dps[i] = DataPoint(newx, newx)
     end

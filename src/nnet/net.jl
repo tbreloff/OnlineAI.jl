@@ -3,11 +3,10 @@ type NeuralNet <: NetStat
   layers::Vector{Layer}  # note: this doesn't include input layer!!
   params::NetParams
   solverParams::SolverParams
-  inputTransformer::Function
+  inputTransformer::Transformer
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
-  # i.e. only allow cross entropy error with sigmoid activation
-  function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams, inputTransformer::Function = nop)
+  function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams, inputTransformer::Transformer = IdentityTransformer())
 
     # do some sanity checking on activation/costmodel combos
     if isa(params.costModel, CrossEntropyCostModel)
@@ -25,7 +24,7 @@ function NeuralNet(structure::AVec{Int};
                    params = NetParams(),
                    solverParams = SolverParams(),
                    activation::Activation = TanhActivation(),
-                   inputTransformer::Function = nop)
+                   inputTransformer::Transformer = IdentityTransformer())
   @assert length(structure) > 1
 
   layers = Layer[]
@@ -54,7 +53,7 @@ Base.print(io::IO, net::NeuralNet) = show(io, net)
 
 # produces a vector of yhat (estimated outputs) from the network
 function forward(net::NeuralNet, x::AVecF, istraining::Bool = false)
-  yhat = net.inputTransformer(x)
+  yhat = transform(net.inputTransformer, x)
   for layer in net.layers
     yhat = forward(layer, yhat, istraining)
   end

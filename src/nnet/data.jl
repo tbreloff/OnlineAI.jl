@@ -5,6 +5,52 @@ type DataPoint
   y::VecF
 end
 
+# --------------------------------------------------------
+
+
+# goal: some simple wrapers around datapoint that perform transformations
+# we want to: select subsets of values, and transform them (including nop)
+
+doc"""
+`Transformation`s wrap an index within a data vector, and descibe how to
+calculate Tⱼ(x) by transforming the iᵗʰ index.
+"""
+abstract Transformation
+
+immutable IdentityTransform <: Transformation idx::Int end
+transform(t::IdentityTransform, x::AVec) = x[t.idx]
+
+immutable AbsTransform <: Transformation idx::Int end
+transform(t::AbsTransform, x::AVec) = abs(x[t.idx])
+
+immutable LogPlus1Transform <: Transformation idx::Int end
+transform(t::LogPlus1Transform, x::AVec) = (xi = x[t.idx]; xi > 0.0 ? log(xi+1) : 0.0)
+
+immutable SquareTransform <: Transformation idx::Int end
+transform(t::SquareTransform, x::AVec) = x[t.idx]^2
+
+immutable CubeTransform <: Transformation idx::Int end
+transform(t::CubeTransform, x::AVec) = x[t.idx]^3
+
+immutable SignSquareTransform <: Transformation idx::Int end
+transform(t::SignSquareTransform, x::AVec) = (xi = x[t.idx]; sign(xi) * xi^2)
+
+
+# --------------------------------------------------------
+
+abstract Transformer
+
+immutable IdentityTransformer <: Transformer end
+transform(transformer::IdentityTransformer, x) = x
+
+immutable VectorTransformer <: Transformer
+  transformations::Vector{Transformation}
+end
+transform{T}(transformer::VectorTransformer, x::AVec{T}) = T[transform(t,x) for t in transformer.transformations]
+
+# --------------------------------------------------------
+
+
 doc"A list of input/output data points"
 type DataPoints <: AbstractVector{DataPoint}
   data::Vector{DataPoint}

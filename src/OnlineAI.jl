@@ -39,6 +39,17 @@ include("nnet/activations.jl")
 
 export
   DataPoint,
+  Transformation,
+  IdentityTransform,
+  AbsTransform,
+  LogPlus1Transform,
+  SquareTransform,
+  CubeTransform,
+  SignSquareTransform,
+  Transformer,
+  IdentityTransformer,
+  VectorTransformer,
+  transform,
   DataPoints,
   splitDataPoints,
   DataSampler,
