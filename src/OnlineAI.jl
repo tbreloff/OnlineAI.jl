@@ -63,11 +63,11 @@ export
   Dropout,
   NoDropout,
   MomentumModel,
-  FixedMomentum,
+  ConstantMomentum,
   DecayMomentum,
   momentum,
   LearningRateModel,
-  FixedLearningRate,
+  ConstantLearningRate,
   DecayLearningRate,
   learningRate,
   NetParams

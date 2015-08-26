@@ -9,9 +9,13 @@ immutable Dropout <: DropoutStrategy
   pHidden::Float64  # the probability that a node is used for hidden layers
 end
 Dropout(; pInput=0.8, pHidden=0.5) = Dropout(pInput, pHidden)
+Base.print(io::IO, d::Dropout) = print(io, "Dropout{$(d.pInput),$(d.pHidden)}")
+Base.show(io::IO, d::Dropout) = print(io, d)
 
 
 immutable NoDropout <: DropoutStrategy end
+Base.print(io::IO, d::NoDropout) = print(io, "NoDropout")
+Base.show(io::IO, d::NoDropout) = print(io, d)
 
 
 # ----------------------------------------
@@ -19,10 +23,13 @@ immutable NoDropout <: DropoutStrategy end
 abstract MomentumModel
 OnlineStats.update!(model::MomentumModel) = nothing
 
-immutable FixedMomentum <: MomentumModel
+immutable ConstantMomentum <: MomentumModel
   μ::Float64
 end
-momentum(model::FixedMomentum) = model.μ
+momentum(model::ConstantMomentum) = model.μ
+
+Base.print(io::IO, model::ConstantMomentum) = print(io, "const_μ{$(momentum(model))}")
+Base.show(io::IO, model::ConstantMomentum) = print(io, model)
 
 doc"linear decay from μ_high to μ_low over numPeriods"
 type DecayMomentum <: MomentumModel
@@ -44,10 +51,13 @@ Base.show(io::IO, model::DecayMomentum) = print(io, model)
 abstract LearningRateModel
 OnlineStats.update!(model::LearningRateModel) = nothing
 
-immutable FixedLearningRate <: LearningRateModel
+immutable ConstantLearningRate <: LearningRateModel
   η::Float64
 end
-learningRate(model::FixedLearningRate) = model.η
+learningRate(model::ConstantLearningRate) = model.η
+
+Base.print(io::IO, model::ConstantLearningRate) = print(io, "const_η{$(learningRate(model))}")
+Base.show(io::IO, model::ConstantLearningRate) = print(io, model)
 
 doc"linear decay from η_high to η_low over numPeriods"
 type DecayLearningRate <: LearningRateModel
@@ -72,14 +82,17 @@ type NetParams{LEARN<:LearningRateModel, MOM<:MomentumModel, DROP<:DropoutStrate
   λ::Float64 # L2 penalty term
   dropoutStrategy::DROP
   costModel::ERR
-  useAdaGrad::Bool
+  useAdagrad::Bool
 end
 
-function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), costModel=L2CostModel(), useAdaGrad::Bool = true)
-  η = typeof(η) <: Real ? FixedLearningRate(Float64(η)) : η  # convert numbers to FixedLearningRate
-  μ = typeof(μ) <: Real ? FixedMomentum(Float64(μ)) : μ  # convert numbers to FixedMomentum
+function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), costModel=L2CostModel(), useAdagrad::Bool = true)
+  η = typeof(η) <: Real ? ConstantLearningRate(Float64(η)) : η  # convert numbers to ConstantLearningRate
+  μ = typeof(μ) <: Real ? ConstantMomentum(Float64(μ)) : μ  # convert numbers to ConstantMomentum
   NetParams(η, μ, λ, dropout, costModel, true)
 end
+
+Base.print(io::IO, p::NetParams) = print(io, "NetParams{η=$(p.η), μ=$(p.μ), λ=$(p.λ), $(p.dropoutStrategy), $(p.costModel), $(p.useAdagrad ? "Adagrad" : "SGD")}")
+Base.show(io::IO, p::NetParams) = print(io, p)
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
 getDropoutProb(params::NetParams, isinput::Bool) = getDropoutProb(params.dropoutStrategy, isinput)

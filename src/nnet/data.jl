@@ -72,7 +72,7 @@ Distributions.sample(sampler::SubsetSampler) = sampler.data[sample(sampler.range
 
 DataPoints(sampler::SubsetSampler) = sampler.data[range]
 
-doc"Create 2 SubsetSampler, one for the first pct of the data and the other for the remaining (1-pct)."
+doc"Create two `SubsetSampler`s, one for the first `pct` of the data and the other for the remaining `1-pct`."
 function splitDataSamplers(data::DataPoints, pct::Real)
   r1, r2 = splitRange(length(data), pct)
   SubsetSampler(data, r1), SubsetSampler(data, r2)
@@ -83,19 +83,17 @@ end
 "separate a dataset into one DataPoint for each y value"
 type StratifiedSampler <: DataSampler
   data::DataPoints
-  idxlist::VecI
-  # dpslist::Vector{DataPoints}
+  idxlist::Vector{VecI}
   n::Int  # current bucket
 end
 
 function StratifiedSampler(dps::DataPoints)
-  # dpslist = DataPoints[]
   idxlist = VecI[]
   for (i,dp) in enumerate(dps)
     
     matched = false
     for indices in idxlist
-      if dp.y == dps[indices[1]].y
+      if dp.y == dps[first(indices)].y
         push!(indices, i)
         matched = true
         break
@@ -130,10 +128,4 @@ DataPoints(sampler::StratifiedSampler) = sampler.data
 
 
 # --------------------------------------------------------
-
-# type DataSets
-#   trainingSet::DataPoints
-#   validationSet::DataPoints
-#   testSet::DataPoints
-# end
 
