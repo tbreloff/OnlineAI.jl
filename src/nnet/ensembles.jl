@@ -96,6 +96,8 @@ function Ensemble{AGG<:OnlineStat}(::Type{AGG}, buildFn::Function, ps::Parameter
   Ensemble(generateModels(buildFn, ps, numModels), AGG[AGG(args...; kwargs...) for i in 1:nout])
 end
 
+OnlineStats.statenames(o::Ensemble) = [:nobs]
+OnlineStats.state(o::Ensemble) = Any[nobs(o)]
 
 StatsBase.predict(models::Vector{OnlineStat}, x::AVecF) = [predict(model, x) for model in models]
 
