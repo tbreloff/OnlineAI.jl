@@ -51,10 +51,12 @@ when randomly choosing a parameter set.  Example:
 ```
 """
 type ParameterSampler
-  syms::Vector{Symbol}
-  dists::Vector
+  d::Dict
+  # syms::Vector{Symbol}
+  # dists::Vector
 end
-StatsBase.sample(ps::ParameterSampler) = [(ps.syms[i], sample(dist)) for (i,dist) in enumerate(ps.dists)]
+# StatsBase.sample(ps::ParameterSampler) = [(ps.syms[i], sample(dist)) for (i,dist) in enumerate(ps.dists)]
+StatsBase.sample(ps::ParameterSampler) = [(s,sample(dist)) for (s,dist) in ps.d]
 
 
 
