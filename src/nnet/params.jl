@@ -72,12 +72,13 @@ type NetParams{LEARN<:LearningRateModel, MOM<:MomentumModel, DROP<:DropoutStrate
   λ::Float64 # L2 penalty term
   dropoutStrategy::DROP
   costModel::ERR
+  useAdaGrad::Bool
 end
 
-function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), costModel=L2CostModel())
+function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), costModel=L2CostModel(), useAdaGrad::Bool = true)
   η = typeof(η) <: Real ? FixedLearningRate(Float64(η)) : η  # convert numbers to FixedLearningRate
   μ = typeof(μ) <: Real ? FixedMomentum(Float64(μ)) : μ  # convert numbers to FixedMomentum
-  NetParams(η, μ, λ, dropout, costModel)
+  NetParams(η, μ, λ, dropout, costModel, true)
 end
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)

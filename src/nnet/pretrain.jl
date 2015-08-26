@@ -29,7 +29,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
   dps = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)])
-  println(dps)
+  # println(dps)
   sampler = SimpleSampler(dps)
 
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
@@ -40,9 +40,9 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     autoencoder = buildNet(layer.nin, layer.nin, [layer.nout]; hiddenActivation=inputActivation, finalActivation=outputActivation, params=encoderParams)
 
     # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
+    l1, l2 = autoencoder.layers
     if tiedweights
-      l = autoencoder.layers[2]
-      autoencoder.layers[2] = Layer(l.nin, l.nout, l.activation, l.p, l.x, TransposeView(autoencoder.layers[1].w), l.dw, l.b, l.db, l.δ, l.Σ, l.r, l.nextr)
+      autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p, l2.x, TransposeView(l1.w), l2.dw, l2.b, l2.db, l2.δ, l2.Σ, l2.r, l2.nextr, TransposeView(l1.Gw), l2.Gb)
     end
 
     println("netlayer: $layer  oact: $outputActivation  autoenc: $autoencoder")
@@ -52,20 +52,19 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     println("  $stats")
 
     # save the weights and bias to the layer
-    autoencoderlayer = autoencoder.layers[1]
-    println("autoencoderlayer: $autoencoderlayer")
-    layer.w = autoencoderlayer.w
-    layer.b = autoencoderlayer.b
+    # println("l1: $l1")
+    layer.w = l1.w
+    layer.b = l1.b
 
     # update the inputActivation, so that this layer's activation becomes the next autoencoder's inputActivation
     inputActivation = outputActivation
 
     # feed the data forward to the next layer
     for i in 1:length(dps)
-      newx = forward(autoencoderlayer, dps[i].x, false)
+      newx = forward(l1, dps[i].x, false)
       dps[i] = DataPoint(newx, newx)
     end
-    println(dps)
+    # println(dps)
 
   end
 
