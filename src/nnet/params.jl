@@ -85,7 +85,7 @@ type NetParams{LEARN<:LearningRateModel, MOM<:MomentumModel, DROP<:DropoutStrate
   useAdagrad::Bool
 end
 
-function NetParams(; η=1e-2, μ=0.0, λ=0.0001, dropout=NoDropout(), costModel=L2CostModel(), useAdagrad::Bool = true)
+function NetParams(; η=1.0, μ=0.1, λ=1e-5, dropout=NoDropout(), costModel=L2CostModel(), useAdagrad::Bool = true)
   η = typeof(η) <: Real ? ConstantLearningRate(Float64(η)) : η  # convert numbers to ConstantLearningRate
   μ = typeof(μ) <: Real ? ConstantMomentum(Float64(μ)) : μ  # convert numbers to ConstantMomentum
   NetParams(η, μ, λ, dropout, costModel, true)

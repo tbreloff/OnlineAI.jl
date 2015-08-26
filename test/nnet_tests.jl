@@ -16,8 +16,8 @@ end
 function testxor(; hiddenLayerNodes = [2],
                    hiddenActivation = SigmoidActivation(),
                    finalActivation = IdentityActivation(),
-                   params = NetParams(η=0.3, μ=0.1, λ=1e-5),
-                   solverParams = SolverParams(maxiter=10000, minerror=1e-6))
+                   params = NetParams(),
+                   solverParams = SolverParams(maxiter=10000))
 
   # all xor inputs and results
   inputs = [0 0; 0 1; 1 0; 1 1]
@@ -37,7 +37,7 @@ function testxor(; hiddenLayerNodes = [2],
                            params = params)
   show(net)
 
-  solve!(net, solverParams, sampler, sampler)
+  stats = solve!(net, solverParams, sampler, sampler)
 
   # output = Float64[predict(net, d.input)[1] for d in data]
   output = vec(predict(net, inputs))
@@ -45,7 +45,7 @@ function testxor(; hiddenLayerNodes = [2],
     println("Result: input=$(d.x) target=$(d.y) output=$o")
   end
 
-  net, output
+  net, output, stats
 end
 
 
@@ -54,18 +54,14 @@ facts("NNet") do
   minerror = 0.05
   solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
 
-  net, output = testxor(params=NetParams(η=0.2, μ=0.0, λ=0.0, costModel=L1CostModel()), solverParams=solverParams)
+  net, output, stats = testxor(params=NetParams(μ=0.0, λ=0.0, costModel=L1CostModel()), solverParams=solverParams)
   @fact net --> anything
   @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
-
-  # net, output = testxor(10000, hiddenLayerNodes=[2], params=NetParams(η=0.3, μ=0.0, λ=0.0, dropout=Dropout(pInput=1.0,pHidden=0.5)))
-  # @fact net --> anything
-  # @fact output --> roughly([0., 1., 1., 0.], atol=0.03)
 
 end # facts
 
 
-function test_pretrain(; solve=true, pretr=true, netparams=NetParams(η=0.2), kwargs...)
+function test_pretrain(; solve=true, pretr=true, netparams=NetParams(), kwargs...)
   data = xor_data()
   sampler = StratifiedSampler(data)
 

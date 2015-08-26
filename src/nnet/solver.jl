@@ -2,12 +2,14 @@
 
 doc"""
 Various parameters for the solve! call.
+```
   maxiter := maximum total number of iterations
   erroriter := number of iterations between updating the SolverStats object and checking stopping conditions
   breakiter := number of iterations between the `onbreak` callback
   stopepochs := number of epochs (1 epoch == 1 update to stats) without improvement for early stopping
   minerror := when validation error drops below this, stop
   onbreak := callback function, run once every breakiter iterations. function args: (net::NeuralNet, solverParams::SolverParams, stats::SolverStats)
+```
 """
 type SolverParams
   maxiter::Int   # maximum total number of iterations
@@ -31,8 +33,9 @@ type SolverStats
   validationError::Float64
   bestValidationError::Float64
   epochSinceImprovement::Int
+  bestModel
 end
-SolverStats() = SolverStats(0, Inf, Inf, Inf, 0)
+SolverStats() = SolverStats(0, Inf, Inf, Inf, 0, nothing)
 
 Base.string(stats::SolverStats) = "SolverStats{n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError)}"
 Base.print(io::IO, stats::SolverStats) = print(io, string(stats))
@@ -67,6 +70,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
       # check for improvement in validation error
       if stats.validationError < stats.bestValidationError
         stats.bestValidationError = stats.validationError
+        stats.bestModel = copy(net)
         stats.epochSinceImprovement = 0
       else
         stats.epochSinceImprovement += 1
