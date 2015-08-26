@@ -9,7 +9,7 @@ end
 # note: the vector version of costMultiplier also returns a boolean which is true when we
 #       need to multiply this value by f'(Σ) when calculating the sensitivities δ
 function costMultiplier(model::CostModel, y::AVecF, yhat::AVecF)
-  Float64[costMultiplier(model, y[i], yhat[i]) for i in length(y)], true
+  Float64[costMultiplier(model, y[i], yhat[i]) for i in 1:length(y)], true
 end
 
 

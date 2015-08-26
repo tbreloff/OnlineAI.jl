@@ -50,10 +50,11 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
       autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p, l2.x, TransposeView(l1.w), l2.dw, l2.b, l2.db, l2.δ, l2.Σ, l2.r, l2.nextr, TransposeView(l1.Gw), l2.Gb)
     end
 
-    println("netlayer: $layer  oact: $outputActivation  autoenc: $autoencoder")
+    println("netlayer: $layer  oact: $outputActivation")
+    println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
-    stats = solve!(autoencoder, sampler, sampler)
+    stats = solve!(autoencoder, sampler, sampler, true)
     println("  $stats")
 
     # save the weights and bias to the layer
@@ -65,8 +66,10 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     inputActivation = outputActivation
 
     # feed the data forward to the next layer
+    transformX = layer === first(net.layers)
     for i in 1:length(dps)
-      newx = forward(l1, dps[i].x, false)
+      x = (transformX ? net.inputTransformer : nop)(dps[i].x)
+      newx = forward(l1, x, false)
       dps[i] = DataPoint(newx, newx)
     end
     # println(dps)

@@ -67,7 +67,9 @@ function test_pretrain(; solve=true, pretr=true, netparams=NetParams(), kwargs..
   data = xor_data()
   sampler = StratifiedSampler(data)
 
-  net = buildRegressionNet(2,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000))
+  # nin = 1; f = x->x[1:1]
+  nin = 2; f = nop
+  net = buildRegressionNet(nin,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000), inputTransformer=f)
   if pretr
     pretrain(net, sampler; kwargs...)
   end

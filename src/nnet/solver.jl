@@ -48,7 +48,7 @@ doc"""
 Batch stochastic gradient descent solver.  Sample from training data to update net, stop if converged
 or if validation error is not improving.  Returns SolverStats summary object.
 """
-function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSampler)
+function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSampler, transformY::Bool = false)
 
   stats = SolverStats()
 
@@ -59,7 +59,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
 
     # randomly sample one data item and update the network
     data = sample(traindata)
-    update!(net, data)
+    update!(net, data, transformY)
 
     # # check for convergence
     if i % net.solverParams.erroriter == 0
