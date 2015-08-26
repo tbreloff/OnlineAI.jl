@@ -55,6 +55,8 @@ doc"Sample the whole data set"
 immutable SimpleSampler <: DataSampler
   data::DataPoints
 end
+Base.print(io::IO, s::DataSampler) = "SimpleSampler{n=$(length(s.data))}"
+Base.show(io::IO, s::DataSampler) = print(io,s)
 
 StatsBase.sample(sampler::SimpleSampler) = sample(sampler.data)
 DataPoints(sampler::SimpleSampler) = sampler.data
@@ -66,6 +68,8 @@ immutable SubsetSampler <: DataSampler
   data::DataPoints
   range::AVecI
 end
+Base.print(io::IO, s::DataSampler) = "SubsetSampler{n=$(length(s.data))}"
+Base.show(io::IO, s::DataSampler) = print(io,s)
 
 # sample from the range
 StatsBase.sample(sampler::SubsetSampler) = sampler.data[sample(sampler.range)]
@@ -86,6 +90,8 @@ type StratifiedSampler <: DataSampler
   idxlist::Vector{VecI}
   n::Int  # current bucket
 end
+Base.print(io::IO, s::DataSampler) = "StratifiedSampler{n=$(length(s.data)), numbuckets=$(length(s.idxlist)), nextbucket=$(s.n)}"
+Base.show(io::IO, s::DataSampler) = print(io,s)
 
 function StratifiedSampler(dps::DataPoints)
   idxlist = VecI[]
