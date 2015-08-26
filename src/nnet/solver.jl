@@ -37,7 +37,7 @@ type SolverStats
 end
 SolverStats() = SolverStats(0, Inf, Inf, Inf, 0, nothing)
 
-Base.string(stats::SolverStats) = "SolverStats{n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError)}"
+Base.string(stats::SolverStats) = "SolverStats{n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError), epochSinceImprovement=$(stats.epochSinceImprovement)}"
 Base.print(io::IO, stats::SolverStats) = print(io, string(stats))
 Base.show(io::IO, stats::SolverStats) = print(io, string(stats))
 
@@ -65,7 +65,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
     if i % solverParams.erroriter == 0
       stats.trainError = totalCost(net, traindata)
       stats.validationError = totalCost(net, validationdata)
-      println("Status: $stats  $net")
+      println("Status: $stats\n$net")
 
       # check for improvement in validation error
       if stats.validationError < stats.bestValidationError

@@ -59,6 +59,7 @@ facts("Ensembles") do
   # @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
 
   ps = ParameterSampler(Dict(zip([:x, :y, :z, :a], [Constant(1), Normal(), Uniform(3,4), VectorSampler(2:4, [0.8,0.1,0.1])])))
+  show(ps.d)
   for i in 1:20
     println(sample(ps))
   end
