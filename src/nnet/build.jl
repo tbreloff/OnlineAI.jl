@@ -3,7 +3,8 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
                   hiddenActivation::Activation = SigmoidActivation(),
                   finalActivation::Activation = SigmoidActivation(),
                   params = NetParams(),
-                  solverParams = SolverParams())
+                  solverParams = SolverParams(),
+                  inputTransformer::Function = nop)
   layers = Layer[]
   nin = numInputs
 
@@ -23,7 +24,7 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
   # push the output layer
   push!(layers, Layer(nin, numOutputs, finalActivation, pDropout))
 
-  NeuralNet(layers, params, solverParams)
+  NeuralNet(layers, params, solverParams, inputTransformer)
 end
 
 buildClassifierNet(args...; kwargs...) = buildNet(args...; kwargs..., finalActivation = SigmoidActivation())

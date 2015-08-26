@@ -36,6 +36,7 @@ function testxor(; hiddenLayerNodes = [2],
                            finalActivation = finalActivation,
                            params = params,
                            solverParams = solverParams)
+                           # inputTransformer = x -> x[1:1])
   show(net)
 
   stats = solve!(net, sampler, sampler)

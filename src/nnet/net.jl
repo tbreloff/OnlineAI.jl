@@ -3,24 +3,29 @@ type NeuralNet <: NetStat
   layers::Vector{Layer}  # note: this doesn't include input layer!!
   params::NetParams
   solverParams::SolverParams
+  inputTransformer::Function
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   # i.e. only allow cross entropy error with sigmoid activation
-  function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams)
+  function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams, inputTransformer::Function = nop)
 
     # do some sanity checking on activation/costmodel combos
     if isa(params.costModel, CrossEntropyCostModel)
       @assert isa(layers[end].activation, layers[end].nout > 1 ? SoftmaxActivation : SigmoidActivation)
     end
 
-    new(layers, params, solverParams)
+    new(layers, params, solverParams, inputTransformer)
   end
 end
 
 
 # simple constructor which creates all layers the same for given list of node counts.
 # structure should include neuron counts for all layers, including input and output
-function NeuralNet(structure::AVec{Int}; params = NetParams(), solverParams = SolverParams(), activation::Activation = TanhActivation())
+function NeuralNet(structure::AVec{Int};
+                   params = NetParams(),
+                   solverParams = SolverParams(),
+                   activation::Activation = TanhActivation(),
+                   inputTransformer::Function = nop)
   @assert length(structure) > 1
 
   layers = Layer[]
@@ -30,7 +35,7 @@ function NeuralNet(structure::AVec{Int}; params = NetParams(), solverParams = So
     push!(layers, Layer(nin, nout, activation, pDropout))
   end
 
-  NeuralNet(layers, params, solverParams)
+  NeuralNet(layers, params, solverParams, inputTransformer)
 end
 
 function Base.show(io::IO, net::NeuralNet)
@@ -49,7 +54,7 @@ Base.print(io::IO, net::NeuralNet) = show(io, net)
 
 # produces a vector of yhat (estimated outputs) from the network
 function forward(net::NeuralNet, x::AVecF, istraining::Bool = false)
-  yhat = x
+  yhat = net.inputTransformer(x)
   for layer in net.layers
     yhat = forward(layer, yhat, istraining)
   end
