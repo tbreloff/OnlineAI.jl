@@ -48,12 +48,12 @@ doc"""
 Batch stochastic gradient descent solver.  Sample from training data to update net, stop if converged
 or if validation error is not improving.  Returns SolverStats summary object.
 """
-function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler, validationdata::DataSampler)
+function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSampler)
 
   stats = SolverStats()
 
   # loop through maxiter times
-  for i in 1:solverParams.maxiter
+  for i in 1:net.solverParams.maxiter
 
     stats.numiter += 1
 
@@ -62,7 +62,7 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
     update!(net, data)
 
     # # check for convergence
-    if i % solverParams.erroriter == 0
+    if i % net.solverParams.erroriter == 0
       stats.trainError = totalCost(net, traindata)
       stats.validationError = totalCost(net, validationdata)
       println("Status: $stats\n$net")
@@ -76,22 +76,22 @@ function solve!(net::NetStat, solverParams::SolverParams, traindata::DataSampler
         stats.epochSinceImprovement += 1
 
         # early stopping... no improvement
-        if stats.epochSinceImprovement >= solverParams.stopepochs
+        if stats.epochSinceImprovement >= net.solverParams.stopepochs
           println("Early stopping: $stats")
           return stats
         end
       end
 
       # check if our error is low enough
-      if stats.validationError <= solverParams.minerror
+      if stats.validationError <= net.solverParams.minerror
         println("Converged, breaking: $stats")
         return stats
       end
     end
 
     # take a break?
-    if i % solverParams.breakiter == 0
-      solverParams.onbreak(net, solverParams, stats)
+    if i % net.solverParams.breakiter == 0
+      net.solverParams.onbreak(net, net.solverParams, stats)
     end
   end
 

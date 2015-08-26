@@ -34,10 +34,11 @@ function testxor(; hiddenLayerNodes = [2],
                            hiddenLayerNodes;
                            hiddenActivation = hiddenActivation,
                            finalActivation = finalActivation,
-                           params = params)
+                           params = params,
+                           solverParams = solverParams)
   show(net)
 
-  stats = solve!(net, solverParams, sampler, sampler)
+  stats = solve!(net, sampler, sampler)
 
   # output = Float64[predict(net, d.input)[1] for d in data]
   output = vec(predict(net, inputs))
@@ -65,13 +66,13 @@ function test_pretrain(; solve=true, pretr=true, netparams=NetParams(), kwargs..
   data = xor_data()
   sampler = StratifiedSampler(data)
 
-  net = buildRegressionNet(2,1,[2]; params=netparams)
+  net = buildRegressionNet(2,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000))
   if pretr
     pretrain(net, sampler; kwargs...)
   end
 
   if solve
-    solve!(net, SolverParams(maxiter=10000), sampler, sampler)
+    solve!(net, sampler, sampler)
   end
 
   net, Float64[predict(net,d.x)[1] for d in data]

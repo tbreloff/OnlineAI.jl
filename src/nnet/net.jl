@@ -2,24 +2,25 @@
 type NeuralNet <: NetStat
   layers::Vector{Layer}  # note: this doesn't include input layer!!
   params::NetParams
+  solverParams::SolverParams
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   # i.e. only allow cross entropy error with sigmoid activation
-  function NeuralNet(layers::Vector{Layer}, params::NetParams)
+  function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams)
 
     # do some sanity checking on activation/costmodel combos
     if isa(params.costModel, CrossEntropyCostModel)
       @assert isa(layers[end].activation, layers[end].nout > 1 ? SoftmaxActivation : SigmoidActivation)
     end
 
-    new(layers, params)
+    new(layers, params, solverParams)
   end
 end
 
 
 # simple constructor which creates all layers the same for given list of node counts.
 # structure should include neuron counts for all layers, including input and output
-function NeuralNet(structure::AVec{Int}; params = NetParams(), activation::Activation = TanhActivation())
+function NeuralNet(structure::AVec{Int}; params = NetParams(), solverParams = SolverParams(), activation::Activation = TanhActivation())
   @assert length(structure) > 1
 
   layers = Layer[]
@@ -29,11 +30,14 @@ function NeuralNet(structure::AVec{Int}; params = NetParams(), activation::Activ
     push!(layers, Layer(nin, nout, activation, pDropout))
   end
 
-  NeuralNet(layers, params)
+  NeuralNet(layers, params, solverParams)
 end
 
 function Base.show(io::IO, net::NeuralNet)
-  println(io, "NeuralNet{params=$(net.params), layers:")
+  println(io, "NeuralNet{")
+  println(io, "  params: $(net.params)")
+  println(io, "  solverParams: $(net.solverParams)")
+  println(io, "  layers:")
   for layer in net.layers
     println(io, "    ", layer)
   end
