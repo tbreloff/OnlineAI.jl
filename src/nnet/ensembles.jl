@@ -98,6 +98,7 @@ end
 
 OnlineStats.statenames(o::Ensemble) = [:nobs]
 OnlineStats.state(o::Ensemble) = Any[nobs(o)]
+nobs(o::Ensemble) = 0
 
 StatsBase.predict(models::Vector{OnlineStat}, x::AVecF) = [predict(model, x) for model in models]
 
