@@ -32,8 +32,8 @@ function splitDataPoints(dps::DataPoints, pct::Real)
   DataPoints[r1], DataPoints[r2]
 end
 
-Distributions.sample(dps::DataPoints) = dps[sample(1:length(dps))]
-Distributions.sample(dps::DataPoints, n::Int) = dps[sample(1:length(dps), n)]
+StatsBase.sample(dps::DataPoints) = dps[sample(1:length(dps))]
+StatsBase.sample(dps::DataPoints, n::Int) = dps[sample(1:length(dps), n)]
 
 Base.shuffle(dps::DataPoints) = DataPoints(shuffle(dps.data))
 Base.shuffle!(dps::DataPoints) = shuffle!(dps.data)
@@ -43,20 +43,20 @@ Base.shuffle!(dps::DataPoints) = shuffle!(dps.data)
 
 doc"""
 Generic approach to sampling data.  Allows for many different approaches in a unified framework.
-DataSamplers should implement the Distributions.sample method which returns a DataPoint object, 
+DataSamplers should implement the StatsBase.sample method which returns a DataPoint object, 
 and a DataPoints constructor which returns a DataPoints object with unique DataPoints.
 """
 abstract DataSampler
 
 # return a DataPoints object with n samples from the sampler
-Distributions.sample(sampler::DataSampler, n::Int) = DataPoints(DataPoint[sample(sampler) for i in 1:n])
+StatsBase.sample(sampler::DataSampler, n::Int) = DataPoints(DataPoint[sample(sampler) for i in 1:n])
 
 doc"Sample the whole data set"
 immutable SimpleSampler <: DataSampler
   data::DataPoints
 end
 
-Distributions.sample(sampler::SimpleSampler) = sample(sampler.data)
+StatsBase.sample(sampler::SimpleSampler) = sample(sampler.data)
 DataPoints(sampler::SimpleSampler) = sampler.data
 
 # --------------------------------------------------------
@@ -68,7 +68,7 @@ immutable SubsetSampler <: DataSampler
 end
 
 # sample from the range
-Distributions.sample(sampler::SubsetSampler) = sampler.data[sample(sampler.range)]
+StatsBase.sample(sampler::SubsetSampler) = sampler.data[sample(sampler.range)]
 
 DataPoints(sampler::SubsetSampler) = sampler.data[range]
 
@@ -109,7 +109,7 @@ function StratifiedSampler(dps::DataPoints)
 end
 
 # sample from each y value equally
-function Distributions.sample(sampler::StratifiedSampler)
+function StatsBase.sample(sampler::StratifiedSampler)
 
   # get the right bucket
   indices = sampler.idxlist[sampler.n]

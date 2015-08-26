@@ -100,6 +100,8 @@ export
 include("nnet/build.jl")
 
 export
+  Constant,
+  ParameterSampler,
   Ensemble
 include("nnet/ensembles.jl")
 
