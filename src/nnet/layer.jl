@@ -22,11 +22,11 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
   nextr::VecF  # nout x 1 -- retention of the nodes of this layer (as opposed to r which applies to the incoming weights)
 end
 
-initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
-# initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
+# initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
+initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
 
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
-  w = initialWeights(nin, nout, activation) * 1e-2
+  w = initialWeights(nin, nout, activation)
   gradientState = getGradientState(gradientModel, nin, nout)
   Layer(nin, nout, activation, gradientState, p, zeros(nin), w, [zeros(nout) for i in 1:4]..., ones(nin), ones(nout))
   # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
