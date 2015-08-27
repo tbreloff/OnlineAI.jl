@@ -97,7 +97,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
 
     # take a break?
     if i % net.solverParams.breakiter == 0
-      net.solverParams.onbreak(net, net.solverParams, stats)
+      net.solverParams.onbreak(net, stats)
     end
   end
 
