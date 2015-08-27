@@ -38,6 +38,9 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
   for layer in net.layers[1:end-1]
 
+    # NOTE: we are mapping input --> hidden --> input, which is why the "center" activation is called hiddenActivation
+    #       and the "final" activation is called inputActivation
+
     # some setup
     hiddenActivation = layer.activation
     inputTransformer = layer === first(net.layers) ? net.inputTransformer : IdentityTransformer()
@@ -58,7 +61,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
       autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, gradientState, l2.p, l2.x, TransposeView(l1.w), l2.b, l2.δ, l2.Σ, l2.r, l2.nextr)
     end
 
-    println("netlayer: $layer  oact: $outputActivation")
+    println("netlayer: $layer  oact: $inputActivation")
     println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
