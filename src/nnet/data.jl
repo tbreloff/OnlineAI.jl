@@ -64,6 +64,19 @@ function DataPoints(x::AMat, y::AVec, indices::AVecI = 1:nrows(x))
   DataPoints([DataPoint(float(vec(x[i,:])), float(vec(y[i,:]))) for i in indices])
 end
 
+function unzip(dps::DataPoints)
+  n = length(dps)
+  mx = length(first(dps).x)
+  my = length(first(dps).y)
+  x = zeros(n, mx)
+  y = zeros(n, my)
+  for (i,dp) in dps
+    x[i,:] = dp.x
+    y[i,:] = dp.y
+  end
+  x, y
+end
+
 
 Base.getindex(dps::DataPoints, i::Int) = dps.data[i]
 Base.getindex(dps::DataPoints, a::AVecI) = DataPoints(dps.data[a])
