@@ -56,7 +56,14 @@ type ParameterSampler
 end
 StatsBase.sample(ps::ParameterSampler) = [(s,sample(dist)) for (s,dist) in ps.d]
 
-
+function Base.print(io::IO, ps::ParameterSampler)
+  println("ParameterSampler{")
+  for k in sort(keys(ps.d))
+    println("  $k => $(typeof(ps.d[k]))")
+  end
+  print("} ")
+end
+Base.show(io::IO, ps::ParameterSampler) = print(io, ps)
 
 # -----------------------------------------------------------------------------
 
