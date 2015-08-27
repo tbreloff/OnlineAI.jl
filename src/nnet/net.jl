@@ -13,6 +13,10 @@ type NeuralNet <: NetStat
       @assert isa(layers[end].activation, layers[end].nout > 1 ? SoftmaxActivation : SigmoidActivation)
     end
 
+    if isa(layers[end].activation, SoftmaxActivation)
+      @assert isa(params.costModel, CrossEntropyCostModel)
+    end
+
     new(layers, params, solverParams, inputTransformer)
   end
 end
@@ -31,7 +35,7 @@ function NeuralNet(structure::AVec{Int};
   for i in 1:length(structure)-1
     nin, nout = structure[i:i+1]
     pDropout = getDropoutProb(params, i==1)
-    push!(layers, Layer(nin, nout, activation, pDropout))
+    push!(layers, Layer(nin, nout, activation, params.gradientModel, pDropout))
   end
 
   NeuralNet(layers, params, solverParams, inputTransformer)
@@ -80,7 +84,7 @@ function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
 
   # now update the weights
   for layer in net.layers
-    updateWeights(layer, net.params)
+    updateWeights(layer, net.params.gradientModel)
   end
 
   # update our η, μ, etc

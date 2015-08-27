@@ -56,8 +56,13 @@ facts("NNet") do
   minerror = 0.05
   solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
 
-  net, output, stats = testxor(params=NetParams(μ=0.0, λ=0.0, costModel=L1CostModel()), solverParams=solverParams)
-  # @fact net --> anything
+  net, output, stats = testxor(params=NetParams(costModel=L1CostModel()), solverParams=solverParams)
+  @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
+
+  net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
+  @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
+
+  net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
   @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
 
 end # facts
@@ -83,3 +88,4 @@ end
 
 
 end # module
+nn = NNetTest

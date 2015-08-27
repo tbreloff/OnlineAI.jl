@@ -73,14 +73,22 @@ export
   DropoutStrategy,
   Dropout,
   NoDropout,
-  MomentumModel,
-  ConstantMomentum,
-  DecayMomentum,
-  momentum,
-  LearningRateModel,
-  ConstantLearningRate,
-  DecayLearningRate,
-  learningRate,
+  # MomentumModel,
+  # ConstantMomentum,
+  # DecayMomentum,
+  # momentum,
+  # LearningRateModel,
+  # ConstantLearningRate,
+  # DecayLearningRate,
+  # learningRate,
+  GradientModel,
+  GradientState,
+  SGDModel,
+  SGDState,
+  AdagradModel,
+  AdagradState,
+  AdadeltaModel,
+  AdadeltaState,
   NetParams
 include("nnet/params.jl")
 
@@ -91,7 +99,9 @@ export
 include("nnet/solver.jl")
 
 export
-  Layer
+  Layer,
+  forward,
+  backward
 include("nnet/layer.jl")
 
 export
@@ -106,7 +116,7 @@ include("nnet/pretrain.jl")
 
 export
   buildNet,
-  buildClassifierNet,
+  buildClassificationNet,
   buildRegressionNet
 include("nnet/build.jl")
 

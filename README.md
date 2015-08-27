@@ -55,7 +55,7 @@ NNet:
 - [x] Basic data management (train/validate/test splitting)
 - [ ] Advanced data cleaning/transformations (handling NaNs, map multinomal classes to dummies, standardizing)
 - [x] Basic gradient descent params (early stopping, momentum, L2 penalty)
-- [x] Easy network building methods (buildClassifierNet, buildRegressionNet)
+- [x] Easy network building methods (buildClassificationNet, buildRegressionNet)
 - [ ] Advanced network building methods (ReLU + dropout, multinomal classification)
 - [ ] Generalized penalty functions
 - [ ] Online algo: handle sequential data properly (unbiased validation/test data)
