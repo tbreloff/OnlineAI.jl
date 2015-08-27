@@ -19,12 +19,13 @@ immutable DenoisingAutoencoder <: PretrainStrategy end
 
 
 
-function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSampler;
+function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSampler, validationData::DataPoints;
                     tiedweights::Bool = true,
                     maxiter::Int = 10000,
                     dropout::DropoutStrategy = Dropout(pInput=0.7,pHidden=0.0),  # this is the "denoising" part, which throws out some of the inputs
                     encoderParams::NetParams = NetParams(dropout=dropout),
-                    solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=typemax(Int), breakiter=typemax(Int)),  #probably don't set this manually??
+                    # solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=typemax(Int), breakiter=typemax(Int)),  #probably don't set this manually??
+                    solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=2000, breakiter=2000, stopepochs=40),
                     inputActivation::Activation = IdentityActivation())
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
@@ -36,13 +37,13 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
   for layer in net.layers[1:end-1]
 
     # some setup
-    outputActivation = layer.activation
+    hiddenActivation = layer.activation
     inputTransformer = layer === first(net.layers) ? net.inputTransformer : IdentityTransformer()
 
     # build a neural net which maps: nin -> nout -> nin
     autoencoder = buildNet(layer.nin, layer.nin, [layer.nout];
-                            hiddenActivation = inputActivation,
-                            finalActivation = outputActivation,
+                            hiddenActivation = hiddenActivation,
+                            finalActivation = inputActivation,
                             params = encoderParams,
                             solverParams = solverParams,
                             inputTransformer = inputTransformer)
@@ -59,16 +60,22 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
-    stats = solve!(autoencoder, sampler, sampler, true)
+    stats = solve!(autoencoder, sampler, SimpleSampler(validationData), true)
     println("  $stats")
+
+    if stats.bestModel == nothing || isnan(stats.bestValidationError) || isinf(stats.bestValidationError)
+      warn("Somthing wrong with pretraining model: $stats")
+    end
 
     # save the weights and bias to the layer
     # println("l1: $l1")
+
+    l1 = first(stats.bestModel.layers)
     layer.w = l1.w
     layer.b = l1.b
 
     # update the inputActivation, so that this layer's activation becomes the next autoencoder's inputActivation
-    inputActivation = outputActivation
+    inputActivation = hiddenActivation
 
     # feed the data forward to the next layer
     for i in 1:length(dps)
