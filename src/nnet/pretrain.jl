@@ -17,7 +17,7 @@ end
 
 
 doc"Samples from the underlying sampler, but sets y = x.  Used in mapping inputs to themselves in autoencoders."
-immutable AutoencoderDataSampler{T<:DataSampler}
+immutable AutoencoderDataSampler{T<:DataSampler} <: DataSampler
   sampler::T
 end
 StatsBase.sample(sampler::AutoencoderDataSampler) = (dp = sample(sampler.sampler); DataPoint(dp.x, dp.x))
@@ -80,7 +80,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
-    stats = solve!(autoencoder, trainEncoderSampler, SimpleSampler(validationSampler), true)
+    stats = solve!(autoencoder, trainEncoderSampler, SimpleSampler(validationData), true)
     println("  $stats")
 
     if stats.bestModel == nothing || isnan(stats.bestValidationError) || isinf(stats.bestValidationError)
