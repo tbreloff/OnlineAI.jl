@@ -65,7 +65,7 @@ Creates a `VectorTransformer` by sampling (N times) both a transform type and th
 
 Note that we call `unique` so as not to duplicate data, so we may actually return less than N samples.
 """
-function generateTransforms(transformSampler::VectorSampler{DataType}, indices::AVecI, N::Int)
+function generateTransformer(transformSampler::VectorSampler{DataType}, indices::AVecI, N::Int)
   VectorTransformer(unique(Transformation[sample(transformSampler)(sample(indices)) for i in 1:N]))
 end
 
