@@ -26,7 +26,7 @@ initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) -
 # initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
 
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
-  w = initialWeights(nin, nout, activation)
+  w = initialWeights(nin, nout, activation) * 1e-2
   gradientState = getGradientState(gradientModel, nin, nout)
   Layer(nin, nout, activation, gradientState, p, zeros(nin), w, [zeros(nout) for i in 1:4]..., ones(nin), ones(nout))
   # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
