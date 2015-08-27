@@ -37,7 +37,18 @@ function Layer(nin::Integer, nout::Integer, activation::Activation, gradientMode
   # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
 end
 
-Base.print(io::IO, l::Layer) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ))}")
+Base.print{A,M,G}(io::IO, l::Layer{A,M,G}) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ)) $(M<:TransposeView ? "T" : "")}")
+
+
+# gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
+function dosigmamult!{A,G}(layer::Layer{A,TransposeView{Float64},G}, α::Float64)
+  copy!(layer.Σ, layer.b)
+  BLAS.gemv!('T', α, layer.w.mat, layer.x, 1.0, layer.Σ)
+end
+function dosigmamult!(layer::Layer, α::Float64)
+  copy!(layer.Σ, layer.b)
+  BLAS.gemv!('N', α, layer.w, layer.x, 1.0, layer.Σ)
+end
 
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
@@ -54,14 +65,22 @@ function forward(layer::Layer, x::AVecF, istraining::Bool)
     end
     # layer.r = float(rand(layer.nin) .<= layer.p)
     # layer.x = layer.r .* x
-    layer.Σ = layer.w * layer.x + layer.b
+
+    dosigmamult!(layer, 1.0)
+    # copy!(layer.Σ, layer.b)
+    # BLAS.gemv!('N', 1.0, layer.w, layer.x, 1.0, layer.Σ)    
+    # layer.Σ = layer.w * layer.x + layer.b
   else
     # test... need to multiply weights by dropout prob p
     # layer.x = collect(x)
     # layer.r = ones(layer.nin)
     fill!(layer.r, 1.0)
     copy!(layer.x, x)
-    layer.Σ = layer.p * (layer.w * layer.x) + layer.b
+
+    dosigmamult!(layer, layer.p)
+    # copy!(layer.Σ, layer.b)
+    # BLAS.gemv!('N', layer.p, layer.w, layer.x, 1.0, layer.Σ)
+    # layer.Σ = layer.p * (layer.w * layer.x) + layer.b
   end
 
   forward(layer.activation, layer.Σ)     # activate
