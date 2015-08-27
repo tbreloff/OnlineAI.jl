@@ -101,14 +101,16 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     # feed the data forward to the next layer
     for i in 1:length(trainData)
       x = transform(inputTransformer, trainData[i].x)
-      newx = forward(l1, x, false)
+      forward!(l1, x, false)
+      newx = copy(l1.a)
       trainData[i] = DataPoint(newx, newx)
     end
 
     # do the same for the validation set
     for i in 1:length(validationData)
       x = transform(inputTransformer, validationData[i].x)
-      newx = forward(l1, x, false)
+      forward!(l1, x, false)
+      newx = copy(l1.a)
       validationData[i] = DataPoint(newx, newx)
     end
 

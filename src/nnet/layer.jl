@@ -99,7 +99,7 @@ end
 function updateSensitivities!(layer::Layer, nextlayer::Layer)
   for i in 1:layer.nout
     δi = 0.0
-    for j in 1:nextlayer.nin
+    for j in 1:nextlayer.nout
       δi += nextlayer.w[j,i] * nextlayer.nextr[j] * nextlayer.δ[j]
     end
     layer.δ[i] = δi * backward(layer.activation, layer.Σ[i])

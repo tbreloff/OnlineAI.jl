@@ -80,7 +80,7 @@ end
 
 
 # given a vector of errors (y - yhat), update network weights
-function backward(net::NeuralNet, multiplyDerivative::Bool)
+function backward!(net::NeuralNet, multiplyDerivative::Bool)
 
   # update δᵢ starting from the output layer using the error multiplier
   updateSensitivities!(net.layers[end], net.costmult, multiplyDerivative)
