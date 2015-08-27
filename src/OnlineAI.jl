@@ -101,7 +101,9 @@ include("nnet/solver.jl")
 export
   Layer,
   forward,
-  backward
+  backward,
+  forward!,
+  backward!
 include("nnet/layer.jl")
 
 export

@@ -14,17 +14,12 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
   # the state of the layer
   x::VecF  # nin x 1 -- input 
   w::MATF  # nout x nin -- weights connecting previous layer to this layer
-  # dw::MatF # nout x nin -- last changes in the weights (used for momentum)
   b::VecF  # nout x 1 -- bias terms
-  # db::VecF # nout x 1 -- last changes in bias terms (used for momentum)
   δ::VecF  # nout x 1 -- sensitivities (calculated during backward pass)
   Σ::VecF  # nout x 1 -- inner products (calculated during forward pass)
+  a::VecF  # nout x 1 -- f(Σ) (calculated during forward pass)
   r::VecF  # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
   nextr::VecF  # nout x 1 -- retention of the nodes of this layer (as opposed to r which applies to the incoming weights)
-
-  # Gw::MATF  # nout x nin -- sum of squares of the weight gradients, used for AdaGrad step
-  # Gb::VecF  # nout x nin -- sum of squares of the bias gradients, used for AdaGrad step
-
 end
 
 initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
@@ -33,7 +28,7 @@ initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) -
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
   w = initialWeights(nin, nout, activation)
   gradientState = getGradientState(gradientModel, nin, nout)
-  Layer(nin, nout, activation, gradientState, p, zeros(nin), w, [zeros(nout) for i in 1:3]..., ones(nin), ones(nout))
+  Layer(nin, nout, activation, gradientState, p, zeros(nin), w, [zeros(nout) for i in 1:4]..., ones(nin), ones(nout))
   # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
 end
 
@@ -52,7 +47,7 @@ end
 
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
-function forward(layer::Layer, x::AVecF, istraining::Bool)
+function forward!(layer::Layer, x::AVecF, istraining::Bool)
 
   if istraining
     # train... randomly drop out incoming nodes
@@ -83,24 +78,37 @@ function forward(layer::Layer, x::AVecF, istraining::Bool)
     # layer.Σ = layer.p * (layer.w * layer.x) + layer.b
   end
 
-  forward(layer.activation, layer.Σ)     # activate
+  forward!(layer.activation, layer.a, layer.Σ)     # activate
 end
 
 
 # backward step for the final (output) layer
 # note: costMult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
-function updateSensitivities(layer::Layer, costMult::AVecF, multiplyDerivative::Bool)
-  layer.δ = multiplyDerivative ? costMult .* backward(layer.activation, layer.Σ) : costMult
+function updateSensitivities!(layer::Layer, costMult::AVecF, multiplyDerivative::Bool)
+  copy!(layer.δ, costMult)
+  if multiplyDerivative
+    for i in 1:layer.nout
+      layer.δ[i] *= backward(layer.activation, layer.Σ[i])
+    end
+  end
+  # layer.δ = multiplyDerivative ? costMult .* backward(layer.activation, layer.Σ) : costMult
 end
 
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
-function updateSensitivities(layer::Layer, nextlayer::Layer)
-  layer.δ = (nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
+function updateSensitivities!(layer::Layer, nextlayer::Layer)
+  for i in 1:layer.nout
+    δi = 0.0
+    for j in 1:nextlayer.nin
+      δi += nextlayer.w[j,i] * nextlayer.nextr[j] * nextlayer.δ[j]
+    end
+    layer.δ[i] = δi * backward(layer.activation, layer.Σ[i])
+  end
+  # layer.δ = (nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
 end
 
 # update weights/bias one column at a time... skipping over the dropped out nodes
-function updateWeights(layer::Layer, gradientModel::GradientModel)
+function updateWeights!(layer::Layer, gradientModel::GradientModel)
 
   # note: i refers to the output, j refers to the input
 

@@ -3,6 +3,17 @@ abstract Activation
 forward(activation::Activation, Σs::AVecF) = Float64[forward(activation, Σ) for Σ in Σs]
 backward(activation::Activation, Σs::AVecF) = Float64[backward(activation, Σ) for Σ in Σs]
 
+function forward!(activation::Activation, a::AVecF, Σs::AVecF)
+  for i in 1:length(a)
+    a[i] = forward(activation, Σs[i])
+  end
+end
+function backward!(activation::Activation, a::AVecF, Σs::AVecF)
+  for i in 1:length(a)
+    a[i] = backward(activation, Σs[i])
+  end
+end
+
 # ---------------------------------------
 
 doc"""

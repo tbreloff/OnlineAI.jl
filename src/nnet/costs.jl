@@ -3,13 +3,22 @@
 abstract CostModel
 
 function cost(model::CostModel, y::AVecF, yhat::AVecF)
-  sum([cost(model, y[i], yhat[i]) for i in 1:length(y)])
+  c = 0.0
+  for i in 1:length(y)
+    c += cost(model, y[i], yhat[i])
+  end
+  # sum([cost(model, y[i], yhat[i]) for i in 1:length(y)])
+  c
 end
 
 # note: the vector version of costMultiplier also returns a boolean which is true when we
 #       need to multiply this value by f'(Σ) when calculating the sensitivities δ
-function costMultiplier(model::CostModel, y::AVecF, yhat::AVecF)
-  Float64[costMultiplier(model, y[i], yhat[i]) for i in 1:length(y)], true
+function costMultiplier!(model::CostModel, costmult::AVecF y::AVecF, yhat::AVecF)
+  for i in 1:length(costmult)
+    costmult[i] = costMultiplier(model, y[i], yhat[i])
+  end
+  # Float64[costMultiplier(model, y[i], yhat[i]) for i in 1:length(y)], true
+  true
 end
 
 
@@ -23,7 +32,7 @@ immutable L2CostModel <: CostModel end
 
 "cost function"
 cost(::L2CostModel, y::Float64, yhat::Float64) = 0.5 * (y - yhat) ^ 2
-cost(::L2CostModel, y::AVecF, yhat::AVecF) = 0.5 * sumabs2(y - yhat)
+# cost(::L2CostModel, y::AVecF, yhat::AVecF) = 0.5 * sumabs2(y - yhat)
 
 "returns M from the equation δ = M .* f'(Σ) ... used in the gradient update"
 costMultiplier(::L2CostModel, y::Float64, yhat::Float64) = yhat - y
@@ -62,8 +71,17 @@ function cost(model::CrossEntropyCostModel, y::AVecF, yhat::AVecF) # softmax cas
 end
 
 costMultiplier(model::CrossEntropyCostModel, y::Float64, yhat::Float64) = yhat - y # binary case
-function costMultiplier(model::CrossEntropyCostModel, y::AVecF, yhat::AVecF) # softmax case
-  (length(y) == 1 ? Float64[costMultiplier(model, y[1], yhat[1])] : yhat - y), false
+function costMultiplier!(model::CrossEntropyCostModel, costmult::AVecF, y::AVecF, yhat::AVecF) # softmax case
+  n = length(costmult)
+  if n == 1
+    costmult[1] = costMultiplier(model, y[1], yhat[1])
+  else
+    for i in 1:n
+      costmult[i] = yhat[i] - y[i]
+    end
+  end
+  # (length(y) == 1 ? Float64[costMultiplier(model, y[1], yhat[1])] : yhat - y), false
+  false
 end
 
 

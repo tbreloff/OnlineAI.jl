@@ -4,6 +4,7 @@ type NeuralNet <: NetStat
   params::NetParams
   solverParams::SolverParams
   inputTransformer::Transformer
+  transformedInput::VecF   # so we can avoid allocations
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams, inputTransformer::Transformer = IdentityTransformer())
@@ -17,7 +18,7 @@ type NeuralNet <: NetStat
       @assert isa(params.costModel, CrossEntropyCostModel)
     end
 
-    new(layers, params, solverParams, inputTransformer)
+    new(layers, params, solverParams, inputTransformer, zeros(first(layers).nin))
   end
 end
 
@@ -56,10 +57,16 @@ Base.print(io::IO, net::NeuralNet) = show(io, net)
 # ------------------------------------------------------------------------
 
 # produces a vector of yhat (estimated outputs) from the network
-function forward(net::NeuralNet, x::AVecF, istraining::Bool = false)
-  yhat = transform(net.inputTransformer, x)
+function forward!(net::NeuralNet, x::AVecF, istraining::Bool = false)
+  
+  # first transform the input
+  transform!(net.inputTransformer, net.transformedInput, x)
+
+  # now feed it forward
+  yhat = net.transformedInput
   for layer in net.layers
-    yhat = forward(layer, yhat, istraining)
+    forward!(layer, yhat, istraining)
+    yhat = layer.a
   end
 
   # update nextr
@@ -75,16 +82,16 @@ end
 function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
 
   # update δᵢ starting from the output layer using the error multiplier
-  updateSensitivities(net.layers[end], errmult, multiplyDerivative)
+  updateSensitivities!(net.layers[end], errmult, multiplyDerivative)
 
   # now update the remaining sensitivities using bakckprop
   for i in length(net.layers)-1:-1:1
-    updateSensitivities(net.layers[i:i+1]...)
+    updateSensitivities!(net.layers[i:i+1]...)
   end
 
   # now update the weights
   for layer in net.layers
-    updateWeights(layer, net.params.gradientModel)
+    updateWeights!(layer, net.params.gradientModel)
   end
 
   # # update our η, μ, etc
@@ -97,9 +104,9 @@ end
 
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
-  yhat = forward(net, x, true)
-  errmult, multiplyDerivative = costMultiplier(net.params.costModel, y, yhat)
-  backward(net, errmult, multiplyDerivative)
+  yhat = forward!(net, x, true)
+  multiplyDerivative = costMultiplier!(net.params.costModel, net.costmult y, yhat)
+  backward!(net, multiplyDerivative)
   yhat
 end
 
@@ -120,7 +127,7 @@ end
 # ------------------------------------------------------------------------
 
 function cost(net::NeuralNet, x::AVecF, y::AVecF)
-  yhat = forward(net, x)
+  yhat = forward!(net, x)
   cost(net.params.costModel, y, yhat)
 end
 totalCost(net::NetStat, data::DataPoint) = cost(net, data.x, data.y)
@@ -130,7 +137,7 @@ totalCost(net::NetStat, sampler::DataSampler) = totalCost(net, DataPoints(sample
 # ------------------------------------------------------------------------
 
 function StatsBase.predict(net::NeuralNet, x::AVecF)
-  forward(net, x)
+  forward!(net, x)
 end
 
 function StatsBase.predict(net::NeuralNet, x::AMatF)
