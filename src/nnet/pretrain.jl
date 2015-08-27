@@ -12,7 +12,7 @@ abstract PretrainStrategy
 
 # default
 function pretrain(net::NeuralNet, sampler::DataSampler, validationData::DataPoints; kwargs...)
-  pretrain(DenoisingAutoencoder, net, sampler; kwargs...)
+  pretrain(DenoisingAutoencoder, net, sampler, validationData; kwargs...)
 end
 
 # -----------------------------------------------------------------
