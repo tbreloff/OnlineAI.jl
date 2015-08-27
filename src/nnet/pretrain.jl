@@ -11,9 +11,17 @@ abstract PretrainStrategy
 
 
 # default
-function pretrain(net::NeuralNet, sampler::DataSampler, validationData::DataPoints; kwargs...)
-  pretrain(DenoisingAutoencoder, net, sampler, validationData; kwargs...)
+function pretrain(net::NeuralNet, sampler::DataSampler, validationSampler::DataSampler; kwargs...)
+  pretrain(DenoisingAutoencoder, net, sampler, validationSampler; kwargs...)
 end
+
+
+doc"Samples from the underlying sampler, but sets y = x.  Used in mapping inputs to themselves in autoencoders."
+immutable AutoencoderDataSampler{T<:DataSampler}
+  sampler::T
+end
+StatsBase.sample(sampler::AutoencoderDataSampler) = (dp = sample(sampler.sampler); DataPoint(dp.x, dp.x))
+DataPoints(sampler::AutoencoderDataSampler) = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)])
 
 # -----------------------------------------------------------------
 
@@ -21,7 +29,7 @@ immutable DenoisingAutoencoder <: PretrainStrategy end
 
 
 
-function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSampler, validationData::DataPoints;
+function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::DataSampler, validationSampler::DataSampler;
                     tiedweights::Bool = true,
                     maxiter::Int = 10000,
                     dropout::DropoutStrategy = Dropout(pInput=0.7,pHidden=0.0),  # this is the "denoising" part, which throws out some of the inputs
@@ -31,9 +39,16 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
                     inputActivation::Activation = IdentityActivation())
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
-  dps = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)])
+  # dps = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(trainSampler)])
   # println(dps)
-  sampler = SimpleSampler(dps)
+  # trainSampler = SimpleSampler(dps)
+  
+  # set up training data
+  trainEncoderSampler = AutoencoderDataSampler(trainSampler)
+  dps = DataPoints(trainEncoderSampler)
+
+  # set up validation data
+  validationData = DataPoints(AutoencoderDataSampler(validationSampler))
 
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
   for layer in net.layers[1:end-1]
@@ -65,7 +80,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
-    stats = solve!(autoencoder, sampler, SimpleSampler(validationData), true)
+    stats = solve!(autoencoder, trainEncoderSampler, SimpleSampler(validationSampler), true)
     println("  $stats")
 
     if stats.bestModel == nothing || isnan(stats.bestValidationError) || isinf(stats.bestValidationError)
