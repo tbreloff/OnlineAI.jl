@@ -115,6 +115,8 @@ export
   HiddenLayerSampler,
   VectorSampler,
   ParameterSampler,
+  generateTransforms,
+  generateModels,
   Ensemble
 include("nnet/ensembles.jl")
 
