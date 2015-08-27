@@ -126,32 +126,35 @@ include("nnet/visualize.jl")
 
 # ----------------------------------------------------------------------
 
-export GaussianReceptiveField,
-       value,
-       Synapse,
-       DelaySynapse,
-       fire!,    # checks for threshold crossing, then fires
-       SpikingNeuron,
-       DiscreteLeakyIntegrateAndFireNeuron,
-       LiquidParams,
-       Liquid,
+# NOTE: EXPERIMENTAL
 
-       ImmediateSynapse,
-       GRFNeuron,
-       GRFInput,
-       LiquidInput,
-       LiquidInputs,
+export 
+  GaussianReceptiveField,
+  value,
+  Synapse,
+  DelaySynapse,
+  fire!,    # checks for threshold crossing, then fires
+  SpikingNeuron,
+  DiscreteLeakyIntegrateAndFireNeuron,
+  LiquidParams,
+  Liquid,
 
-       Readout,
-       FireReadout,
-       StateReadout,
-       FireWindowReadout,
+  ImmediateSynapse,
+  GRFNeuron,
+  GRFInput,
+  LiquidInput,
+  LiquidInputs,
 
-       LiquidStateMachine,
-       liquidState,
+  Readout,
+  FireReadout,
+  StateReadout,
+  FireWindowReadout,
 
-       LiquidVisualization,
-       LiquidVisualizationNode
+  LiquidStateMachine,
+  liquidState,
+
+  LiquidVisualization,
+  LiquidVisualizationNode
 
 abstract Synapse
 abstract SpikingNeuron <: Node
