@@ -45,7 +45,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
                             finalActivation = outputActivation,
                             params = encoderParams,
                             solverParams = solverParams,
-                            inputTransformer = ())
+                            inputTransformer = inputTransformer)
 
     # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
     l1, l2 = autoencoder.layers
