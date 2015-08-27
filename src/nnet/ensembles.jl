@@ -24,6 +24,7 @@ immutable VectorSampler{T} <: DiscreteUnivariateDistribution
   probs::VecF
 end
 VectorSampler(vec::AVec) = VectorSampler(vec, fill(1.0 / length(vec), length(vec)))
+VectorSampler{T}(vec::AVec{Tuple{T,Float64}}) = VectorSampler(unzip(vec)...)
 function StatsBase.sample(vs::VectorSampler)
   r = rand()
   totp = 0.0
