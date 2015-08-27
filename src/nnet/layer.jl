@@ -82,7 +82,7 @@ function updateWeights(layer::Layer, params::NetParams)
       δi = layer.δ[iOut]  # δi is the gradient
       Gbi = layer.Gb[iOut] + δi^2
 
-      dbi = Gbi > 0.0 ? Δbi(params, δi / (params.useAdagrad ? sqrt(Gbi) : 1.0), layer.db[iOut]) : 0.0
+      dbi = Gbi > 0.0 ? Δbi(params, δi / (params.useAdagrad ? sqrt(1.0+Gbi) : 1.0), layer.db[iOut]) : 0.0
 
       layer.b[iOut] += dbi
       layer.db[iOut] = dbi
@@ -96,7 +96,7 @@ function updateWeights(layer::Layer, params::NetParams)
           gradient = δi * layer.x[iIn]
           Gwij = layer.Gw[iOut,iIn] + gradient^2
           
-          dwij = Gwij > 0.0 ? ΔWij(params, gradient / (params.useAdagrad ? sqrt(Gwij) : 1.0), layer.w[iOut,iIn], layer.dw[iOut,iIn]) : 0.0
+          dwij = Gwij > 0.0 ? ΔWij(params, gradient / (params.useAdagrad ? sqrt(1.0+Gwij) : 1.0), layer.w[iOut,iIn], layer.dw[iOut,iIn]) : 0.0
 
           layer.w[iOut,iIn] += dwij
           layer.dw[iOut,iIn] = dwij
