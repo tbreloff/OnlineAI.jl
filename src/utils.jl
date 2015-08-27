@@ -15,16 +15,16 @@ Base.setindex!{T}(tv::TransposeView{T}, val::T, i::Integer, j::Integer) = (tv.ma
 Base.length(tv::TransposeView) = length(tv.mat)
 Base.size(tv::TransposeView) = (ncols(tv.mat), nrows(tv.mat))
 
-import Base: *, ctranspose
-function *{T<:Real}(tv::TransposeView{T}, v::AVec{T})
-  res = similar(v, T, nrows(tv))
-  for i in 1:nrows(tv)
-    res[i] = dot(col(tv.mat, i), v)
-  end
-  res
-end
+# import Base: *, ctranspose
+# function *{T<:Real}(tv::TransposeView{T}, v::AVec{T})
+#   res = similar(v, T, nrows(tv))
+#   for i in 1:nrows(tv)
+#     res[i] = dot(col(tv.mat, i), v)
+#   end
+#   res
+# end
 
-ctranspose(tv::TransposeView) = tv.mat
+# ctranspose(tv::TransposeView) = tv.mat
 
 
 ####################################################

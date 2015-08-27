@@ -19,21 +19,41 @@ abstract Transformation
 
 immutable IdentityTransform <: Transformation idx::Int end
 transform(t::IdentityTransform, x::AVec) = x[t.idx]
+function transform!(t::IdentityTransform, x_transformed::AVec, x::AVec, i::Int)
+  x_transformed[i] = x[t.idx]
+end
 
 immutable AbsTransform <: Transformation idx::Int end
 transform(t::AbsTransform, x::AVec) = abs(x[t.idx])
+function transform!(t::AbsTransform, x_transformed::AVec, x::AVec, i::Int)
+  x_transformed[i] = abs(x[t.idx])
+end
 
 immutable LogPlus1Transform <: Transformation idx::Int end
 transform(t::LogPlus1Transform, x::AVec) = (xi = x[t.idx]; xi > 0.0 ? log(xi+1) : 0.0)
+function transform!(t::LogPlus1Transform, x_transformed::AVec, x::AVec, i::Int)
+  xi = x[t.idx]
+  x_transformed[i] = xi > 0.0 ? log(xi + 1.0) : 0.0
+end
 
 immutable SquareTransform <: Transformation idx::Int end
 transform(t::SquareTransform, x::AVec) = x[t.idx]^2
+function transform!(t::SquareTransform, x_transformed::AVec, x::AVec, i::Int)
+  x_transformed[i] = x[t.idx]^2
+end
 
 immutable CubeTransform <: Transformation idx::Int end
 transform(t::CubeTransform, x::AVec) = x[t.idx]^3
+function transform!(t::CubeTransform, x_transformed::AVec, x::AVec, i::Int)
+  x_transformed[i] = x[t.idx]^3
+end
 
 immutable SignSquareTransform <: Transformation idx::Int end
 transform(t::SignSquareTransform, x::AVec) = (xi = x[t.idx]; sign(xi) * xi^2)
+function transform!(t::SignSquareTransform, x_transformed::AVec, x::AVec, i::Int)
+  xi = x[t.idx]
+  x_transformed[i] = sign(xi) * x^2
+end
 
 
 # --------------------------------------------------------
@@ -42,11 +62,19 @@ abstract Transformer
 
 immutable IdentityTransformer <: Transformer end
 transform(transformer::IdentityTransformer, x) = x
+transform!(transformer::IdentityTransformer, x_transformed::AVec, x::AVec) = copy!(x_transformed, x)
+
 
 immutable VectorTransformer <: Transformer
   transformations::Vector{Transformation}
 end
 transform{T}(transformer::VectorTransformer, x::AVec{T}) = T[transform(t,x) for t in transformer.transformations]
+
+function transform!(transformer::VectorTransformer, x_transformed::AVec, x::AVec)
+  for i in 1:length(x_transformed)
+    transform!(transformer.transformations[i], x_transformed, x)
+  end
+end
 
 # --------------------------------------------------------
 

@@ -105,7 +105,7 @@ end
 # online version... returns the feedforward estimate before updating
 function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward!(net, x, true)
-  multiplyDerivative = costMultiplier!(net.params.costModel, net.costmult y, yhat)
+  multiplyDerivative = costMultiplier!(net.params.costModel, net.costmult, y, yhat)
   backward!(net, multiplyDerivative)
   yhat
 end

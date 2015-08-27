@@ -50,6 +50,7 @@ export
   IdentityTransformer,
   VectorTransformer,
   transform,
+  transform!,
   DataPoints,
   splitDataPoints,
   DataSampler,
