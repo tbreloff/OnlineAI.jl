@@ -90,8 +90,8 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     # println("l1: $l1")
 
     l1 = first(stats.bestModel.layers)
-    layer.w = l1.w
-    layer.b = l1.b
+    layer.w = copy(l1.w)
+    layer.b = copy(l1.b)
 
     # update the inputActivation, so that this layer's activation becomes the next autoencoder's inputActivation
     inputActivation = hiddenActivation
