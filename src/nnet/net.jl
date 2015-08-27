@@ -109,7 +109,9 @@ function OnlineStats.update!(net::NeuralNet, x::MatF, y::MatF)
   Float64[update!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
 end
 
-OnlineStats.update!(net::NetStat, data::DataPoint, transformY::Bool = false) = update!(net, data.x, transformY ? net.inputTransformer(data.y) : data.y)
+function OnlineStats.update!(net::NetStat, data::DataPoint, transformY::Bool = false)
+  update!(net, data.x, transformY ? transform(net.inputTransformer, data.y) : data.y)
+end
 
 # ------------------------------------------------------------------------
 
