@@ -26,6 +26,7 @@ end
 
 # ------------------------------------------------------------------------
 
+@enum SolverStatus RUNNING CONVERGED STOPPEDEARLY MAXITER
 
 type SolverStats
   numiter::Int
@@ -33,11 +34,12 @@ type SolverStats
   validationError::Float64
   bestValidationError::Float64
   epochSinceImprovement::Int
+  status::SolverStatus
   bestModel
 end
-SolverStats() = SolverStats(0, Inf, Inf, Inf, 0, nothing)
+SolverStats() = SolverStats(0, Inf, Inf, Inf, 0, RUNNING, nothing)
 
-Base.string(stats::SolverStats) = "SolverStats{n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError), epochSinceImprovement=$(stats.epochSinceImprovement)}"
+Base.string(stats::SolverStats) = "SolverStats{$(stats.status) n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError), epochSinceImprovement=$(stats.epochSinceImprovement)}"
 Base.print(io::IO, stats::SolverStats) = print(io, string(stats))
 Base.show(io::IO, stats::SolverStats) = print(io, string(stats))
 
@@ -80,6 +82,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
         # early stopping... no improvement
         if stats.epochSinceImprovement >= net.solverParams.stopepochs
           println("Early stopping: $stats")
+          stats.status = STOPPEDEARLY
           return stats
         end
       end
@@ -87,6 +90,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
       # check if our error is low enough
       if stats.validationError <= net.solverParams.minerror
         println("Converged, breaking: $stats")
+        stats.status = CONVERGED
         return stats
       end
     end
@@ -98,6 +102,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
   end
 
   println("Maxiter reached: $stats")
+  stats.status = MAXITER
   stats
 end
 
