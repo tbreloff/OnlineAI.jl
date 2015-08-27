@@ -90,6 +90,8 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     # println("l1: $l1")
 
     l1 = first(stats.bestModel.layers)
+    @assert isa(l1.w, Matrix)
+    println(l1)
     layer.w = copy(l1.w)
     layer.b = copy(l1.b)
 

@@ -5,6 +5,7 @@ type NeuralNet <: NetStat
   solverParams::SolverParams
   inputTransformer::Transformer
   transformedInput::VecF   # so we can avoid allocations
+  costmult::VecF
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams, inputTransformer::Transformer = IdentityTransformer())
@@ -18,7 +19,7 @@ type NeuralNet <: NetStat
       @assert isa(params.costModel, CrossEntropyCostModel)
     end
 
-    new(layers, params, solverParams, inputTransformer, zeros(first(layers).nin))
+    new(layers, params, solverParams, inputTransformer, zeros(first(layers).nin), zeros(last(layers).nout))
   end
 end
 
@@ -79,10 +80,10 @@ end
 
 
 # given a vector of errors (y - yhat), update network weights
-function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
+function backward(net::NeuralNet, multiplyDerivative::Bool)
 
   # update δᵢ starting from the output layer using the error multiplier
-  updateSensitivities!(net.layers[end], errmult, multiplyDerivative)
+  updateSensitivities!(net.layers[end], net.costmult, multiplyDerivative)
 
   # now update the remaining sensitivities using bakckprop
   for i in length(net.layers)-1:-1:1
@@ -120,8 +121,11 @@ function OnlineStats.update!(net::NeuralNet, x::MatF, y::MatF)
   Float64[update!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
 end
 
-function OnlineStats.update!(net::NetStat, data::DataPoint, transformY::Bool = false)
-  update!(net, data.x, transformY ? transform(net.inputTransformer, data.y) : data.y)
+# note: when yEqualsX is true, we are updating an autoencoder (or similar) and so we can
+# use net.transformedInput instead of y
+function OnlineStats.update!(net::NetStat, data::DataPoint, yEqualsX::Bool = false)
+  update!(net, data.x, yEqualsX ? net.transformedInput : data.y)
+  # update!(net, data.x, transformY ? transform(net.inputTransformer, data.y) : data.y)
 end
 
 # ------------------------------------------------------------------------

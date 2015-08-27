@@ -83,15 +83,15 @@ end
 
 
 # backward step for the final (output) layer
-# note: costMult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
-function updateSensitivities!(layer::Layer, costMult::AVecF, multiplyDerivative::Bool)
-  copy!(layer.δ, costMult)
+# note: costmult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
+function updateSensitivities!(layer::Layer, costmult::AVecF, multiplyDerivative::Bool)
+  copy!(layer.δ, costmult)
   if multiplyDerivative
     for i in 1:layer.nout
       layer.δ[i] *= backward(layer.activation, layer.Σ[i])
     end
   end
-  # layer.δ = multiplyDerivative ? costMult .* backward(layer.activation, layer.Σ) : costMult
+  # layer.δ = multiplyDerivative ? costmult .* backward(layer.activation, layer.Σ) : costmult
 end
 
 # this is the backward step for a hidden layer
