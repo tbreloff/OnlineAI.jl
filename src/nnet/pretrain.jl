@@ -21,7 +21,7 @@ immutable AutoencoderDataSampler{T<:DataSampler}
   sampler::T
 end
 StatsBase.sample(sampler::AutoencoderDataSampler) = (dp = sample(sampler.sampler); DataPoint(dp.x, dp.x))
-DataPoints(sampler::AutoencoderDataSampler) = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler)])
+DataPoints(sampler::AutoencoderDataSampler) = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(sampler.sampler)])
 
 # -----------------------------------------------------------------
 

@@ -42,7 +42,7 @@ function testxor(; hiddenLayerNodes = [2],
   show(net)
 
   if doPretrain
-    pretrain(net, sampler)
+    pretrain(net, sampler, sampler)
   end
 
   stats = solve!(net, sampler, sampler)
@@ -86,7 +86,7 @@ function test_pretrain(; solve=true, pretr=true, netparams=NetParams(), kwargs..
   nin = 2; f = nop
   net = buildRegressionNet(nin,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000), inputTransformer=f)
   if pretr
-    pretrain(net, sampler; kwargs...)
+    pretrain(net, sampler, sampler; kwargs...)
   end
 
   if solve
