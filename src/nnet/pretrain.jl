@@ -39,13 +39,12 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
                     inputActivation::Activation = IdentityActivation())
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
-  # dps = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(trainSampler)])
-  # println(dps)
-  # trainSampler = SimpleSampler(dps)
+  # trainData = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(trainSampler)])
+  # println(trainData)
+  # trainSampler = SimpleSampler(trainData)
   
   # set up training data
-  trainEncoderSampler = AutoencoderDataSampler(trainSampler)
-  dps = DataPoints(trainEncoderSampler)
+  trainData = DataPoints(AutoencoderDataSampler(trainSampler))
 
   # set up validation data
   validationData = DataPoints(AutoencoderDataSampler(validationSampler))
@@ -80,7 +79,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
-    stats = solve!(autoencoder, trainEncoderSampler, SimpleSampler(validationData), true)
+    stats = solve!(autoencoder, SimpleSampler(trainData), SimpleSampler(validationData), true)
     println("  $stats")
 
     if stats.bestModel == nothing || isnan(stats.bestValidationError) || isinf(stats.bestValidationError)
@@ -98,12 +97,20 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     inputActivation = hiddenActivation
 
     # feed the data forward to the next layer
-    for i in 1:length(dps)
-      x = transform(inputTransformer, dps[i].x)
+    for i in 1:length(trainData)
+      x = transform(inputTransformer, trainData[i].x)
       newx = forward(l1, x, false)
-      dps[i] = DataPoint(newx, newx)
+      trainData[i] = DataPoint(newx, newx)
     end
-    # println(dps)
+
+    # do the same for the validation set
+    for i in 1:length(validationData)
+      x = transform(inputTransformer, validationData[i].x)
+      newx = forward(l1, x, false)
+      validationData[i] = DataPoint(newx, newx)
+    end
+
+    # println(trainData)
 
   end
 
