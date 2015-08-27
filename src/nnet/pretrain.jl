@@ -11,7 +11,9 @@ abstract PretrainStrategy
 
 
 # default
-pretrain(net::NeuralNet, sampler::DataSampler; kwargs...) = pretrain(DenoisingAutoencoder, net, sampler; kwargs...)
+function pretrain(net::NeuralNet, sampler::DataSampler, validationData::DataPoints; kwargs...)
+  pretrain(DenoisingAutoencoder, net, sampler; kwargs...)
+end
 
 # -----------------------------------------------------------------
 
