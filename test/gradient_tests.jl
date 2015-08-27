@@ -82,20 +82,16 @@ end
 
 # now update the weights
 for l in ls
-  OnlineAI.updateWeights(l, net.params)
+  OnlineAI.updateWeights(l, net.params.gradientModel)
 end
 
 
 ws = [l.w for l in ls]
 bs = [l.b for l in ls]
-dws = [l.dw for l in ls]
-dbs = [l.db for l in ls]
 
 for i in 1:length(ls)
   println()
   @show i
   @show ws[i]
-  @show dws[i]
   @show bs[i]
-  @show dbs[i]
 end

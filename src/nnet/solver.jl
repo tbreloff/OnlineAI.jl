@@ -52,6 +52,8 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
 
   stats = SolverStats()
 
+  println("\nsolve: $net\n")
+
   # loop through maxiter times
   for i in 1:net.solverParams.maxiter
 
@@ -65,7 +67,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
     if i % net.solverParams.erroriter == 0
       stats.trainError = totalCost(net, traindata)
       stats.validationError = totalCost(net, validationdata)
-      println("Status: $stats\n$net")
+      println("Status: $stats")
 
       # check for improvement in validation error
       if stats.validationError < stats.bestValidationError

@@ -92,7 +92,9 @@ immutable SGDState <: GradientState
   dw::MatF
   db::VecF
 end
-AdagradState(nin::Int, nout::Int) = AdagradState(zeros(nout,nin), zeros(nin))
+SGDState(nin::Int, nout::Int) = SGDState(zeros(nout,nin), zeros(nout))
+
+getGradientState(model::SGDModel, nin::Int, nout::Int) = SGDState(nin,nout)
 
 function Δwij(model::SGDModel, state::SGDState, gradient::Float64, wij::Float64, i::Int, j::Int)
   dwij = -model.η * (gradient + model.λ * wij) + model.μ * state.dw[i,j]
@@ -114,13 +116,15 @@ immutable AdagradModel <: GradientModel
   η::Float64 # base learning rate (numerator)
   λ::Float64 # L2 penalty term
 end
-AdagradModel(; ε=0.01, η=1.0, λ=1e-5)
+AdagradModel(; ε=0.01, η=1.0, λ=1e-5) = AdagradModel(ε, η, λ)
 
 type AdagradState <: GradientState
   Gw::MatF
   Gb::VecF
 end
-AdagradState(nin::Int, nout::Int) = AdagradState(zeros(nout,nin), zeros(nin))
+AdagradState(nin::Int, nout::Int) = AdagradState(zeros(nout,nin), zeros(nout))
+
+getGradientState(model::AdagradModel, nin::Int, nout::Int) = AdagradState(nin,nout)
 
 function Δwij(model::AdagradModel, state::AdagradState, gradient::Float64, wij::Float64, i::Int, j::Int)
   state.Gw[i,j] += gradient^2
@@ -131,7 +135,7 @@ end
 function Δbi(model::AdagradModel, state::AdagradState, gradient::Float64, bi::Float64, i::Int)
   state.Gb[i] += gradient^2
   η = model.η / sqrt(model.ε + state.Gb[i])
-  -model.η * gradient + model.μ * state.db[i]
+  -model.η * gradient
 end
 
 # ----------------------------------------
@@ -143,30 +147,47 @@ Relatively parameter-free... can probably avoid changing ε and ρ
 """
 immutable AdadeltaModel <: GradientModel
   ε::Float64  # try 0.01?
-  ρ::Float64  # try 0.99?
+  ρ::Float64  # try 0.97?
   λ::Float64 # L2 penalty term
 end
-AdadeltaModel(; ε=0.01, ρ=0.99 λ=1e-5)
+AdadeltaModel(; ε=0.01, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, ρ, λ)
 
 type AdadeltaState <: GradientState
-  dw::MatF      # last change
-  db::VecF      # last change
-  dwMean::MatF  # exponential avg of w changes
-  dbMean::VecF  # exponential avg of b changes
+  dwMean::MatF  # exponential avg of w changes (lagged by 1)
+  dbMean::VecF  # exponential avg of b changes (lagged by 1)
   GwMean::MatF  # exponential avg of w gradients
   GbMean::VecF  # exponential avg of b gradients
 end
-AdadeltaState(nin::Int, nout::Int) = AdadeltaState(zeros(nout,nin), zeros(nin), zeros(nout,nin), zeros(nin))
+AdadeltaState(nin::Int, nout::Int) = AdadeltaState(zeros(nout,nin), zeros(nout), zeros(nout,nin), zeros(nout))
+
+getGradientState(model::AdadeltaModel, nin::Int, nout::Int) = AdadeltaState(nin,nout)
 
 function Δwij(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, wij::Float64, i::Int, j::Int)
-  Gw
-  dwij = -model.η * (gradient + model.λ * wij) + model.μ * state.dw[i,j]
-  state.dw[i,j] = dwij
+  ε, ρ = model.ε, model.ρ
+
+  # average g²
+  state.GwMean[i,j] = ρ * state.GwMean[i,j] + (1.0 - ρ) * gradient^2
+
+  # compute learning rate from previous average dw² and current average g²
+  η = sqrt(state.dwMean[i,j] + ε) / sqrt(state.GwMean[i,j] + ε)
+
+  # compute change and update average dw²
+  dwij = -η * (gradient + model.λ * wij)
+  state.dwMean[i,j] = ρ * state.dwMean[i,j] + (1.0 - ρ) * dwij^2
   dwij
 end
 function Δbi(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, bi::Float64, i::Int)
-  dbi = -model.η * gradient + model.μ * state.db[i]
-  state.db[i] = dbi
+  ε, ρ = model.ε, model.ρ
+
+  # average g²
+  state.GbMean[i] = ρ * state.GbMean[i] + (1.0 - ρ) * gradient^2
+
+  # compute learning rate from previous average db² and current average g²
+  η = sqrt(state.dbMean[i] + ε) / sqrt(state.GbMean[i] + ε)
+
+  # compute change and update average db²
+  dbi = -η * (gradient + model.λ * bi)
+  state.dbMean[i] = ρ * state.dbMean[i] + (1.0 - ρ) * dbi^2
   dbi
 end
 
@@ -185,7 +206,9 @@ type NetParams{GRAD<:GradientModel, DROP<:DropoutStrategy, ERR<:CostModel}
   # useAdagrad::Bool
 end
 
-function NetParams(; gradientModel::GradientModel = SGDModel(), dropout::DropoutStrategy = NoDropout(), costModel::CostModel = L2CostModel())
+function NetParams(; gradientModel::GradientModel = AdadeltaModel(),
+                     dropout::DropoutStrategy = NoDropout(),
+                     costModel::CostModel = L2CostModel())
   NetParams(gradientModel, dropout, costModel)
 end
 
@@ -196,7 +219,7 @@ end
 # end
 
 # Base.print(io::IO, p::NetParams) = print(io, "NetParams{η=$(p.η), μ=$(p.μ), λ=$(p.λ), $(p.dropoutStrategy), $(p.costModel), $(p.useAdagrad ? "Adagrad" : "SGD")}")
-Base.print(io::IO, p::NetParams) = print(io, "NetParams{$(p.gradientModel) $(p.dropoutStrategy) $(costModel)}")
+Base.print(io::IO, p::NetParams) = print(io, "NetParams{$(p.gradientModel) $(p.dropoutStrategy) $(p.costModel)}")
 Base.show(io::IO, p::NetParams) = print(io, p)
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)

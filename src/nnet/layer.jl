@@ -50,7 +50,7 @@ function forward(layer::Layer, x::AVecF, istraining::Bool)
     for i in 1:layer.nin
       ri = rand() <= layer.p ? 1.0 : 0.0
       layer.r[i] = ri
-      layer.x[i] *= ri
+      layer.x[i] = ri * x[i]
     end
     # layer.r = float(rand(layer.nin) .<= layer.p)
     # layer.x = layer.r .* x
@@ -59,8 +59,8 @@ function forward(layer::Layer, x::AVecF, istraining::Bool)
     # test... need to multiply weights by dropout prob p
     # layer.x = collect(x)
     # layer.r = ones(layer.nin)
-    copy!(layer.x, x)
     fill!(layer.r, 1.0)
+    copy!(layer.x, x)
     layer.Σ = layer.p * (layer.w * layer.x) + layer.b
   end
 
@@ -81,9 +81,6 @@ function updateSensitivities(layer::Layer, nextlayer::Layer)
 end
 
 # update weights/bias one column at a time... skipping over the dropped out nodes
-# note we are tracking the sum of squares of gradients for use in the AdaGrad update,
-# where we swap out the gradient `g` for the ratio `g / sqrt(G)`
-# function updateWeights(layer::Layer, params::NetParams)
 function updateWeights(layer::Layer, gradientModel::GradientModel)
 
   # note: i refers to the output, j refers to the input

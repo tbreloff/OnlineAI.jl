@@ -87,8 +87,8 @@ function backward(net::NeuralNet, errmult::AVecF, multiplyDerivative::Bool)
     updateWeights(layer, net.params.gradientModel)
   end
 
-  # update our η, μ, etc
-  update!(net.params)
+  # # update our η, μ, etc
+  # update!(net.params)
 end
 
 

@@ -21,9 +21,9 @@ immutable DenoisingAutoencoder <: PretrainStrategy end
 
 function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSampler;
                     tiedweights::Bool = true,
-                    maxiter::Int = 1000,
+                    maxiter::Int = 10000,
                     dropout::DropoutStrategy = Dropout(pInput=0.7,pHidden=0.0),  # this is the "denoising" part, which throws out some of the inputs
-                    encoderParams::NetParams = NetParams(η=1.0, μ=0.0, λ=1e-5, dropout=dropout),
+                    encoderParams::NetParams = NetParams(dropout=dropout),
                     solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=typemax(Int), breakiter=typemax(Int)),  #probably don't set this manually??
                     inputActivation::Activation = IdentityActivation())
 
@@ -50,7 +50,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, sampler::DataSam
     # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
     l1, l2 = autoencoder.layers
     if tiedweights
-      gradientState = getGradientState(net.params.gradientModel, l2.nin, l2.nout)
+      gradientState = getGradientState(encoderParams.gradientModel, l2.nin, l2.nout)
       # autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p, l2.x, TransposeView(l1.w), l2.dw, l2.b, l2.db, l2.δ, l2.Σ, l2.r, l2.nextr, TransposeView(l1.Gw), l2.Gb)
       autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, gradientState, l2.p, l2.x, TransposeView(l1.w), l2.b, l2.δ, l2.Σ, l2.r, l2.nextr)
     end

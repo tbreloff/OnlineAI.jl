@@ -17,8 +17,9 @@ function testxor(; hiddenLayerNodes = [2],
                    hiddenActivation = SigmoidActivation(),
                    finalActivation = IdentityActivation(),
                    params = NetParams(),
-                   solverParams = SolverParams(maxiter=10000),
-                   inputTransformer = IdentityTransformer())
+                   solverParams = SolverParams(maxiter=100000),
+                   inputTransformer = IdentityTransformer(),
+                   doPretrain = true)
 
   # all xor inputs and results
   inputs = [0 0; 0 1; 1 0; 1 1]
@@ -40,6 +41,10 @@ function testxor(; hiddenLayerNodes = [2],
                            inputTransformer = inputTransformer)
   show(net)
 
+  if doPretrain
+    pretrain(net, sampler)
+  end
+
   stats = solve!(net, sampler, sampler)
 
   output = vec(predict(net, inputs))
@@ -53,17 +58,22 @@ end
 
 facts("NNet") do
 
-  minerror = 0.05
-  solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
+  atol = 0.05
+  solverParams = SolverParams(maxiter=100000, minerror=1e-3)
 
-  net, output, stats = testxor(params=NetParams(costModel=L1CostModel()), solverParams=solverParams)
-  @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
+  net, output, stats = testxor(params=NetParams(gradientModel=SGDModel(η=0.2), costModel=L2CostModel()), solverParams=solverParams)
+  @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
-  @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
+  # net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
+  # @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
   net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
-  @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
+  @fact output --> roughly([0., 1., 1., 0.], atol=atol)
+
+  net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
+                               finalActivation=SigmoidActivation(), solverParams=solverParams,
+                               hiddenLayerNodes = [6,6])
+  @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
 end # facts
 
