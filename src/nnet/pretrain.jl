@@ -143,9 +143,9 @@ function setSecondAutoencoderLayer(autoencoder::NeuralNet, l1::NormalizedLayer, 
                                 l2.dβState,
                                 l2.dαState,
                                 l2.xvar, l2.w,
-                                l2.x, l2.xhat, l2.β, l2.α, l2.y, l2.δy,
+                                l2.x, l2.xhat, l2.α, l2.y, l2.δy,
                                 l2.b, l2.Σ, l2.a, l2.δΣ,
-                                l2.r, l2.nextr)
+                                l2.β, l2.r, l2.nextr)
 end
 
 

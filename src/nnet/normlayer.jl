@@ -39,7 +39,6 @@ type NormalizedLayer{A <: Activation,
   
   x::VecF               # nin x 1 -- input
   xhat::VecF            # nin x 1 -- xhat = standardize(x)
-  β::VecF               # nin x 1 -- 
   α::VecF               # nin x 1 -- 
   y::VecF               # nin x 1 -- y = xhat .* β + α
   δy::VecF              # nin x 1 -- sensitivities for y:  δyᵢ := dC / dyᵢ   (calculated during backward pass)
@@ -49,6 +48,7 @@ type NormalizedLayer{A <: Activation,
   a::VecF               # nout x 1 -- activation := f(Σ)
   δΣ::VecF               # nout x 1 -- sensitivities for Σ:  δΣᵢ := dC / dΣᵢ (calculated during backward pass)
 
+  β::VecF               # nin x 1 -- updated by SGD step, used to compute y
   r::VecF               # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
   nextr::VecF           # nout x 1 -- retention of the nodes of this layer (as opposed to r 
                         #             which applies to the incoming weights)
@@ -68,8 +68,9 @@ function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation,
                   getGradientState(gradientModel, nin, 1),
                   [Variance(wgt) for i in 1:nin],
                   w,
-                  [zeros(nin) for i in 1:6]...,
+                  [zeros(nin) for i in 1:5]...,
                   [zeros(nout) for i in 1:4]...,
+                  ones(nin),
                   ones(nin),
                   ones(nout))
 end
@@ -79,7 +80,24 @@ function Base.print{A,M,G}(io::IO, l::NormalizedLayer{A,M,G})
   print(io, "‖δΣ‖₁=$(sumabs(l.δΣ)) ‖δy‖₁=$(sumabs(l.δy)) ")
   print(io, "$(M<:TransposeView ? "T" : "")}")
 end
-Base.show(io::IO, l::NormalizedLayer) = print(io, l)
+function Base.show(io::IO, l::NormalizedLayer) 
+  println(l)
+  @show l.r
+  @show l.nextr
+  @show l.x
+  println(l.xvar)
+  @show l.xhat
+  @show l.y
+  @show l.Σ
+  @show l.a
+  @show l.δy
+  @show l.δΣ
+  @show l.w
+  @show l.b
+  @show l.β
+  @show l.α
+  println()
+end
 
 
 # gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
@@ -100,7 +118,6 @@ end
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
 function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
-  println("\n\n$layer")
 
   # update r and get scale factor p
   if istraining
@@ -115,8 +132,6 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
     fill!(layer.r, 1.0)
     p = layer.p
   end
-  @show layer.r
-  @show p
 
   # update x, xvar, xhat, y
   for i in 1:layer.nin
@@ -128,17 +143,10 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
     # we compute y = xhat * β + α, then multiply by r in case we're dropping out
     layer.y[i] = ((layer.xhat[i] * layer.β[i]) + layer.α[i]) * layer.r[i]
   end
-  @show layer.x
-  println(layer.xvar)
-  @show layer.xhat
-  @show layer.y
 
 
   # update Σ
   dosigmamult!(layer, p)
-  @show layer.Σ
-
-  println("\n")
 
   forward!(layer.activation, layer.a, layer.Σ)     # activate
 end
@@ -229,6 +237,7 @@ function updateWeights!(layer::NormalizedLayer, gradientModel::GradientModel)
 
     end
   end
+
 
 end
 

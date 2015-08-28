@@ -99,6 +99,9 @@ function backward!(net::NeuralNet, multiplyDerivative::Bool)
   # now update the weights
   for layer in net.layers
     updateWeights!(layer, net.params.gradientModel)
+
+    # println()
+    # @show layer
   end
 
   # # update our η, μ, etc
