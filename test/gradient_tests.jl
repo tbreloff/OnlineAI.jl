@@ -2,10 +2,10 @@
 using OnlineAI, FactCheck
 import OnlineStats: @LOG
 
-# A = SigmoidActivation()
-A = TanhActivation()
-# C = CrossEntropyCostModel()
-C = L2CostModel()
+A = SigmoidActivation()
+# A = TanhActivation()
+C = CrossEntropyCostModel()
+# C = L2CostModel()
 
 nin, nout = 3, 1
 hidden = [2]
@@ -44,11 +44,11 @@ for l in ls
 end
 
 
-yhat = forward(net, x, true)
-errmult, multiplyDerivative = OnlineAI.costMultiplier(net.params.costModel, y, yhat)
-OnlineAI.updateSensitivities(ls[end], errmult, multiplyDerivative)
+yhat = forward!(net, x, true)
+multiplyDerivative = OnlineAI.costMultiplier!(net.params.costModel, net.costmult, y, yhat)
+OnlineAI.updateSensitivities!(ls[end], net.costmult, multiplyDerivative)
 for i in length(ls)-1:-1:1
-  OnlineAI.updateSensitivities(ls[i:i+1]...)
+  OnlineAI.updateSensitivities!(ls[i:i+1]...)
 end
 
 δs = [l.δ for l in ls]
@@ -60,7 +60,7 @@ bs = [l.b for l in ls]
 @show x
 @show y
 @show yhat
-@show errmult
+@show net.costmult
 @show multiplyDerivative
 
 facts("gradient") do
@@ -82,7 +82,7 @@ end
 
 # now update the weights
 for l in ls
-  OnlineAI.updateWeights(l, net.params.gradientModel)
+  OnlineAI.updateWeights!(l, net.params.gradientModel)
 end
 
 
