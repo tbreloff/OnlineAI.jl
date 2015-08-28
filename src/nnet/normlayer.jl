@@ -25,7 +25,6 @@ type NormalizedLayer{A <: Activation,
   nin::Int
   nout::Int
   activation::A
-  # gradientState::GSTATE
   p::Float64  # dropout retention probability
 
   # the state of the layer
@@ -36,6 +35,7 @@ type NormalizedLayer{A <: Activation,
   dαState::GSTATE
   
   xvar::Vector{Variance{WGT}}  # nin x 1 -- online variances to calculate μ and σ for the normalization step
+  w::MATF               # nout x nin -- weights connecting y --> Σ
   
   x::VecF               # nin x 1 -- input
   xhat::VecF            # nin x 1 -- xhat = standardize(x)
@@ -44,7 +44,6 @@ type NormalizedLayer{A <: Activation,
   y::VecF               # nin x 1 -- y = xhat .* β + α
   δy::VecF              # nin x 1 -- sensitivities for y:  δyᵢ := dC / dyᵢ   (calculated during backward pass)
 
-  w::MATF               # nout x nin -- weights connecting y --> Σ
   b::VecF               # nout x 1 -- bias terms
   Σ::VecF               # nout x 1 -- inner products
   a::VecF               # nout x 1 -- activation := f(Σ)
@@ -62,22 +61,25 @@ function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation,
                          wgt = EqualWeighting())
 
   w = initialWeights(nin, nout, activation)
-  gradientState = getGradientState(gradientModel, nin, nout)
   NormalizedLayer(nin, nout, activation, p,
                   getGradientState(gradientModel, nout, nin),
                   getGradientState(gradientModel, nout, 1),
                   getGradientState(gradientModel, nin, 1),
                   getGradientState(gradientModel, nin, 1),
                   [Variance(wgt) for i in 1:nin],
-                  [zeros(nin) for i in 1:6]...,
                   w,
-                  [zeros(nout) for i in 1:5]...,
+                  [zeros(nin) for i in 1:6]...,
+                  [zeros(nout) for i in 1:4]...,
                   ones(nin),
                   ones(nout))
 end
 
-Base.print{A,M,G}(io::IO, l::NormalizedLayer{A,M,G}) = print(io, "NormalizedLayer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ)) $(M<:TransposeView ? "T" : "")}")
-
+function Base.print{A,M,G}(io::IO, l::NormalizedLayer{A,M,G})
+  print(io, "NormalizedLayer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ")
+  print(io, "‖δΣ‖₁=$(sumabs(l.δΣ)) ‖δy‖₁=$(sumabs(l.δy)) ")
+  print(io, "$(M<:TransposeView ? "T" : "")}")
+end
+Base.show(io::IO, l::NormalizedLayer) = print(io, l)
 
 
 # gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
@@ -98,6 +100,7 @@ end
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
 function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
+  println("\n\n$layer")
 
   # update r and get scale factor p
   if istraining
@@ -112,23 +115,30 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
     fill!(layer.r, 1.0)
     p = layer.p
   end
+  @show layer.r
+  @show p
 
-  # update x, xvars, xhat, y
+  # update x, xvar, xhat, y
   for i in 1:layer.nin
     layer.x[i] = x[i]
 
-    # update xvars[i]
-    update!(xvars[i], x[i])
-
-    layer.xhat[i] = standardize(xvars[i])
+    # update xvar and standardize xi in one call
+    layer.xhat[i] = standardize!(layer.xvar[i], x[i])
 
     # we compute y = xhat * β + α, then multiply by r in case we're dropping out
     layer.y[i] = ((layer.xhat[i] * layer.β[i]) + layer.α[i]) * layer.r[i]
   end
+  @show layer.x
+  println(layer.xvar)
+  @show layer.xhat
+  @show layer.y
 
 
   # update Σ
   dosigmamult!(layer, p)
+  @show layer.Σ
+
+  println("\n")
 
   forward!(layer.activation, layer.a, layer.Σ)     # activate
 end
@@ -160,7 +170,7 @@ end
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
 function updateδΣ!(layer::NormalizedLayer, nextlayer::NormalizedLayer)
   for i in 1:layer.nout
-    σi = OnlineStats.if0then1(std(nextlayer.xvar[i]))
+    σi = if0then1(std(nextlayer.xvar[i]))
     βi = nextlayer.β[i]
     deriv = backward(layer.activation, layer.Σ[i])
     layer.δΣ[i] = nextlayer.δy[i] * (βi / σi) * deriv

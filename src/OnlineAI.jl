@@ -10,10 +10,12 @@ using Distributions
 # using StatsBase
 
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
-                    VecF, MatF, AVec, AMat, AVecF, AMatF
+                    VecF, MatF, AVec, AMat, AVecF, AMatF, if0then1,
+                    standardize, unstandardize, standardize!
 
 export row, col, row!, col!, rows, cols, nrows, ncols,
-       VecF, MatF, AVec, AMat, AVecF, AMatF
+       VecF, MatF, AVec, AMat, AVecF, AMatF, if0then1,
+       standardize, unstandardize, standardize!
 
 
 

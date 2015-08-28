@@ -68,14 +68,15 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
                             inputTransformer = inputTransformer)
 
     # tied weights means w₂ = w₁' ... rebuild the layer with a TransposeView of the first layer's weights
-    l1, l2 = autoencoder.layers
+    # l1, l2 = autoencoder.layers
     if tiedweights
+      setSecondAutoencoderLayer(autoencoder, autoencoder.layers...)
       # gradientState = getGradientState(encoderParams.gradientModel, l2.nin, l2.nout)
-      autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p,
-                                    l2.dwState,
-                                    l2.dbState,
-                                    l2.x, TransposeView(l1.w), l2.b, l2.δ,
-                                    l2.Σ, l2.a, l2.r, l2.nextr)
+      # autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p,
+      #                               l2.dwState,
+      #                               l2.dbState,
+      #                               l2.x, TransposeView(l1.w), l2.b, l2.δ,
+      #                               l2.Σ, l2.a, l2.r, l2.nextr)
     end
 
     println("netlayer: $layer  oact: $inputActivation")
@@ -124,5 +125,31 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
   # we're done... net is pretrained now
   return
 end
+
+
+function setSecondAutoencoderLayer(autoencoder::NeuralNet, l1::Layer, l2::Layer)
+  autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p,
+                                l2.dwState,
+                                l2.dbState,
+                                l2.x, TransposeView(l1.w), l2.b, l2.δ,
+                                l2.Σ, l2.a, l2.r, l2.nextr)
+end
+
+
+function setSecondAutoencoderLayer(autoencoder::NeuralNet, l1::NormalizedLayer, l2::NormalizedLayer)
+  autoencoder.layers[2] = NormalizedLayer(l2.nin, l2.nout, l2.activation, l2.p,
+                                l2.dwState,
+                                l2.dbState,
+                                l2.dβState,
+                                l2.dαState,
+                                l2.xvar, l2.w,
+                                l2.x, l2.xhat, l2.β, l2.α, l2.y, l2.δy,
+                                l2.b, l2.Σ, l2.a, l2.δΣ,
+                                l2.r, l2.nextr)
+end
+
+
+
+
 
 
