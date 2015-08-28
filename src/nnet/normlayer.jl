@@ -42,34 +42,38 @@ type NormalizedLayer{A <: Activation,
   β::VecF               # nin x 1 -- 
   α::VecF               # nin x 1 -- 
   y::VecF               # nin x 1 -- y = xhat .* β + α
-  r::VecF               # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
   δy::VecF              # nin x 1 -- sensitivities for y:  δyᵢ := dC / dyᵢ   (calculated during backward pass)
 
   w::MATF               # nout x nin -- weights connecting y --> Σ
   b::VecF               # nout x 1 -- bias terms
   Σ::VecF               # nout x 1 -- inner products
   a::VecF               # nout x 1 -- activation := f(Σ)
-  nextr::VecF           # nout x 1 -- retention of the nodes of this layer (as opposed to r which applies to the incoming weights)
   δΣ::VecF               # nout x 1 -- sensitivities for Σ:  δΣᵢ := dC / dΣᵢ (calculated during backward pass)
+
+  r::VecF               # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
+  nextr::VecF           # nout x 1 -- retention of the nodes of this layer (as opposed to r 
+                        #             which applies to the incoming weights)
 end
 
-# note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
-#       is also approximately standard normal
-initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
 
 
-function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
+function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation,
+                         gradientModel::GradientModel, p::Float64 = 1.0;
+                         wgt = EqualWeighting())
+
   w = initialWeights(nin, nout, activation)
   gradientState = getGradientState(gradientModel, nin, nout)
-  NormalizedLayer(nin, nout, activation, gradientState, p,
+  NormalizedLayer(nin, nout, activation, p,
                   getGradientState(gradientModel, nout, nin),
                   getGradientState(gradientModel, nout, 1),
                   getGradientState(gradientModel, nin, 1),
                   getGradientState(gradientModel, nin, 1),
-                  Variances(nin),
-                  [zeros(nin) for i in 1:7]...,
+                  [Variance(wgt) for i in 1:nin],
+                  [zeros(nin) for i in 1:6]...,
                   w,
-                  [zeros(nout) for i in 1:6]...)
+                  [zeros(nout) for i in 1:5]...,
+                  ones(nin),
+                  ones(nout))
 end
 
 Base.print{A,M,G}(io::IO, l::NormalizedLayer{A,M,G}) = print(io, "NormalizedLayer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ)) $(M<:TransposeView ? "T" : "")}")

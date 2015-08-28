@@ -13,23 +13,14 @@ end
 SGDModel(; η=0.1, μ=0.5, λ=1e-5) = SGDModel(η, μ, λ)
 
 immutable SGDState <: GradientState
-  dw::MatF
-  db::VecF
+  lastChanges::MatF
 end
-SGDState(nin::Int, nout::Int) = SGDState(zeros(nout,nin), zeros(nout))
+SGDState(n::Int, m::Int) = SGDState(zeros(n,m))
+getGradientState(model::SGDModel, n::Int, m::Int) = SGDState(n,m)
 
-getGradientState(model::SGDModel, nin::Int, nout::Int) = SGDState(nin,nout)
-
-function Δwij(model::SGDModel, state::SGDState, gradient::Float64, wij::Float64, i::Int, j::Int)
-  dwij = -model.η * (gradient + model.λ * wij) + model.μ * state.dw[i,j]
-  state.dw[i,j] = dwij
-  dwij
-end
-
-function Δbi(model::SGDModel, state::SGDState, gradient::Float64, bi::Float64, i::Int)
-  dbi = -model.η * gradient + model.μ * state.db[i]
-  state.db[i] = dbi
-  dbi
+# update and return the change
+function Δij(model::SGDModel, state::SGDState, gradient::Float64, val::Float64, i::Int, j::Int)
+  state.lastChanges[i,j] = -model.η * (gradient + model.λ * val) + model.μ * state.lastChanges[i,j]
 end
 
 # ----------------------------------------
@@ -43,24 +34,17 @@ end
 AdagradModel(; ε=0.01, η=1.0, λ=1e-5) = AdagradModel(ε, η, λ)
 
 type AdagradState <: GradientState
-  Gw::MatF
-  Gb::VecF
+  G::MatF
 end
-AdagradState(nin::Int, nout::Int) = AdagradState(zeros(nout,nin), zeros(nout))
+AdagradState(n::Int, m::Int) = AdagradState(zeros(n,m))
 
-getGradientState(model::AdagradModel, nin::Int, nout::Int) = AdagradState(nin,nout)
+getGradientState(model::AdagradModel, n::Int, m::Int) = AdagradState(n,m)
 
-# function Δwij(model::AdagradModel, state::AdagradState, gradient::Float64, wij::Float64, i::Int, j::Int)
-#   state.Gw[i,j] += gradient^2
-#   η = model.η / sqrt(model.ε + state.Gw[i,j])
-#   -η * (gradient + model.λ * wij)
-# end
-
-# function Δbi(model::AdagradModel, state::AdagradState, gradient::Float64, bi::Float64, i::Int)
-#   state.Gb[i] += gradient^2
-#   η = model.η / sqrt(model.ε + state.Gb[i])
-#   -model.η * gradient
-# end
+function Δij(model::AdagradModel, state::AdagradState, gradient::Float64, val::Float64, i::Int, j::Int)
+  state.G[i,j] += gradient^2
+  η = model.η / sqrt(model.ε + state.G[i,j])
+  -η * (gradient + model.λ * val)
+end
 
 # ----------------------------------------
 
@@ -76,18 +60,12 @@ immutable AdadeltaModel <: GradientModel
 end
 AdadeltaModel(; ε=0.01, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, ρ, λ)
 
-# type AdadeltaState <: GradientState
-#   dwMean::MatF  # exponential avg of w changes (lagged by 1)
-#   dbMean::VecF  # exponential avg of b changes (lagged by 1)
-#   GwMean::MatF  # exponential avg of w gradients
-#   GbMean::VecF  # exponential avg of b gradients
-# end
-# AdadeltaState(nin::Int, nout::Int) = AdadeltaState(zeros(nout,nin), zeros(nout), zeros(nout,nin), zeros(nout))
+
 type AdadeltaState <: GradientState
   dMean::MatF
   GMean::MatF
 end
-
+AdadeltaState(n::Int, m::Int) = AdadeltaState(zeros(n,m), zeros(n,m))
 getGradientState(model::AdadeltaModel, n::Int, m::Int) = AdadeltaState(n,m)
 
 function Δij(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, val::Float64, i::Int, j::Int)
@@ -105,31 +83,3 @@ function Δij(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, val
   dij
 end
 
-# function Δwij(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, wij::Float64, i::Int, j::Int)
-#   ε, ρ = model.ε, model.ρ
-
-#   # average g²
-#   state.GwMean[i,j] = ρ * state.GwMean[i,j] + (1.0 - ρ) * gradient^2
-
-#   # compute learning rate from previous average dw² and current average g²
-#   η = sqrt(state.dwMean[i,j] + ε) / sqrt(state.GwMean[i,j] + ε)
-
-#   # compute change and update average dw²
-#   dwij = -η * (gradient + model.λ * wij)
-#   state.dwMean[i,j] = ρ * state.dwMean[i,j] + (1.0 - ρ) * dwij^2
-#   dwij
-# end
-# function Δbi(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, bi::Float64, i::Int)
-#   ε, ρ = model.ε, model.ρ
-
-#   # average g²
-#   state.GbMean[i] = ρ * state.GbMean[i] + (1.0 - ρ) * gradient^2
-
-#   # compute learning rate from previous average db² and current average g²
-#   η = sqrt(state.dbMean[i] + ε) / sqrt(state.GbMean[i] + ε)
-
-#   # compute change and update average db²
-#   dbi = -η * (gradient + model.λ * bi)
-#   state.dbMean[i] = ρ * state.dbMean[i] + (1.0 - ρ) * dbi^2
-#   dbi
-# end

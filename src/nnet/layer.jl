@@ -8,16 +8,22 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
   nin::Int
   nout::Int
   activation::A
-  gradientState::GSTATE
+  # gradientState::GSTATE
   p::Float64  # dropout retention probability
 
   # the state of the layer
+  
+  dwState::GSTATE
+  dbState::GSTATE  
+
   x::VecF  # nin x 1 -- input 
+
   w::MATF  # nout x nin -- weights connecting previous layer to this layer
   b::VecF  # nout x 1 -- bias terms
   δ::VecF  # nout x 1 -- sensitivities (calculated during backward pass)
   Σ::VecF  # nout x 1 -- inner products (calculated during forward pass)
   a::VecF  # nout x 1 -- f(Σ) (calculated during forward pass)
+
   r::VecF  # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
   nextr::VecF  # nout x 1 -- retention of the nodes of this layer (as opposed to r which applies to the incoming weights)
 end
@@ -26,13 +32,20 @@ end
 
 # note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
 #       is also approximately standard normal
-initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
+# initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
 
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
   w = initialWeights(nin, nout, activation)
-  gradientState = getGradientState(gradientModel, nin, nout)
-  println(w)
-  Layer(nin, nout, activation, gradientState, p, zeros(nin), w, [zeros(nout) for i in 1:4]..., ones(nin), ones(nout))
+  # gradientState = getGradientState(gradientModel, nin, nout)
+  # println(w)
+  Layer(nin, nout, activation, p,
+            getGradientState(gradientModel, nout, nin),
+            getGradientState(gradientModel, nout, 1),
+            zeros(nin),
+            w,
+            [zeros(nout) for i in 1:4]...,
+            ones(nin),
+            ones(nout))
   # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
 end
 
@@ -137,7 +150,8 @@ function updateWeights!(layer::Layer, gradientModel::GradientModel)
       
       # if this node is retained, we can update incoming bias
       bGrad = layer.δ[i]  # δi is the gradient
-      dbi = Δbi(gradientModel, layer.gradientState, bGrad, layer.b[i], i)
+      # dbi = Δbi(gradientModel, layer.gradientState, bGrad, layer.b[i], i)
+      dbi = Δij(gradientModel, layer.dbState, bGrad, layer.b[i], i, 1)
       # Gbi = layer.Gb[i] + δi^2
 
       # dbi = Gbi > 0.0 ? Δbi(params, δi / (params.useAdagrad ? sqrt(1.0+Gbi) : 1.0), layer.db[i]) : 0.0
@@ -152,7 +166,8 @@ function updateWeights!(layer::Layer, gradientModel::GradientModel)
         if layer.r[j] > 0.0
           
           wGrad = bGrad * layer.x[j]
-          dwij = Δwij(gradientModel, layer.gradientState, wGrad, layer.w[i,j], i, j)
+          # dwij = Δwij(gradientModel, layer.gradientState, wGrad, layer.w[i,j], i, j)
+          dwij = Δij(gradientModel, layer.dwState, wGrad, layer.w[i,j], i, j)
           # Gwij = layer.Gw[i,j] + wGrad^2
           
           # dwij = Gwij > 0.0 ? Δbij(params, wGrad / (params.useAdagrad ? sqrt(1.0+Gwij) : 1.0), layer.w[i,j], layer.dw[i,j]) : 0.0

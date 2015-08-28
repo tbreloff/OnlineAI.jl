@@ -1,5 +1,6 @@
 
-const LAYER = Layer
+# const LAYER = Layer
+const LAYER = NormalizedLayer
 
 type NeuralNet <: NetStat
   layers::Vector{LAYER}  # note: this doesn't include input layer!!
@@ -29,24 +30,24 @@ type NeuralNet <: NetStat
 end
 
 
-# simple constructor which creates all layers the same for given list of node counts.
-# structure should include neuron counts for all layers, including input and output
-function NeuralNet(structure::AVec{Int};
-                    params = NetParams(),
-                    solverParams = SolverParams(),
-                    activation::Activation = TanhActivation(),
-                    inputTransformer::Transformer = IdentityTransformer())
-  @assert length(structure) > 1
+# # simple constructor which creates all layers the same for given list of node counts.
+# # structure should include neuron counts for all layers, including input and output
+# function NeuralNet(structure::AVec{Int};
+#                     params = NetParams(),
+#                     solverParams = SolverParams(),
+#                     activation::Activation = TanhActivation(),
+#                     inputTransformer::Transformer = IdentityTransformer())
+#   @assert length(structure) > 1
 
-  layers = LAYER[]
-  for i in 1:length(structure)-1
-    nin, nout = structure[i:i+1]
-    pDropout = getDropoutProb(params, i==1)
-    push!(layers, layerType(nin, nout, activation, params.gradientModel, pDropout))
-  end
+#   layers = LAYER[]
+#   for i in 1:length(structure)-1
+#     nin, nout = structure[i:i+1]
+#     pDropout = getDropoutProb(params, i==1)
+#     push!(layers, layerType(nin, nout, activation, params.gradientModel, pDropout))
+#   end
 
-  NeuralNet(layers, params, solverParams, inputTransformer)
-end
+#   NeuralNet(layers, params, solverParams, inputTransformer)
+# end
 
 function Base.show(io::IO, net::NeuralNet)
   println(io, "NeuralNet{")
@@ -157,5 +158,15 @@ function StatsBase.predict(net::NeuralNet, x::AMatF)
   yhat
 end
 
+# ------------------------------------------------------------------------
+
+
+# note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
+#       is also approximately standard normal
+initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
+
+
+
+# ------------------------------------------------------------------------
 
 
