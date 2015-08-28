@@ -176,6 +176,7 @@ end
 
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
+# TODO: this is unstable... how can we stabilize correctly????
 function updateδΣ!(layer::NormalizedLayer, nextlayer::NormalizedLayer)
   for i in 1:layer.nout
     σi = if0then1(std(nextlayer.xvar[i]))
@@ -215,7 +216,7 @@ function updateWeights!(layer::NormalizedLayer, gradientModel::GradientModel)
   for i in 1:layer.nout
     if layer.nextr[i] > 0.0
 
-      layer.b[i] += Δij(gradientModel, layer.dbState, layer.δΣ[i], layer.b[i], i, 1)
+      layer.b[i] += Δij(gradientModel, layer.dbState, layer.δΣ[i], 0.0, i, 1)
       
       for j in 1:layer.nin
         if layer.r[j] > 0.0
@@ -232,8 +233,8 @@ function updateWeights!(layer::NormalizedLayer, gradientModel::GradientModel)
   for i in 1:layer.nin
     if layer.r[i] > 0.0
 
-      layer.α[i] += Δij(gradientModel, layer.dαState, layer.δy[i], layer.α[i], i, 1)
-      layer.β[i] += Δij(gradientModel, layer.dβState, layer.δy[i] * layer.xhat[i], layer.β[i], i, 1)
+      layer.α[i] += Δij(gradientModel, layer.dαState, layer.δy[i], 0.0, i, 1)
+      layer.β[i] += Δij(gradientModel, layer.dβState, layer.δy[i] * layer.xhat[i], 0.0, i, 1)
 
     end
   end

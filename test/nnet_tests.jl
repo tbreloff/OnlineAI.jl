@@ -59,9 +59,15 @@ end
 facts("NNet") do
 
   atol = 0.05
-  solverParams = SolverParams(maxiter=10000, minerror=1e-3, plotiter=500)
+  solverParams = SolverParams(maxiter=10000,
+                              minerror=1e-3,
+                              plotiter=200,
+                              plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
 
-  net, output, stats = testxor(params=NetParams(gradientModel=SGDModel(η=0.2), costModel=L2CostModel()), solverParams=solverParams, doPretrain=false)
+  gradientModel = AdadeltaModel()
+  # gradientModel = SGDModel(η=0.001)
+  net, output, stats = testxor(params=NetParams(gradientModel=gradientModel, costModel=L2CostModel()),
+                               solverParams=solverParams, doPretrain=false)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
   # net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
@@ -84,7 +90,9 @@ function test_pretrain(; solve=true, pretr=true, netparams=NetParams(), kwargs..
 
   # nin = 1; f = x->x[1:1]
   nin = 2; f = nop
-  net = buildRegressionNet(Layer, nin,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000), inputTransformer=f)
+  net = buildRegressionNet(Layer, nin,1,[2]; params=netparams,
+                           solverParams=SolverParams(maxiter=10000),
+                           inputTransformer=f)
   if pretr
     pretrain(net, sampler, sampler; kwargs...)
   end

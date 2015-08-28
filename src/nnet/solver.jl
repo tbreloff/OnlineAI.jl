@@ -16,6 +16,7 @@ type SolverParams
   erroriter::Int  # number of iterations be
   breakiter::Int
   plotiter::Int
+  plotfields::Vector{Symbol}
   stopepochs::Int
   minerror::Float64
   onbreak::Function
@@ -25,10 +26,11 @@ function SolverParams(; maxiter = 1000,
                         erroriter = 1000,
                         breakiter = 10000,
                         plotiter = -1,
+                        plotfields = Symbol[:x, :xhat, :y, :Σ, :a],
                         stopepochs = 100,
                         minerror = 1e-5,
                         onbreak = donothing) 
-  SolverParams(maxiter, erroriter, breakiter, plotiter, stopepochs, minerror, onbreak)
+  SolverParams(maxiter, erroriter, breakiter, plotiter, plotfields, stopepochs, minerror, onbreak)
 end
 
 # ------------------------------------------------------------------------
@@ -64,7 +66,7 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
 
   # optionally set up the plotter (only if plotiter ≥ 0)
   if net.solverParams.plotiter >= 0
-    stats.plotter = NetProgressPlotter(net, stats)
+    stats.plotter = NetProgressPlotter(net, stats, net.solverParams.plotfields)
   end
 
   println("\nsolve: $net\n")

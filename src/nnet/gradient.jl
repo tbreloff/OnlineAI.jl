@@ -55,10 +55,11 @@ Relatively parameter-free... can probably avoid changing ε and ρ
 """
 immutable AdadeltaModel <: GradientModel
   ε::Float64  # try 0.01?
+  η::Float64
   ρ::Float64  # try 0.97?
   λ::Float64 # L2 penalty term
 end
-AdadeltaModel(; ε=0.01, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, ρ, λ)
+AdadeltaModel(; ε=0.01, η=0.1, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, η, ρ, λ)
 
 
 type AdadeltaState <: GradientState
@@ -75,7 +76,7 @@ function Δij(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, val
   state.GMean[i,j] = ρ * state.GMean[i,j] + (1.0 - ρ) * gradient^2
 
   # compute learning rate from previous average dw² and current average g²
-  η = sqrt(state.dMean[i,j] + ε) / sqrt(state.GMean[i,j] + ε)
+  η = model.η * sqrt(state.dMean[i,j] + ε) / sqrt(state.GMean[i,j] + ε)
 
   # compute change and update average dw²
   dij = -η * (gradient + model.λ * val)
