@@ -22,6 +22,8 @@ abstract NetStat <: OnlineStat
 nobs(o::NetStat) = 0
 abstract Node
 
+abstract NeuralNetLayer
+
 # ------------------------------------------------
 
 include("utils.jl")
@@ -100,12 +102,17 @@ export
 include("nnet/solver.jl")
 
 export
+  NeuralNetLayer,
   Layer,
   forward,
   backward,
   forward!,
   backward!
 include("nnet/layer.jl")
+
+export
+  NormalizedLayer
+include("nnet/normlayer.jl")
 
 export
   NeuralNet

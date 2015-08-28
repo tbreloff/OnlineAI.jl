@@ -1,6 +1,6 @@
 
 type NeuralNet <: NetStat
-  layers::Vector{Layer}  # note: this doesn't include input layer!!
+  layers::Vector{NeuralNetLayer}  # note: this doesn't include input layer!!
   params::NetParams
   solverParams::SolverParams
   inputTransformer::Transformer
@@ -8,7 +8,10 @@ type NeuralNet <: NetStat
   costmult::VecF
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
-  function NeuralNet(layers::Vector{Layer}, params::NetParams, solverParams::SolverParams, inputTransformer::Transformer = IdentityTransformer())
+  function NeuralNet(layers::Vector{NeuralNetLayer},
+                      params::NetParams,
+                      solverParams::SolverParams,
+                      inputTransformer::Transformer = IdentityTransformer())
 
     # do some sanity checking on activation/costmodel combos
     if isa(params.costModel, CrossEntropyCostModel)
@@ -26,18 +29,19 @@ end
 
 # simple constructor which creates all layers the same for given list of node counts.
 # structure should include neuron counts for all layers, including input and output
-function NeuralNet(structure::AVec{Int};
-                   params = NetParams(),
-                   solverParams = SolverParams(),
-                   activation::Activation = TanhActivation(),
-                   inputTransformer::Transformer = IdentityTransformer())
+function NeuralNet{T<:NeuralNetLayer}(structure::AVec{Int};
+                                      params = NetParams(),
+                                      solverParams = SolverParams(),
+                                      activation::Activation = TanhActivation(),
+                                      inputTransformer::Transformer = IdentityTransformer(),
+                                      layerType::Type{T} = Layer)
   @assert length(structure) > 1
 
-  layers = Layer[]
+  layers = NeuralNetLayer[]
   for i in 1:length(structure)-1
     nin, nout = structure[i:i+1]
     pDropout = getDropoutProb(params, i==1)
-    push!(layers, Layer(nin, nout, activation, params.gradientModel, pDropout))
+    push!(layers, layerType(nin, nout, activation, params.gradientModel, pDropout))
   end
 
   NeuralNet(layers, params, solverParams, inputTransformer)

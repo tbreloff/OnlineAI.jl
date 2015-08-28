@@ -4,7 +4,7 @@
 # forward value is f(wx + b), where f is the activation function
 # Σ := wx + b
 # note: w is a parameter for the case of tied weights (it can be a TransposeView!)
-type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientState}
+type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientState} <: NeuralNetLayer
   nin::Int
   nout::Int
   activation::A
