@@ -72,7 +72,7 @@ transform{T}(transformer::VectorTransformer, x::AVec{T}) = T[transform(t,x) for 
 
 function transform!(transformer::VectorTransformer, x_transformed::AVec, x::AVec)
   for i in 1:length(x_transformed)
-    transform!(transformer.transformations[i], x_transformed, x)
+    transform!(transformer.transformations[i], x_transformed, x, i)
   end
 end
 
