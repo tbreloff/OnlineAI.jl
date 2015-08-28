@@ -1,4 +1,49 @@
 
+type NetProgressPlotter
+  net::NeuralNet
+  stats::SolverStats
+  fields::Vector{Symbol}
+  plts::Matrix{Qwt.Plot}
+  window
+end
+
+# setup
+function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{Symbol} = Symbol[:x, :xhat, :y, :Σ, :a])
+  n = length(net.layers)
+  m = length(fields)
+
+  # initialize the plots
+  plts = Array{Qwt.Plot}(n, m)
+  for (i, layer) in enumerate(net.layers)
+    for (j, field) in enumerate(fields)
+      arr = getfield(layer, field)
+      plts[i,j] = plot(zeros(0, length(arr)); title="Layer $i: $field", width=1, show=false)
+    end
+  end
+
+  # layout the plots
+  window = vsplitter([hsplitter(row(plts,i)...) for i in 1:nrows(plts)]...)
+  showwidget(window)
+
+  NetProgressPlotter(net, stats, fields, plts, window)
+end
+
+function OnlineStats.update!(plotter::NetProgressPlotter)
+  for (i, layer) in enumerate(plotter.net.layers)
+    for (j, field) in enumerate(plotter.fields)
+      arr = getfield(layer, field)
+      plt = plotter.plts[i,j]
+      push!(plt, plotter.stats.numiter, vec(arr))
+      refresh(plt)
+    end
+  end
+
+  # todo: do something with other stats...
+end
+
+
+# --------------------------------------------------------------------------
+
 type LayerViz
   layer::Layer
   circles::Vector{Ellipse}

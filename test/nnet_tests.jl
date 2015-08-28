@@ -59,7 +59,7 @@ end
 facts("NNet") do
 
   atol = 0.05
-  solverParams = SolverParams(maxiter=10000, minerror=1e-3)
+  solverParams = SolverParams(maxiter=10000, minerror=1e-3, plotiter=500)
 
   net, output, stats = testxor(params=NetParams(gradientModel=SGDModel(η=0.2), costModel=L2CostModel()), solverParams=solverParams, doPretrain=false)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)

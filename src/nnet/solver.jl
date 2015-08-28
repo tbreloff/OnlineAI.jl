@@ -15,13 +15,20 @@ type SolverParams
   maxiter::Int   # maximum total number of iterations
   erroriter::Int  # number of iterations be
   breakiter::Int
+  plotiter::Int
   stopepochs::Int
   minerror::Float64
   onbreak::Function
 end
 
-function SolverParams(; maxiter=1000, erroriter=1000, breakiter=10000, stopepochs=100, minerror=1e-5, onbreak=donothing) 
-  SolverParams(maxiter, erroriter, breakiter, stopepochs, minerror, onbreak)
+function SolverParams(; maxiter = 1000,
+                        erroriter = 1000,
+                        breakiter = 10000,
+                        plotiter = -1,
+                        stopepochs = 100,
+                        minerror = 1e-5,
+                        onbreak = donothing) 
+  SolverParams(maxiter, erroriter, breakiter, plotiter, stopepochs, minerror, onbreak)
 end
 
 # ------------------------------------------------------------------------
@@ -36,8 +43,9 @@ type SolverStats
   epochSinceImprovement::Int
   status::SolverStatus
   bestModel
+  plotter
 end
-SolverStats() = SolverStats(0, Inf, Inf, Inf, 0, RUNNING, nothing)
+SolverStats() = SolverStats(0, Inf, Inf, Inf, 0, RUNNING, nothing, nothing)
 
 Base.string(stats::SolverStats) = "SolverStats{$(stats.status) n=$(stats.numiter), trainerr=$(stats.trainError), valerr=$(stats.validationError), besterr=$(stats.bestValidationError), epochSinceImprovement=$(stats.epochSinceImprovement)}"
 Base.print(io::IO, stats::SolverStats) = print(io, string(stats))
@@ -53,6 +61,11 @@ or if validation error is not improving.  Returns SolverStats summary object.
 function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSampler, transformY::Bool = false)
 
   stats = SolverStats()
+
+  # optionally set up the plotter (only if plotiter ≥ 0)
+  if net.solverParams.plotiter >= 0
+    stats.plotter = NetProgressPlotter(net, stats)
+  end
 
   println("\nsolve: $net\n")
 
@@ -93,6 +106,12 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
         stats.status = CONVERGED
         return stats
       end
+    end
+
+    # update the plot?
+    piter = net.solverParams.plotiter
+    if (piter > 0 && i % net.solverParams.plotiter == 0) || piter == 0
+      update!(stats.plotter)
     end
 
     # take a break?
