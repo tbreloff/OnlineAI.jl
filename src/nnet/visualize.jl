@@ -17,7 +17,7 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   for (i, layer) in enumerate(net.layers)
     for (j, field) in enumerate(fields)
       arr = getfield(layer, field)
-      plts[i,j] = plot(zeros(0, length(arr)); title="Layer $i: $field", width=1, show=false)
+      plts[i,j] = plot(zeros(0, length(arr)); title="Layer $i: $field", width=1, show=false, legend=false)
     end
   end
 
