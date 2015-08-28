@@ -4,7 +4,7 @@
 # forward value is f(wx + b), where f is the activation function
 # Σ := wx + b
 # note: w is a parameter for the case of tied weights (it can be a TransposeView!)
-type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientState, WGT <: Weighting}
+type NormalizedLayer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientState, WGT <: Weighting}
   nin::Int
   nout::Int
   activation::A
@@ -13,7 +13,7 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
 
   # the state of the layer
   x::VecF  # nin x 1 -- input
-  xvar::Variances  # nin x 1 -- online variances to calculate μ and σ for the normalization step
+  xvar::Variances{WGT}  # nin x 1 -- online variances to calculate μ and σ for the normalization step
   xhat::VecF  # nin x 1 -- xhat = standardize(x)
   y::VecF  # nin x 1 -- y = 
   w::MATF  # nout x nin -- weights connecting previous layer to this layer
@@ -26,7 +26,10 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
 end
 
 # initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
-initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
+
+# note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
+#       is also approximately standard normal
+initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
 
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
   w = initialWeights(nin, nout, activation)

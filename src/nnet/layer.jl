@@ -23,7 +23,10 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
 end
 
 # initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
-initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) * 0.1
+
+# note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
+#       is also approximately standard normal
+initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
 
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
   w = initialWeights(nin, nout, activation)
