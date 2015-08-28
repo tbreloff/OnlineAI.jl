@@ -98,7 +98,7 @@ function unzip(dps::DataPoints)
   my = length(first(dps).y)
   x = zeros(n, mx)
   y = zeros(n, my)
-  for (i,dp) in dps
+  for (i,dp) in enumerate(dps)
     x[i,:] = dp.x
     y[i,:] = dp.y
   end

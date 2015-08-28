@@ -1,6 +1,8 @@
 
+const LAYER = Layer
+
 type NeuralNet <: NetStat
-  layers::Vector{NeuralNetLayer}  # note: this doesn't include input layer!!
+  layers::Vector{LAYER}  # note: this doesn't include input layer!!
   params::NetParams
   solverParams::SolverParams
   inputTransformer::Transformer
@@ -8,7 +10,7 @@ type NeuralNet <: NetStat
   costmult::VecF
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
-  function NeuralNet(layers::Vector{NeuralNetLayer},
+  function NeuralNet(layers::Vector{LAYER},
                       params::NetParams,
                       solverParams::SolverParams,
                       inputTransformer::Transformer = IdentityTransformer())
@@ -29,15 +31,14 @@ end
 
 # simple constructor which creates all layers the same for given list of node counts.
 # structure should include neuron counts for all layers, including input and output
-function NeuralNet{T<:NeuralNetLayer}(structure::AVec{Int};
-                                      params = NetParams(),
-                                      solverParams = SolverParams(),
-                                      activation::Activation = TanhActivation(),
-                                      inputTransformer::Transformer = IdentityTransformer(),
-                                      layerType::Type{T} = Layer)
+function NeuralNet(structure::AVec{Int};
+                    params = NetParams(),
+                    solverParams = SolverParams(),
+                    activation::Activation = TanhActivation(),
+                    inputTransformer::Transformer = IdentityTransformer())
   @assert length(structure) > 1
 
-  layers = NeuralNetLayer[]
+  layers = LAYER[]
   for i in 1:length(structure)-1
     nin, nout = structure[i:i+1]
     pDropout = getDropoutProb(params, i==1)

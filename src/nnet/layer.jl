@@ -31,6 +31,7 @@ initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) /
 function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
   w = initialWeights(nin, nout, activation)
   gradientState = getGradientState(gradientModel, nin, nout)
+  println(w)
   Layer(nin, nout, activation, gradientState, p, zeros(nin), w, [zeros(nout) for i in 1:4]..., ones(nin), ones(nout))
   # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
 end
@@ -38,16 +39,31 @@ end
 Base.print{A,M,G}(io::IO, l::Layer{A,M,G}) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ)) $(M<:TransposeView ? "T" : "")}")
 
 
-# gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
-function dosigmamult!{A,G}(layer::Layer{A,TransposeView{Float64},G}, α::Float64)
-  copy!(layer.Σ, layer.b)
-  BLAS.gemv!('T', α, layer.w.mat, layer.x, 1.0, layer.Σ)
-end
-function dosigmamult!(layer::Layer, α::Float64)
-  copy!(layer.Σ, layer.b)
-  BLAS.gemv!('N', α, layer.w, layer.x, 1.0, layer.Σ)
-end
+# # gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
+# function dosigmamult!{A,G}(layer::Layer{A,TransposeView{Float64},G}, α::Float64)
+#   copy!(layer.Σ, layer.b)
+#   BLAS.gemv!('T', α, layer.w.mat, layer.x, 1.0, layer.Σ)
+# end
+# function dosigmamult!(layer::Layer, α::Float64)
+#   copy!(layer.Σ, layer.b)
+#   BLAS.gemv!('N', α, layer.w, layer.x, 1.0, layer.Σ)
+# end
 
+
+# gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
+@generated function dosigmamult!(layer::Layer, α::Float64)
+  if layer.parameters[2] <: TransposeView
+    return quote
+      copy!(layer.Σ, layer.b)
+      BLAS.gemv!('T', α, layer.w.mat, layer.x, 1.0, layer.Σ)
+    end
+  else
+    return quote
+      copy!(layer.Σ, layer.b)
+      BLAS.gemv!('N', α, layer.w, layer.x, 1.0, layer.Σ)
+    end
+  end
+end
 
 # takes input vector, and computes Σⱼ = wⱼ'x + bⱼ  and  Oⱼ = A(Σⱼ)
 function forward!(layer::Layer, x::AVecF, istraining::Bool)

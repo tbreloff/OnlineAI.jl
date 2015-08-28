@@ -84,7 +84,7 @@ function test_pretrain(; solve=true, pretr=true, netparams=NetParams(), kwargs..
 
   # nin = 1; f = x->x[1:1]
   nin = 2; f = nop
-  net = buildRegressionNet(nin,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000), inputTransformer=f)
+  net = buildRegressionNet(Layer, nin,1,[2]; params=netparams, solverParams=SolverParams(maxiter=10000), inputTransformer=f)
   if pretr
     pretrain(net, sampler, sampler; kwargs...)
   end
