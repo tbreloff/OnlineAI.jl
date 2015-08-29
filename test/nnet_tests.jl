@@ -61,7 +61,7 @@ facts("NNet") do
   atol = 0.05
   solverParams = SolverParams(maxiter=10000,
                               minerror=1e-3,
-                              plotiter=200,
+                              plotiter=20,
                               plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
 
   gradientModel = AdadeltaModel()
@@ -70,17 +70,17 @@ facts("NNet") do
                                solverParams=solverParams, doPretrain=false)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  # net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
-  # @fact output --> roughly([0., 1., 1., 0.], atol=atol)
+  net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
+  @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  # net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
-  # @fact output --> roughly([0., 1., 1., 0.], atol=atol)
+  net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
+  @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  # net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
-  #                              finalActivation=SigmoidActivation(), solverParams=solverParams,
-  #                              hiddenLayerNodes = [6,6])
-  # @fact output --> roughly([0., 1., 1., 0.], atol=atol)
-
+  net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
+                               finalActivation=SigmoidActivation(), solverParams=solverParams,
+                               hiddenLayerNodes = [6,6])
+  @fact output --> roughly([0., 1., 1., 0.], atol=atol)
+  
 end # facts
 
 

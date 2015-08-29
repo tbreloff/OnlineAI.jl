@@ -126,6 +126,7 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
     #       So on dropout, we are actually dropping out thr previous layer's nodes...
     for i in 1:layer.nin
       layer.r[i] = rand() <= layer.p ? 1.0 : 0.0
+      update!(layer.xvar[i], x[i])
     end
     p = 1.0
   else
@@ -138,7 +139,7 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
     layer.x[i] = x[i]
 
     # update xvar and standardize xi in one call
-    layer.xhat[i] = standardize!(layer.xvar[i], x[i])
+    layer.xhat[i] = standardize(layer.xvar[i], x[i])
 
     # we compute y = xhat * β + α, then multiply by r in case we're dropping out
     layer.y[i] = ((layer.xhat[i] * layer.β[i]) + layer.α[i]) * layer.r[i]

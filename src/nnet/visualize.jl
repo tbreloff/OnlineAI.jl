@@ -1,4 +1,6 @@
 
+const MAXNUMPLTS = 20
+
 type NetProgressPlotter
   net::NeuralNet
   stats::SolverStats
@@ -17,7 +19,7 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   for (i, layer) in enumerate(net.layers)
     for (j, field) in enumerate(fields)
       arr = getfield(layer, field)
-      plts[i,j] = plot(zeros(0, length(arr)); title="Layer $i: $field", width=1, show=false, legend=false)
+      plts[i,j] = scatter(zeros(0, min(length(arr), MAXNUMPLTS)); title="Layer $i: $field", show=false, legend=false)
     end
   end
 
@@ -33,7 +35,7 @@ function OnlineStats.update!(plotter::NetProgressPlotter)
     for (j, field) in enumerate(plotter.fields)
       arr = getfield(layer, field)
       plt = plotter.plts[i,j]
-      push!(plt, plotter.stats.numiter, vec(arr))
+      push!(plt, plotter.stats.numiter, vec(arr)[1:min(length(arr),MAXNUMPLTS)])
       refresh(plt)
     end
   end
