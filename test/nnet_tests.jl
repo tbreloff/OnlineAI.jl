@@ -61,7 +61,7 @@ facts("NNet") do
   atol = 0.05
   solverParams = SolverParams(maxiter=10000,
                               minerror=1e-3,
-                              plotiter=20,
+                              plotiter=-1,
                               plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
 
   gradientModel = AdadeltaModel()

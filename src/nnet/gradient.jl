@@ -59,7 +59,7 @@ immutable AdadeltaModel <: GradientModel
   ρ::Float64  # try 0.97?
   λ::Float64 # L2 penalty term
 end
-AdadeltaModel(; ε=0.01, η=0.1, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, η, ρ, λ)
+AdadeltaModel(; ε=0.01, η=0.5, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, η, ρ, λ)
 
 
 type AdadeltaState <: GradientState
