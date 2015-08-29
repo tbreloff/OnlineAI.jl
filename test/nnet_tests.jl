@@ -14,7 +14,7 @@ end
 
 
 function testxor(; hiddenLayerNodes = [2],
-                   hiddenActivation = SigmoidActivation(),
+                   hiddenActivation = SoftsignActivation(),
                    finalActivation = IdentityActivation(),
                    params = NetParams(),
                    solverParams = SolverParams(maxiter=100000),
@@ -80,7 +80,7 @@ facts("NNet") do
                                finalActivation=SigmoidActivation(), solverParams=solverParams,
                                hiddenLayerNodes = [6,6])
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
-  
+
 end # facts
 
 
