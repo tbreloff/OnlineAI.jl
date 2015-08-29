@@ -222,18 +222,6 @@ DataPoints(sampler::StratifiedSampler) = sampler.data
 
 # --------------------------------------------------------
 
-# Note: iterating like "for x in X; (do something); end" translates to:
-# state = start(X)
-# while !done(X, state)
-#   (x, state) = next(X, state)
-#   (do something)
-# end
-
-# # iterate with the syntax "for x in list"
-# Base.start{T}(cb::CircularBuffer{T}) = 1
-# Base.done{T}(cb::CircularBuffer{T}, state::Int) = state > length(cb)
-# Base.next{T}(cb::CircularBuffer{T}, state::Int) = (cb.buffer[bufferIndex(cb, state)], state+1)
-
 type CrossValidationIterator
   dps::DataPoints
   shuffledIndices::VecI
@@ -258,26 +246,6 @@ function crossValidationSets(dps::DataPoints, numFolds::Int)
   CrossValidationIterator(dps, shuffledIndices, [a[i]+1:a[i+1] for i in 1:numFolds])
 end
 
-# type CrossValidationSampler <: DataSampler
-#   train::Vector{SubsetSampler}
-#   validation::Vector{SubsetSampler}
-# end
-
-# function CrossValidationSampler(dps::DataPoints, numFolds::Int)
-#   n = length(dps)
-#   trainsamplers = SubsetSampler[]
-#   valsamplers = SubsetSampler[]
-
-#   indices = shuffle(collect(1:n))
-#   a = round(Int, collect(linspace(0,n,numFolds+1)))
-#   for i in 1:numFolds
-#     valrng = a[i]+1:a[i+1]
-#     trainrng = setdiff(1:n, valrng)
-#     push!(trainsamplers, SubsetSampler(dps, indices[trainrng]))
-#     push!(valsamplers, SubsetSampler(dps, indices[valrng]))
-#   end
-#   CrossValidationSampler(trainsamplers, valsamplers)
-# end
 
 # --------------------------------------------------------
 
