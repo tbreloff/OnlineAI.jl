@@ -13,13 +13,13 @@ function xor_data()
 end
 
 
-function testxor(; hiddenLayerNodes = [2],
+function testxor(; hiddenLayerNodes = [4],
                    hiddenActivation = SoftsignActivation(),
-                   finalActivation = IdentityActivation(),
+                   finalActivation = SigmoidActivation(),
                    params = NetParams(),
                    solverParams = SolverParams(maxiter=100000),
                    inputTransformer = IdentityTransformer(),
-                   doPretrain = true)
+                   doPretrain = false)
 
   # all xor inputs and results
   inputs = [0 0; 0 1; 1 0; 1 1]
@@ -59,7 +59,7 @@ end
 facts("NNet") do
 
   atol = 0.05
-  solverParams = SolverParams(maxiter=10000,
+  solverParams = SolverParams(maxiter=50000,
                               minerror=1e-3,
                               plotiter=-1,
                               plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
@@ -78,7 +78,7 @@ facts("NNet") do
 
   net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
                                finalActivation=SigmoidActivation(), solverParams=solverParams,
-                               hiddenLayerNodes = [6,6])
+                               hiddenLayerNodes = [6,6,6,6,6])
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
 end # facts

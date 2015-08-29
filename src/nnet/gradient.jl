@@ -31,7 +31,7 @@ immutable AdagradModel <: GradientModel
   η::Float64 # base learning rate (numerator)
   λ::Float64 # L2 penalty term
 end
-AdagradModel(; ε=0.01, η=1.0, λ=1e-5) = AdagradModel(ε, η, λ)
+AdagradModel(; ε=1e-6, η=1.0, λ=1e-5) = AdagradModel(ε, η, λ)
 
 type AdagradState <: GradientState
   G::MatF
@@ -59,7 +59,7 @@ immutable AdadeltaModel <: GradientModel
   ρ::Float64  # try 0.97?
   λ::Float64 # L2 penalty term
 end
-AdadeltaModel(; ε=0.01, η=0.5, ρ=0.97, λ=1e-5) = AdadeltaModel(ε, η, ρ, λ)
+AdadeltaModel(; ε=1e-6, η=0.5, ρ=0.95, λ=1e-5) = AdadeltaModel(ε, η, ρ, λ)
 
 
 type AdadeltaState <: GradientState
