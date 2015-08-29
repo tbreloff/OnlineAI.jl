@@ -52,7 +52,7 @@ immutable SignSquareTransform <: Transformation idx::Int end
 transform(t::SignSquareTransform, x::AVec) = (xi = x[t.idx]; sign(xi) * xi^2)
 function transform!(t::SignSquareTransform, x_transformed::AVec, x::AVec, i::Int)
   xi = x[t.idx]
-  x_transformed[i] = sign(xi) * x^2
+  x_transformed[i] = sign(xi) * xi^2
 end
 
 
@@ -155,13 +155,13 @@ immutable SubsetSampler <: DataSampler
   data::DataPoints
   range::AVecI
 end
-Base.print(io::IO, s::SubsetSampler) = print(io, "SubsetSampler{n=$(length(s.data))}")
+Base.print(io::IO, s::SubsetSampler) = print(io, "SubsetSampler{n=$(length(s.range))}")
 Base.show(io::IO, s::SubsetSampler) = print(io,s)
 
 # sample from the range
 StatsBase.sample(sampler::SubsetSampler) = sampler.data[sample(sampler.range)]
 
-DataPoints(sampler::SubsetSampler) = sampler.data[range]
+DataPoints(sampler::SubsetSampler) = sampler.data[sampler.range]
 
 doc"Create two `SubsetSampler`s, one for the first `pct` of the data and the other for the remaining `1-pct`."
 function splitDataSamplers(data::DataPoints, pct::Real)
@@ -221,4 +221,67 @@ DataPoints(sampler::StratifiedSampler) = sampler.data
 
 
 # --------------------------------------------------------
+
+# Note: iterating like "for x in X; (do something); end" translates to:
+# state = start(X)
+# while !done(X, state)
+#   (x, state) = next(X, state)
+#   (do something)
+# end
+
+# # iterate with the syntax "for x in list"
+# Base.start{T}(cb::CircularBuffer{T}) = 1
+# Base.done{T}(cb::CircularBuffer{T}, state::Int) = state > length(cb)
+# Base.next{T}(cb::CircularBuffer{T}, state::Int) = (cb.buffer[bufferIndex(cb, state)], state+1)
+
+type CrossValidationIterator
+  dps::DataPoints
+  shuffledIndices::VecI
+  validrngs::Vector{UnitRange}
+end
+
+function makeCVPair(cviter::CrossValidationIterator, i::Int)
+  vrng = cviter.validrngs[i]
+  trng = setdiff(1:length(cviter.dps), vrng)
+  map(rng -> SubsetSampler(cviter.dps, cviter.shuffledIndices[rng]), (trng, vrng))
+end
+
+Base.start(cviter::CrossValidationIterator) = 1
+Base.done(cviter::CrossValidationIterator, state::Int) = state > length(cviter.validrngs)
+Base.next(cviter::CrossValidationIterator, state::Int) = (makeCVPair(cviter,state), state+1)
+
+# returns an iterator returning (trainsampler, validationsampler) tuples for each fold
+function crossValidationSets(dps::DataPoints, numFolds::Int)
+  n = length(dps)
+  shuffledIndices = shuffle(collect(1:n))
+  a = round(Int, collect(linspace(0,n,numFolds+1)))
+  CrossValidationIterator(dps, shuffledIndices, [a[i]+1:a[i+1] for i in 1:numFolds])
+end
+
+# type CrossValidationSampler <: DataSampler
+#   train::Vector{SubsetSampler}
+#   validation::Vector{SubsetSampler}
+# end
+
+# function CrossValidationSampler(dps::DataPoints, numFolds::Int)
+#   n = length(dps)
+#   trainsamplers = SubsetSampler[]
+#   valsamplers = SubsetSampler[]
+
+#   indices = shuffle(collect(1:n))
+#   a = round(Int, collect(linspace(0,n,numFolds+1)))
+#   for i in 1:numFolds
+#     valrng = a[i]+1:a[i+1]
+#     trainrng = setdiff(1:n, valrng)
+#     push!(trainsamplers, SubsetSampler(dps, indices[trainrng]))
+#     push!(valsamplers, SubsetSampler(dps, indices[valrng]))
+#   end
+#   CrossValidationSampler(trainsamplers, valsamplers)
+# end
+
+# --------------------------------------------------------
+
+
+
+
 

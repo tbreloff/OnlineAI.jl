@@ -61,7 +61,8 @@ export
   SimpleSampler,
   SubsetSampler,
   splitDataSamplers,
-  StratifiedSampler
+  StratifiedSampler,
+  crossValidationSets
 include("nnet/data.jl")
 
 export

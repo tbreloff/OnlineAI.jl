@@ -80,6 +80,12 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
     data = sample(traindata)
     update!(net, data, transformY)
 
+    # update the plot?
+    piter = net.solverParams.plotiter
+    if (piter > 0 && i % net.solverParams.plotiter == 0) || piter == 0
+      update!(stats.plotter)
+    end
+
     # # check for convergence
     if i % net.solverParams.erroriter == 0
       stats.trainError = totalCost(net, traindata)
@@ -108,12 +114,6 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
         stats.status = CONVERGED
         return stats
       end
-    end
-
-    # update the plot?
-    piter = net.solverParams.plotiter
-    if (piter > 0 && i % net.solverParams.plotiter == 0) || piter == 0
-      update!(stats.plotter)
     end
 
     # take a break?
