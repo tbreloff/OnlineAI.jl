@@ -9,11 +9,6 @@ function findMatching(viznodes, neuron)
   error("Couldn't find matching viznode for $neuron")
 end
 
-function getLinspace(n, h)
-  h = n > 1 ? h : 0
-  linspace(-h, h, n)
-end
-
 
 # ---------------------------------------------------------------------------
 

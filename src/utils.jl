@@ -73,3 +73,10 @@ function foreach(A::AbstractArray, f::Function, fs::Function...)
   end
   A
 end
+
+
+function getLinspace(n, h)
+  h = n > 1 ? h : 0
+  linspace(-h, h, n)
+end
+
