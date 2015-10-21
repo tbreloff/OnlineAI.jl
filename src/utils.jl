@@ -1,5 +1,7 @@
 
 
+typealias AVecI AbstractVector{Int}
+typealias AMatI AbstractMatrix{Int}
 typealias VecI Vector{Int}
 typealias MatI Matrix{Int}
 typealias IntIterable AVec{Int}

@@ -5,9 +5,10 @@ using Reexport
 using Distributions
 @reexport using QuickStructs
 @reexport using OnlineStats
-@reexport using Qwt
-@reexport using CTechCommon
+#@reexport using Qwt
+#@reexport using CTechCommon
 # using StatsBase
+using Plots
 
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
                     VecF, MatF, AVec, AMat, AVecF, AMatF, if0then1,
@@ -138,9 +139,9 @@ export
   Ensemble
 include("nnet/ensembles.jl")
 
-export
-  visualize
-include("nnet/visualize.jl")
+# export
+#   visualize
+# include("nnet/visualize.jl")
 
 # ----------------------------------------------------------------------
 
@@ -183,7 +184,7 @@ include("liquid/readout.jl")
 include("liquid/liquid.jl")
 include("liquid/neurons.jl")
 include("liquid/input.jl")
-include("liquid/visualize.jl")
+# include("liquid/visualize.jl")
 
 # ------------------------------------------------
 

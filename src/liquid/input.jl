@@ -31,10 +31,10 @@ end
 OnlineStats.update!(grf::GaussianReceptiveField, x::Float64) = update!(grf.variance, x)
 
 
-function Qwt.plot(grfs::Vector{GaussianReceptiveField}, rng::FloatIterable)
-  y = Float64[value(grfs[i],r) for r in rng, i in 1:length(grfs)]
-  plot(rng,y)
-end
+# function Qwt.plot(grfs::Vector{GaussianReceptiveField}, rng::FloatIterable)
+#   y = Float64[value(grfs[i],r) for r in rng, i in 1:length(grfs)]
+#   plot(rng,y)
+# end
 
 
 # ---------------------------------------------------------------------
