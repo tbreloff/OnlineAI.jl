@@ -13,6 +13,7 @@ using Distributions
 #@reexport using CTechCommon
 # using StatsBase
 using Plots
+using Requires
 
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
                     VecF, MatF, AVec, AMat, AVecF, AMatF, if0then1,
@@ -145,7 +146,11 @@ export
 include("nnet/ensembles.jl")
 
 export
-  visualize
+  visualize,
+  track_progress
+
+# function __init__()
+
 include("nnet/visualize.jl")
 
 # ----------------------------------------------------------------------

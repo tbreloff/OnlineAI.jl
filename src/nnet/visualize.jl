@@ -20,16 +20,16 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   # initialize the plots
   # plts = Array{Qwt.Plot}(n, m)
   plts = typeof(Plots.current())[]
-  for (i, layer) in enumerate(net.layers)
-    for (j, field) in enumerate(fields)
+  for field in fields
+    for (i,layer) in enumerate(net.layers)
       arr = getfield(layer, field)
-      push!(plts, scatter(zeros(0, min(length(arr), MAXNUMPLTS)); title = "Layer $i: $field", leg=false))
+      push!(plts, scatter(min(length(arr), MAXNUMPLTS); title = "Layer $i: $field", leg=false))
       # plts[i,j] = scatter(zeros(0, min(length(arr), MAXNUMPLTS)); title="Layer $i: $field", show=false, legend=false)
     end
   end
 
   # create the subplot
-  subplt = subplot(plts...; nr = length(net.layers))
+  subplt = subplot(plts...; nc = length(net.layers))
 
   # # layout the plots
   # window = vsplitter([hsplitter(row(plts,i)...) for i in 1:nrows(plts)]...)
@@ -38,12 +38,27 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   NetProgressPlotter(net, stats, fields, subplt)
 end
 
-function OnlineStats.update!(plotter::NetProgressPlotter; show=false)
-  for (i, layer) in enumerate(plotter.net.layers)
-    for (j, field) in enumerate(plotter.fields)
+function track_progress(net::NeuralNet; stats::SolverStats = SolverStats(), fields::AVec{Symbol} = Symbol[:x, :xhat, :y, :Σ, :a])
+  NetProgressPlotter(net, stats, fields)
+end
+
+function OnlineStats.update!(plotter::NetProgressPlotter, updateiter = false; show=true)
+  if updateiter
+    plotter.stats.numiter += 1
+  end
+
+  for (i, field) in enumerate(plotter.fields)
+    for (j, layer) in enumerate(plotter.net.layers)
+
+      # get the values for each node in this layer
       arr = getfield(layer, field)
+      
+      # get the correct plot from the grid
       plt = plotter.subplt[i,j]
-      push!(plt, plotter.stats.numiter, vec(arr)[1:min(length(arr),MAXNUMPLTS)])
+
+      # add the data
+      data = vec(arr)[1:min(length(arr),MAXNUMPLTS)]
+      push!(plt, plotter.stats.numiter, data)
       if show
         gui(plt)
       end
@@ -98,9 +113,10 @@ end
 
 
 # # --------------------------------------------------------------------------
-try
-  @eval begin
-    import Qwt
+# try
+#   @eval import Qwt
+
+@require Qwt begin
 
     type LayerViz
       layer::NeuralNetLayer
@@ -227,5 +243,4 @@ try
 
     end
 
-  end
 end
