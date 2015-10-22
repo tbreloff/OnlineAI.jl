@@ -29,4 +29,5 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
 end
 
 buildClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., finalActivation = SigmoidActivation())
+buildTanhClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., hiddenActivation = TanhActivation(), finalActivation = TanhActivation())
 buildRegressionNet(args...; kwargs...) = buildNet(args...; kwargs..., finalActivation = IdentityActivation())

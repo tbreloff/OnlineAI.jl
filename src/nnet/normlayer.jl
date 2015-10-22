@@ -3,7 +3,7 @@ doc"""
 one layer of a multilayer perceptron (neural net)
 ninᵢ := noutᵢ₋₁ + 1  (we add the bias term automatically, so there's one extra input)
 
-This is a noramlized layer, with inspiration from:
+This is a normalized layer, with inspiration from:
   `Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift`
     2015 Ioffe and Szegedy
   `http://arxiv.org/pdf/1502.03167.pdf`
@@ -82,6 +82,10 @@ function Base.print{A,M,G}(io::IO, l::NormalizedLayer{A,M,G})
   print(io, "$(M<:TransposeView ? "T" : "")}")
 end
 function Base.show(io::IO, l::NormalizedLayer) 
+  print(io, l)
+end
+
+function Base.display(::Base.REPL.REPLDisplay, ::MIME"text/plain", l::NormalizedLayer)
   println(l)
   @show l.r
   @show l.nextr

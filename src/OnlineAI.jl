@@ -1,4 +1,8 @@
 
+if VERSION >= v"0.4-"
+  __precompile__()
+end
+
 module OnlineAI
 
 using Reexport
@@ -103,10 +107,10 @@ include("nnet/solver.jl")
 export
   NeuralNetLayer,
   Layer
-  # forward,
-  # backward,
-  # forward!,
-  # backward!
+  forward,
+  backward,
+  forward!,
+  backward!
 include("nnet/layer.jl")
 
 export
@@ -126,6 +130,7 @@ include("nnet/pretrain.jl")
 export
   buildNet,
   buildClassificationNet,
+  buildTanhClassificationNet,
   buildRegressionNet
 include("nnet/build.jl")
 

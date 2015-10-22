@@ -18,28 +18,35 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   # subplt = subplot(zeros(0,n*m), n=n*m, nr=n, title=fields, linkx=true)
 
   # initialize the plots
-  plts = Array{Qwt.Plot}(n, m)
+  # plts = Array{Qwt.Plot}(n, m)
+  plts = typeof(Plots.current())[]
   for (i, layer) in enumerate(net.layers)
     for (j, field) in enumerate(fields)
       arr = getfield(layer, field)
-      plts[i,j] = scatter(zeros(0, min(length(arr), MAXNUMPLTS)); title="Layer $i: $field", show=false, legend=false)
+      push!(plts, scatter(zeros(0, min(length(arr), MAXNUMPLTS)); title = "Layer $i: $field", leg=false))
+      # plts[i,j] = scatter(zeros(0, min(length(arr), MAXNUMPLTS)); title="Layer $i: $field", show=false, legend=false)
     end
   end
 
-  # layout the plots
-  window = vsplitter([hsplitter(row(plts,i)...) for i in 1:nrows(plts)]...)
-  showwidget(window)
+  # create the subplot
+  subplt = subplot(plts...; nr = length(net.layers))
 
-  NetProgressPlotter(net, stats, fields, plts, window)
+  # # layout the plots
+  # window = vsplitter([hsplitter(row(plts,i)...) for i in 1:nrows(plts)]...)
+  # showwidget(window)
+
+  NetProgressPlotter(net, stats, fields, subplt)
 end
 
-function OnlineStats.update!(plotter::NetProgressPlotter)
+function OnlineStats.update!(plotter::NetProgressPlotter; show=false)
   for (i, layer) in enumerate(plotter.net.layers)
     for (j, field) in enumerate(plotter.fields)
       arr = getfield(layer, field)
-      plt = plotter.plts[i,j]
+      plt = plotter.subplt[i,j]
       push!(plt, plotter.stats.numiter, vec(arr)[1:min(length(arr),MAXNUMPLTS)])
-      refresh(plt)
+      if show
+        gui(plt)
+      end
     end
   end
 
