@@ -14,7 +14,7 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   m = length(fields)
 
   # initialize the plots
-  plts = typeof(Plots.current())[]
+  plts = Plots.Plot{typeof(backend())}[]
   for field in fields
     for (i,layer) in enumerate(net.layers)
       arr = getfield(layer, field)

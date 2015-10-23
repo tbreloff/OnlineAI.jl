@@ -34,7 +34,7 @@ end
 #       is also approximately standard normal
 # initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
 
-function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0)
+function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0; wgt=nothing)
   w = initialWeights(nin, nout, activation)
   # gradientState = getGradientState(gradientModel, nin, nout)
   # println(w)

@@ -166,7 +166,7 @@ end
 
 # note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
 #       is also approximately standard normal
-initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
+initialWeights(nin::Int, nout::Int, activation::Activation) = 0.5randn(nout, nin) / sqrt(nin)
 
 
 
