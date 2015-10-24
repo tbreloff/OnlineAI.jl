@@ -89,7 +89,9 @@ export
   AdagradModel,
   AdagradState,
   AdadeltaModel,
-  AdadeltaState
+  AdadeltaState,
+  AdamModel,
+  AdamState
 include("nnet/gradient.jl")
 
 export
