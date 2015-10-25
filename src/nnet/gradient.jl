@@ -5,7 +5,7 @@ abstract GradientState
 # ----------------------------------------
 
 doc"Stochastic Gradient Descent with Momentum"
-immutable SGDModel <: GradientModel
+type SGDModel <: GradientModel
   η::Float64 # learning rate
   μ::Float64 # momentum
   λ::Float64 # L2 penalty term
@@ -26,7 +26,7 @@ end
 # ----------------------------------------
 
 doc"Adaptive Gradient"
-immutable AdagradModel <: GradientModel
+type AdagradModel <: GradientModel
   ε::Float64  # try 0.01?
   η::Float64 # base learning rate (numerator)
   λ::Float64 # L2 penalty term
@@ -53,7 +53,7 @@ See: ADADELTA: An Adaptive Learning Rate Method (Zeiler 2012)
 
 Relatively parameter-free... can probably avoid changing ε and ρ
 """
-immutable AdadeltaModel <: GradientModel
+type AdadeltaModel <: GradientModel
   ε::Float64  # try 0.01?
   η::Float64
   ρ::Float64  # try 0.97?
@@ -92,7 +92,7 @@ adjusting for zero-bias.  The defaults are those suggested in the paper.
 
 TODO: AdaMax is similar, using the p-norm as p -> ∞
 """
-immutable AdamModel <: GradientModel
+type AdamModel <: GradientModel
   ε::Float64  # small number so we don't divide by 0
   η::Float64  # learning rate... (this is α in the paper) maybe use around 1e-3?
   ρ1::Float64 # decay for first moment (β₁ in the paper)
@@ -120,4 +120,37 @@ function Δij(model::AdamModel, state::AdamState, gradient::Float64, val::Float6
   -ηt * state.m[i,j] / (sqrt(state.v[i,j] + model.ε))
 end
 
+# --------------------------------------------------------------
+
+"Enacts a strategy to adjust the learning rate"
+abstract LearningRateModel
+
+immutable FixedLearningRate <: LearningRateModel end
+OnlineStats.update!(lrmodel::FixedLearningRate, err::Float64) = nothing
+
+
+"Adapts learning rate based on relative variance of the changes in the test error"
+immutable AdaptiveLearningRate <: LearningRateModel
+  gradientModel::GradientModel
+  errordiff::Diff
+  diffvar::Variance
+  adjustmentPct::Float64
+  cutoffRatio::Float64
+end
+
+function AdaptiveLearningRate(gradientModel::GradientModel, adjustmentPct = 1e-2, cutoffRatio = 1e-1; wgt = ExponenialWeighting(20))
+  AdaptiveLearningRate(gradientModel, Diff(), Variance(), adjustmentPct, cutoffRatio)
+end
+
+# if the error is decreasing at a large rate relative to the variance, increase the learning rate (speed it up)
+function OnlineStats.update!(lrmodel::AdaptiveLearningRate, err::Float64)
+  update!(lrmodel.errordiff, err)
+  update!(lrmodel.diffvar, diff(lrmodel.errordiff))
+  m = mean(lrmodel.diffvar)
+  s = std(lrmodel.diffvar)
+  if s > 0.0
+    pct = lrmodel.adjustmentPct * (m / s < -lrmodel.cutoffRatio ? 1.0 : -1.0)
+    lrmodel.gradientModel.η *= (1.0 + pct)
+  end
+end
 

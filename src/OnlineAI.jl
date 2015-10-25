@@ -91,7 +91,10 @@ export
   AdadeltaModel,
   AdadeltaState,
   AdamModel,
-  AdamState
+  AdamState,
+  LearningRateModel,
+  FixedLearningRate,
+  AdaptiveLearningRate
 include("nnet/gradient.jl")
 
 export
