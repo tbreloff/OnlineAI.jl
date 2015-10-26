@@ -114,8 +114,10 @@ function Δij(model::AdamModel, state::AdamState, gradient::Float64, val::Float6
   ρ1, ρ2 = model.ρ1, model.ρ2
   state.m[i,j] = ρ1 * state.m[i,j] + (1.0 - ρ1) * gradient
   state.v[i,j] = ρ2 * state.v[i,j] + (1.0 - ρ2) * gradient^2
-  state.ρ1t *= model.ρ1
-  state.ρ2t *= model.ρ2
+  if i == 1 && j == 1
+    state.ρ1t *= model.ρ1
+    state.ρ2t *= model.ρ2
+  end
   ηt = model.η * (sqrt(1.0 - state.ρ2t) / (1.0 - state.ρ1t))
   -ηt * state.m[i,j] / (sqrt(state.v[i,j] + model.ε))
 end
@@ -135,24 +137,30 @@ type AdaMaxModel <: GradientModel
 end
 AdaMaxModel(; η=1e-3, ρ1=0.9, ρ2=0.99, λ=1e-6) = AdaMaxModel(η, ρ1, ρ2, λ)
 
-type AdaMaxState <: GradientState
+immutable AdaMaxState <: GradientState
   m::MatF # average first moment
   u::MatF # average second moment
-  ρ1t::Float64  # β₁ᵗ from the paper... t-th power of β₁
+  ρ1t::Vector{Float64}  # β₁ᵗ from the paper... t-th power of β₁
   # ρ2t::Float64  # β₂ᵗ from the paper... t-th power of β₂
 end
-AdaMaxState(n::Integer, m::Integer) = AdaMaxState(zeros(n,m), zeros(n,m), 1.0)
+AdaMaxState(n::Integer, m::Integer) = AdaMaxState(zeros(n,m), zeros(n,m), [1.0])
 getGradientState(model::AdaMaxModel, n::Integer, m::Integer) = AdaMaxState(n,m)
 
 function Δij(model::AdaMaxModel, state::AdaMaxState, gradient::Float64, val::Float64, i::Int, j::Int)
-  ρ1, ρ2 = model.ρ1, model.ρ2
-  state.m[i,j] = ρ1 * state.m[i,j] + (1.0 - ρ1) * gradient
+  # ρ1, ρ2 = model.ρ1, model.ρ2
+  ρ1 = model.ρ1
+  # state.m[i,j] = ρ1 * state.m[i,j] + (1.0 - ρ1) * gradient
+  mij = ρ1 * state.m[i,j] + (1.0 - ρ1) * gradient
+  state.m[i,j] = mij
   # state.u[i,j] = ρ2 * state.u[i,j] + (1.0 - ρ2) * gradient^2
-  state.u[i,j] = max(ρ2 * state.u[i,j], abs(gradient))
-  state.ρ1t *= model.ρ1
-  # state.ρ2t *= model.ρ2
-  ηt = model.η / (1.0 - state.ρ1t)
-  -ηt * state.m[i,j] / (state.u[i,j] + 1e-10)
+  uij = max(model.ρ2 * state.u[i,j], abs(gradient))
+  state.u[i,j] = uij
+  if i == 1 && j == 1
+    state.ρ1t[1] *= ρ1
+  end
+  # ηt = model.η / (1.0 - state.ρ1t[1])
+  # -ηt * mij / (uij + 1e-10)
+  -model.η * mij / ((uij + 1e-10) * (1.0 - state.ρ1t[1]))
 end
 
 # --------------------------------------------------------------

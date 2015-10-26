@@ -26,7 +26,7 @@ type NetParams{GRAD<:GradientModel, DROP<:DropoutStrategy, ERR<:CostModel}
   costModel::ERR
 end
 
-function NetParams(; gradientModel::GradientModel = AdadeltaModel(),
+function NetParams(; gradientModel::GradientModel = AdaMaxModel(),
                      dropout::DropoutStrategy = NoDropout(),
                      costModel::CostModel = L2CostModel())
   NetParams(gradientModel, dropout, costModel)
