@@ -92,6 +92,8 @@ export
   AdadeltaState,
   AdamModel,
   AdamState,
+  AdaMaxModel,
+  AdaMaxState,
   LearningRateModel,
   FixedLearningRate,
   AdaptiveLearningRate
