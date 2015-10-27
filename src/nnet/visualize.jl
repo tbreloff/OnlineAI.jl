@@ -18,7 +18,7 @@ function NetProgressPlotter(net::NeuralNet, stats::SolverStats, fields::Vector{S
   for field in fields
     for (i,layer) in enumerate(net.layers)
       arr = getfield(layer, field)
-      push!(plts, scatter(min(length(arr), MAXNUMPLTS); title = "Layer $i: $field", leg=false, show=false, xticks=nothing, kw...))
+      push!(plts, scatter(min(length(arr), MAXNUMPLTS); title = "Layer $i: $field", leg=false, show=false, xticks=nothing, subplot=true, kw...))
     end
   end
 
