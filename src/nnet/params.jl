@@ -24,12 +24,16 @@ type NetParams{GRAD<:GradientModel, DROP<:DropoutStrategy, ERR<:CostModel}
   gradientModel::GRAD
   dropoutStrategy::DROP
   costModel::ERR
+  weightInit::Function
 end
 
-function NetParams(; gradientModel::GradientModel = AdaMaxModel(),
-                     dropout::DropoutStrategy = NoDropout(),
-                     costModel::CostModel = L2CostModel())
-  NetParams(gradientModel, dropout, costModel)
+function NetParams(; 
+                    gradientModel::GradientModel = AdaMaxModel(),
+                    dropout::DropoutStrategy = NoDropout(),
+                    costModel::CostModel = L2CostModel(),
+                    weightInit::Function = _initialWeights
+                  )
+  NetParams(gradientModel, dropout, costModel, weightInit)
 end
 
 

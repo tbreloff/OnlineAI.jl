@@ -58,10 +58,10 @@ end
 
 function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation,
                          gradientModel::GradientModel, p::Float64 = 1.0;
-                         # wgt = EqualWeighting())
+                         weightInit::Function = _initialWeights,
                          wgt = ExponentialWeighting(500))
 
-  w = initialWeights(nin, nout, activation)
+  w = weightInit(nin, nout, activation)
   NormalizedLayer(nin, nout, activation, p,
                   getGradientState(gradientModel, nout, nin),
                   getGradientState(gradientModel, nout, 1),

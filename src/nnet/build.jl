@@ -15,7 +15,14 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
   for nout in hiddenStructure
 
     # push the hidden layer
-    push!(layers, LAYER(nin, nout, hiddenActivation, params.gradientModel, pDropout; wgt = wgt))
+    push!(layers, LAYER(nin,
+                        nout,
+                        hiddenActivation,
+                        params.gradientModel,
+                        pDropout;
+                        wgt = wgt,
+                        weightInit = params.weightInit
+                       ))
     nin = nout
     
     # next layers will get the "hidden" dropout probability
@@ -23,7 +30,14 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
   end
 
   # push the output layer
-  push!(layers, LAYER(nin, numOutputs, finalActivation, params.gradientModel, pDropout; wgt = wgt))
+  push!(layers, LAYER(nin,
+                      numOutputs,
+                      finalActivation,
+                      params.gradientModel,
+                      pDropout;
+                      wgt = wgt,
+                      weightInit = params.weightInit
+                     ))
 
   NeuralNet(layers, params, solverParams, inputTransformer)
 end

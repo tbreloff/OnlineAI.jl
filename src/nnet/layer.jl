@@ -28,16 +28,11 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
   nextr::VecF  # nout x 1 -- retention of the nodes of this layer (as opposed to r which applies to the incoming weights)
 end
 
-# initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
 
-# note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
-#       is also approximately standard normal
-# initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
-
-function Layer(nin::Integer, nout::Integer, activation::Activation, gradientModel::GradientModel, p::Float64 = 1.0; wgt=nothing)
-  w = initialWeights(nin, nout, activation)
-  # gradientState = getGradientState(gradientModel, nin, nout)
-  # println(w)
+function Layer(nin::Integer, nout::Integer, activation::Activation,
+               gradientModel::GradientModel, p::Float64 = 1.0;
+               wgt = nothing, weightInit::Function = _initialWeights)
+  w = weightInit(nin, nout, activation)
   Layer(nin, nout, activation, p,
             getGradientState(gradientModel, nout, nin),
             getGradientState(gradientModel, nout, 1),
@@ -46,10 +41,11 @@ function Layer(nin::Integer, nout::Integer, activation::Activation, gradientMode
             [zeros(nout) for i in 1:4]...,
             ones(nin),
             ones(nout))
-  # Layer(nin, nout, activation, p, zeros(nin), w, zeros(nout, nin), [zeros(nout) for i in 1:4]..., ones(nin), ones(nout), zeros(nout,nin), zeros(nout))
 end
 
-Base.print{A,M,G}(io::IO, l::Layer{A,M,G}) = print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ)) $(M<:TransposeView ? "T" : "")}")
+function Base.print{A,M,G}(io::IO, l::Layer{A,M,G})
+  print(io, "Layer{$(l.nin)=>$(l.nout) $(l.activation) p=$(l.p) ‖δ‖₁=$(sumabs(l.δ)) $(M<:TransposeView ? "T" : "")}")
+end
 
 
 # # gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)

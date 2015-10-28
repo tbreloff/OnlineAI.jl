@@ -12,6 +12,7 @@ using Distributions
 #@reexport using Qwt
 #@reexport using CTechCommon
 # using StatsBase
+@reexport using StatsBase
 using Plots
 using Requires
 
