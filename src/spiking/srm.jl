@@ -1,5 +1,5 @@
 
-# Leaky Integrate and Fire (LIF)
+# Spike Response Model neurons
 
 type SRMSynapse <: Synapse
   postsynapticNeuron::SpikingNeuron
