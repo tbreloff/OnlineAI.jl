@@ -42,7 +42,8 @@ type SkanNeuron{T<:Real, S}
     outgoing_synapses::S
     pulse::Bool         # s(t): the soma output (pulse)... binary: on or off
     spike::Bool         # u(t): the initial spike. true when: !s(t-1) && s(t)
-    threshold::T        # θ(t): threshold voltage
+    potential::T        # ∑rᵢ(t): membrane potential
+    threshold::T        # θ(t):   threshold voltage
     threshold_rise::T   # threshold change when increasing
     threshold_fall::T   # threshold change when decreasing
 end
@@ -68,6 +69,15 @@ end
 
 # -----------------------------------------------------------------------------
 
+function membrane_potential{T<:Real}(neuron::SkanNeuron{T})
+    sumrt = zero(T)
+    for synapse in neuron.incoming_synapses
+        sumrt += synapse.ramp
+    end
+    sumrt
+end
+
+
 "One time step in a simulation"
 function step!{T<:Real}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}}, synapses::AbstractArray{SkanSynapse{T}})
 
@@ -81,11 +91,36 @@ function step!{T<:Real}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}
         end
     end
 
-    # update the neurons' membrane potentials and pulse/spike
-    #   s(t) = sum(rᵢ(t)) > θ(t-1)  for i ∈ incoming_synapses
+    # update the neurons' membrane potentials and update pulse/spike/threshold/potential
+    #   pulse(t) = sum(rᵢ(t)) > θ(t-1)  (for i ∈ incoming_synapses)
+    #   spike(t) = pulse(t) && !pulse(t-1)
     for neuron in neurons
+        potential = membrane_potential(neuron)
 
+        pulse = potential >= neuron.threshold
+        neuron.spike = pulse && !neuron.pulse
+        neuron.pulse = pulse
+
+        if pulse
+            neuron.threshold += neuron.threshold_rise
+        elseif potential == 0 && neuron.potential != 0
+            neuron.threshold -= neuron.threshold_fall
+        end
+
+        neuron.potential = potential
     end
+
+    # update the synaptic ramp flags
+    for synapse in synapses
+        if synapse.ramp_flag > 0 && synapse.ramp >= synapse.weight
+            synapse.ramp_flag = -1
+        elseif synapse.ramp_flag < 0 && synapse.ramp <= 0
+            synapse.ramp_flag = 0
+        elseif synapse.ramp_flag == 0 && synapse.presynaptic.spike
+            synapse.ramp_flag = 1
+        end
+    end
+    
 end
 
 
