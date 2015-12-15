@@ -56,7 +56,7 @@ shifts, thus compute power can be used for additional model expressivity instead
 """
 type SkanNeuron{T<:Real, S} <: SpikingNeuron
     incoming_synapses::S
-    outgoing_synapses::S
+    # outgoing_synapses::S
     pulse::Bool         # s(t): the soma output (pulse)... binary: on or off
     spike::Bool         # u(t): the initial spike. true when: !s(t-1) && s(t)
     potential::T        # ∑rᵢ(t): membrane potential
@@ -120,7 +120,9 @@ end
 
 
 "One time step in a simulation"
-function step!{T<:Real, S<:SkanSynapse}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}}, synapses::AbstractArray{S})
+function step!{N<:SpikingNeuron, S<:SkanSynapse}(params::SkanParams,
+                                              neurons::AbstractArray{N},
+                                              synapses::AbstractArray{S})
 
     # update the ramp vars for each synapse
     #   r(t) += p(t-1) * Δr(t-1)

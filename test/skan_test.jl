@@ -1,6 +1,6 @@
 
 using OnlineAI
-using Plots
+using Plots; plotly()
 
 F = Float32
 S = SkanSynapse{F}
@@ -10,18 +10,18 @@ params = SkanParams{F}()
 numinputs = 2
 inputs = [InputNeuron() for i in 1:numinputs]
 numoutputs = 3
-outputs = [SkanNeuron{F}(S[], S[], false, false, 0, 0, 40numinputs, 100numinputs) for i in 1:numoutputs]
-neurons = join(inputs, outputs)
+outputs = [SkanNeuron(S[], false, false, F(0), F(0), F(40numinputs), F(100numinputs)) for i in 1:numoutputs]
+neurons = vcat(inputs, outputs)
 
 # init the synapses
-synapses = [SkanSynapse{F}(input, output, 10000, 0, 0, 0, 0) for input in inputs, output in outputs]
+synapses = SkanSynapse[SkanSynapse(input, output, F(10000), zeros(F,3)..., zero(Int8)) for input in inputs, output in outputs]
 
 # do a sim
-n = 100
-ramps = zeros(n, length(synapses))
+n = 10000
+ramps, ramp_steps = [zeros(n, length(synapses)) for i=1:2]
 potentials, thresholds = [zeros(n, numoutputs) for i=1:2]
 
-for i in 1:100
+for i in 1:n
 
     # create random spiking activity
     for input in inputs
@@ -33,6 +33,7 @@ for i in 1:100
 
     for (j,s) in enumerate(synapses)
         ramps[i,j] = s.ramp
+        ramp_steps[i,j] = s.ramp_step
     end
 
     for (j,o) in enumerate(outputs)
@@ -42,9 +43,10 @@ for i in 1:100
 
 end
 
-
-sp = subplot(plot(ramps), plot(potentials))
-plot!(sp.plts[2], thresholds)
+plts = map(plot, (ramps, ramp_steps, potentials, thresholds))
+subplot(plts...)
+# sp = subplot(plot(ramps), plot(potentials))
+# plot!(sp.plts[2], thresholds)
 
 
 
