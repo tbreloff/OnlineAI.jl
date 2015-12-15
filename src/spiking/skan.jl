@@ -7,13 +7,22 @@
 # "A component of a SKAN architecture"
 # abstract AbstractSkan
 
+export
+    SkanParams,
+    InputNeuron,
+    SkanNeuron,
+    SkanGroup,
+    SkanSynapse,
+    membrane_potential,
+    step!
+
 
 # -----------------------------------------------------------------------------
 
 using Parameters
 
 @with_kw immutable SkanParams{T<:Real}
-    Δt::Int = 1
+    # Δt::Int = 1
     # ramp_step_rise::T = 
     ramp_step_adjustment::T = 1  # ddr
     ramp_step_min::T = 0         #
@@ -22,13 +31,21 @@ using Parameters
     # threshold_rise_initfunc::Function = (n) -> 40n
     # threshold_fall_initfunc::Function = (n) -> 100n
     # inhibitor_decay::T
-    weight_initfunc::Function = () -> 10000
+    # weight_initfunc::Function = () -> 10000
     # weight_rise::T
     # weight_fall::T
 end
 
 # -----------------------------------------------------------------------------
 
+"Represents an input spike train"
+type InputNeuron <: SpikingNeuron
+    spike::Bool
+end
+InputNeuron() = InputNeuron(false)
+step!(neuron::InputNeuron) = nothing
+
+# -----------------------------------------------------------------------------
 
 """
 A SkanNeuron is modeled on Afshar et al's Synapto-Dendritic Kernel Adaptation (SKAN) framework,
@@ -37,7 +54,7 @@ updating alternative to the Spike Response Model (SRM), Hodgen-Huxley, or other 
 models.  The model avoids multiplication and division, and has a smart normalization step using only left/right
 shifts, thus compute power can be used for additional model expressivity instead of biological correctness.
 """
-type SkanNeuron{T<:Real, S}
+type SkanNeuron{T<:Real, S} <: SpikingNeuron
     incoming_synapses::S
     outgoing_synapses::S
     pulse::Bool         # s(t): the soma output (pulse)... binary: on or off
@@ -48,6 +65,35 @@ type SkanNeuron{T<:Real, S}
     threshold_fall::T   # threshold change when decreasing
 end
 
+function membrane_potential{T<:Real}(neuron::SkanNeuron{T})
+    sumrt = zero(T)
+    for synapse in neuron.incoming_synapses
+        sumrt += synapse.ramp
+    end
+    sumrt
+end
+
+# update the neurons' membrane potentials and update pulse/spike/threshold/potential
+#   pulse(t) = sum(rᵢ(t)) > θ(t-1)  (for i ∈ incoming_synapses)
+#   spike(t) = pulse(t) && !pulse(t-1)
+function step!(neuron::SkanNeuron)
+    potential = membrane_potential(neuron)
+
+    pulse = potential >= neuron.threshold
+    neuron.spike = pulse && !neuron.pulse
+    neuron.pulse = pulse
+
+    if pulse
+        neuron.threshold += neuron.threshold_rise
+    elseif potential == 0 && neuron.potential != 0
+        neuron.threshold -= neuron.threshold_fall
+    end
+
+    neuron.potential = potential
+end
+
+# -----------------------------------------------------------------------------
+
 # group of SKAN neurons which have a shared inhibitory signal
 type SkanGroup{T<:Real} <: AbstractVector{SkanNeuron{T}}
     neurons::Vector{SkanNeuron{T}}
@@ -57,9 +103,9 @@ Base.size(group::SkanGroup) = size(group.neurons)
 Base.getindex(group::SkanGroup, i::Integer) = group.neurons[i]
 
 # connects a presynaptic SkanNeuron to a postsynaptic SkanNeuron
-type SkanSynapse{T<:Real}
-    presynaptic::SkanNeuron{T}
-    postsynaptic::SkanNeuron{T}
+type SkanSynapse{T<:Real, S1<:SpikingNeuron, S2<:SpikingNeuron}
+    presynaptic::S1
+    postsynaptic::S2
     weight::T           # wᵢ(t): synaptic weight
     weight_adj_flag::T  # dᵢ(t): 1 on uᵢ(t)
     ramp::T             # rᵢ(t): ramp height
@@ -69,17 +115,12 @@ end
 
 # -----------------------------------------------------------------------------
 
-function membrane_potential{T<:Real}(neuron::SkanNeuron{T})
-    sumrt = zero(T)
-    for synapse in neuron.incoming_synapses
-        sumrt += synapse.ramp
-    end
-    sumrt
-end
+
+
 
 
 "One time step in a simulation"
-function step!{T<:Real}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}}, synapses::AbstractArray{SkanSynapse{T}})
+function step!{T<:Real, S<:SkanSynapse}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}}, synapses::AbstractArray{S})
 
     # update the ramp vars for each synapse
     #   r(t) += p(t-1) * Δr(t-1)
@@ -91,23 +132,9 @@ function step!{T<:Real}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}
         end
     end
 
-    # update the neurons' membrane potentials and update pulse/spike/threshold/potential
-    #   pulse(t) = sum(rᵢ(t)) > θ(t-1)  (for i ∈ incoming_synapses)
-    #   spike(t) = pulse(t) && !pulse(t-1)
+    # update the neurons
     for neuron in neurons
-        potential = membrane_potential(neuron)
-
-        pulse = potential >= neuron.threshold
-        neuron.spike = pulse && !neuron.pulse
-        neuron.pulse = pulse
-
-        if pulse
-            neuron.threshold += neuron.threshold_rise
-        elseif potential == 0 && neuron.potential != 0
-            neuron.threshold -= neuron.threshold_fall
-        end
-
-        neuron.potential = potential
+        step!(neuron)
     end
 
     # update the synaptic ramp flags
@@ -120,7 +147,7 @@ function step!{T<:Real}(params::SkanParams, neurons::AbstractArray{SkanNeuron{T}
             synapse.ramp_flag = 1
         end
     end
-    
+
 end
 
 

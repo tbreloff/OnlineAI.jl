@@ -1,7 +1,5 @@
 
-if VERSION >= v"0.4-"
-  __precompile__()
-end
+__precompile__()
 
 module OnlineAI
 
@@ -203,6 +201,8 @@ include("spiking/liquid.jl")
 include("spiking/srm.jl")
 include("spiking/input.jl")
 # include("spiking/visualize.jl")
+
+include("spiking/skan.jl")
 
 # ------------------------------------------------
 
