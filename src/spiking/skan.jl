@@ -27,10 +27,11 @@ using Parameters
     ramp_step_adjustment::T = 1  # ddr
     ramp_step_min::T = 0         #
     ramp_step_max::T = 400
-    # ramp_step_initfunc::Function = () -> rand(100:200)
+    ramp_step_initfunc::Function = () -> T(rand(100:200))
     # threshold_rise_initfunc::Function = (n) -> 40n
     # threshold_fall_initfunc::Function = (n) -> 100n
     # inhibitor_decay::T
+    weight_init::T = 10000
     # weight_initfunc::Function = () -> 10000
     # weight_rise::T
     # weight_fall::T
