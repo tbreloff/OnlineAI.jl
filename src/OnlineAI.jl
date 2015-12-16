@@ -11,15 +11,15 @@ using Distributions
 #@reexport using CTechCommon
 # using StatsBase
 @reexport using StatsBase
-using Plots
+# using Plots
 using Requires
 
 import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
-                    VecF, MatF, AVec, AMat, AVecF, AMatF, if0then1,
+                    VecF, MatF, AMat, AVec, AVecF, AMatF, if0then1,
                     standardize, unstandardize, standardize!
 
 export row, col, row!, col!, rows, cols, nrows, ncols,
-       VecF, MatF, AVec, AMat, AVecF, AMatF, if0then1,
+       VecF, MatF, AVecF, AMatF, if0then1,
        standardize, unstandardize, standardize!
 
 
@@ -151,13 +151,13 @@ export
   Ensemble
 include("nnet/ensembles.jl")
 
-export
-  visualize,
-  track_progress
+# export
+#   visualize,
+#   track_progress
 
 # function __init__()
 
-include("nnet/visualize.jl")
+# include("nnet/visualize.jl")
 
 # ----------------------------------------------------------------------
 
