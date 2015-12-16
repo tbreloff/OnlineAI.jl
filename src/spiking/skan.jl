@@ -80,16 +80,22 @@ end
 function step!(neuron::SkanNeuron)
     potential = membrane_potential(neuron)
 
+    # pulse while potential is above threshold
+    # spike only in the first timestep of a pulse
     pulse = potential >= neuron.threshold
     neuron.spike = pulse && !neuron.pulse
     neuron.pulse = pulse
 
+    # during a pulse, increase the threshold
     if pulse
         neuron.threshold += neuron.threshold_rise
-    elseif potential == 0 && neuron.potential != 0
+
+    # when potential returns to rest, decrease the threshold
+    elseif potential <= 0 && neuron.potential > 0
         neuron.threshold -= neuron.threshold_fall
     end
 
+    # save the potential
     neuron.potential = potential
 end
 
@@ -131,7 +137,7 @@ function step!{N<:SpikingNeuron, S<:SkanSynapse}(params::SkanParams,
     for synapse in synapses
         synapse.ramp += synapse.ramp_flag * synapse.ramp_step
         if synapse.postsynaptic.pulse
-            synapse.ramp_step += params.ramp_step_adjustment
+            synapse.ramp_step += synapse.ramp_flag * params.ramp_step_adjustment
         end
     end
 

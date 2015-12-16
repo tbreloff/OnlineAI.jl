@@ -11,7 +11,7 @@ params = SkanParams{F}()
 # init the neurons
 numinputs = 2
 inputs = [InputNeuron() for i in 1:numinputs]
-numoutputs = 3
+numoutputs = 1
 outputs = [SkanNeuron(S[],
                       false,
                       false,
@@ -38,7 +38,7 @@ end
 
 
 # do a sim
-n = 100000
+n = 10000
 
 synapse_fields = [:ramp,:ramp_step,:ramp_flag]
 sdict = Dict(zip(synapse_fields, [zeros(n, length(synapses)) for i=1:length(synapse_fields)]))
