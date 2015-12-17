@@ -1,7 +1,7 @@
 
 using OnlineAI
-using Plots
-# plotly()
+using MLPlots
+plotly()
 default(leg=false)
 
 F = Float32
@@ -9,7 +9,7 @@ S = SkanSynapse{F}
 params = SkanParams{F}()
 
 # init the neurons
-numinputs = 2
+numinputs = 3
 inputs = [InputNeuron() for i in 1:numinputs]
 numoutputs = 1
 outputs = [SkanNeuron(S[],
@@ -43,13 +43,18 @@ n = 10000
 synapse_fields = [:ramp,:ramp_step,:ramp_flag]
 sdict = Dict(zip(synapse_fields, [zeros(n, length(synapses)) for i=1:length(synapse_fields)]))
 
-neuron_fields = [:pulse, :spike, :potential, :threshold]
+ispikes = SpikeTrains(numinputs, c=:red, title="Input Spikes", ms=10)
+ospikes = SpikeTrains(numoutputs, title="Output Spikes", ms=10)
+opulses = SpikeTrains(numoutputs, title="Output Pulses", ms=10)
+
+# neuron_fields = [:pulse, :spike, :potential, :threshold]
+neuron_fields = [:potential, :threshold]
 ndict = Dict(zip(neuron_fields, [zeros(n, numoutputs) for i=1:length(neuron_fields)]))
-# pulses, spikes, potentials, thresholds = [zeros(n, numoutputs) for i=1:4]
+# opulses, spikes, potentials, thresholds = [zeros(n, numoutputs) for i=1:4]
 
-inputspikes = zeros(n, numinputs)
+# inputspikes = zeros(n, numinputs)
 
-for i in 1:n
+for t in 1:n
 
     # create random spiking activity
     for input in inputs
@@ -61,22 +66,29 @@ for i in 1:n
 
     # store the network state for plotting
     for (j,s) in enumerate(synapses), (k,v) in sdict
-        v[i,j] = getfield(s, k)
+        v[t,j] = getfield(s, k)
     end
     for (j,s) in enumerate(outputs), (k,v) in ndict
-        v[i,j] = getfield(s, k)
+        v[t,j] = getfield(s, k)
+    end
+    for (j,s) in enumerate(outputs)
+        s.pulse && push!(opulses, j, t)
+        s.spike && push!(ospikes, j, t)
     end
     for (j,s) in enumerate(inputs)
-        inputspikes[i,j] = s.spike
+        # inputspikes[t,j] = s.spike
+        s.spike && push!(ispikes, j, t)
     end
 
 end
 
 splts = [plot(sdict[k], title=k) for k in synapse_fields]
-nplts = [plot(ndict[k], title=k) for k in neuron_fields]
-inplt = plot(inputspikes,title="Inputs Spikes")
+# nplts = [plot(ndict[k], title=k) for k in neuron_fields]
+nplt = plot(ndict[:potential], title="Membrane Potential")
+plot!(ndict[:threshold])
+# inplt = plot(inputspikes,title="Inputs Spikes")
 
-subplot(splts..., nplts..., inplt, size=(1000,1200), nc=1, link=true)
+subplot(splts..., nplt, ispikes.plt, ospikes.plt, opulses.plt, size=(1000,1200), nc=1, link=true)
 
 
 
