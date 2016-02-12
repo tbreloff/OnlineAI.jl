@@ -139,7 +139,7 @@ function visualize(lsm::LiquidStateMachine)
 end
 
 #update visualization
-function OnlineStats.update!(viz::LiquidVisualization, y::VecF)
+function OnlineStats.fit!(viz::LiquidVisualization, y::VecF)
   viz.t += 1
 
   for viznode in viz.viznodes

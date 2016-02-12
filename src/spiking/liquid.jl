@@ -58,9 +58,9 @@ type LiquidInputs{T <: LiquidInput}
 end
 
 
-function OnlineStats.update!(inputs::LiquidInputs, x::VecF, dt::Float64)
+function OnlineStats.fit!(inputs::LiquidInputs, x::VecF, dt::Float64)
   for i in 1:length(inputs.inputs)
-    update!(inputs.inputs[i], x[i], dt)
+    fit!(inputs.inputs[i], x[i], dt)
   end
 end
 
@@ -146,9 +146,9 @@ end
 
 StatsBase.sample{T<:SpikingNeuron}(neurons::Vector{T}, pct::Float64) = sample(neurons, round(Int, pct * length(neurons)))
 
-function OnlineStats.update!(liquid::Liquid, dt::Float64)
+function OnlineStats.fit!(liquid::Liquid, dt::Float64)
   for neuron in liquid.neurons
-    update!(neuron, dt)
+    fit!(neuron, dt)
   end
   foreach(liquid.neurons, fire!)
 end
@@ -173,7 +173,7 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
   liquid = Liquid(params.neuronType, params)
 
   # create input structure
-  wgt = ExponentialWeighting(10000)
+  wgt = ExponentialWeight(10000)
   variances = [Variance(wgt) for i in 1:numInputs]
   inputs = LiquidInputs(liquid, variances)
 
@@ -186,20 +186,20 @@ function LiquidStateMachine(params::LiquidParams, numInputs::Int, numOutputs::In
 end
 
 # liquidState(lsm::LiquidStateMachine) = Float64[float(neuron.fired) for neuron in lsm.liquid.outputNeurons]
-OnlineStats.statenames(lsm::LiquidStateMachine) = [:liquidState, :nobs]
-OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
+# OnlineStats.statenames(lsm::LiquidStateMachine) = [:liquidState, :nobs]
+# OnlineStats.state(lsm::LiquidStateMachine) = Any[liquidState(lsm), nobs(lsm)]
 
 
-function OnlineStats.update!(lsm::LiquidStateMachine, x::VecF, y::VecF, dt::Float64 = lsm.liquid.params.dt)
-  update!(lsm.inputs, x, dt)   # update input neurons
-  update!(lsm.liquid, dt)     # update liquid state
+function OnlineStats.fit!(lsm::LiquidStateMachine, x::VecF, y::VecF, dt::Float64 = lsm.liquid.params.dt)
+  fit!(lsm.inputs, x, dt)   # update input neurons
+  fit!(lsm.liquid, dt)     # update liquid state
 
   # update readout models
   # TODO: liquidState should be more flexible... multiple models, recent window averages, etc
-  update!(lsm.readout, lsm.liquid.outputNeurons)
+  fit!(lsm.readout, lsm.liquid.outputNeurons)
   state = liquidState(lsm, lsm.readout)
   for (i,model) in enumerate(lsm.readoutModels)
-    update!(model, state, y[i])
+    fit!(model, state, y[i])
   end
 
   lsm.n += 1

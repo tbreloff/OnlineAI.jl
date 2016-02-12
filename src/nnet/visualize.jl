@@ -32,7 +32,7 @@ function track_progress(net::NeuralNet; stats::SolverStats = SolverStats(), fiel
   NetProgressPlotter(net, stats, fields; kw...)
 end
 
-function OnlineStats.update!(plotter::NetProgressPlotter, updateiter = false; show=false)
+function OnlineStats.fit!(plotter::NetProgressPlotter, updateiter = false; show=false)
   if updateiter
     plotter.stats.numiter += 1
   end
@@ -80,7 +80,7 @@ end
   end
 
   # updates the color of the circles, and color/size of the weight connections
-  function OnlineStats.update!(viz::LayerViz, bigweight::Float64, bigbias::Float64)
+  function OnlineStats.fit!(viz::LayerViz, bigweight::Float64, bigbias::Float64)
     # change the colors of the line widths (weights)
     nout, nin = size(viz.wgtlines)
     l = viz.layer
@@ -159,7 +159,7 @@ end
     # end
 
     viz = NetViz(net, vizs, inputvals)
-    update!(viz)
+    fit!(viz)
     viz
   end
 
@@ -174,11 +174,11 @@ end
   biggestabswgt(net::NeuralNet) = maximum([maximum(abs(l.w)) for l in net.layers])
   biggestabsbias(net::NeuralNet) = maximum([maximum(abs(l.b)) for l in net.layers])
 
-  function OnlineStats.update!(viz::NetViz; bigweight::Float64 = biggestabswgt(viz.net), bigbias::Float64 = biggestabsbias(viz.net))
+  function OnlineStats.fit!(viz::NetViz; bigweight::Float64 = biggestabswgt(viz.net), bigbias::Float64 = biggestabsbias(viz.net))
 
     # update the layers
     for lv in viz.layervizs
-      update!(lv, bigweight, bigbias)
+      fit!(lv, bigweight, bigbias)
     end
 
     # update the input val textboxes

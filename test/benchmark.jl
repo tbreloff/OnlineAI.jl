@@ -4,7 +4,7 @@ using OnlineAI
 
 function runtest(net, x, y, niter)
   for i in 1:niter
-    update!(net, x, y)
+    fit!(net, x, y)
   end
 end
 

@@ -27,7 +27,7 @@ Base.show(io::IO, s::SRMSynapse) = print(io, s)
 # total current decays back to 0 at rate τs (spike)
 # (current * dt) is added to membrane potential (u) after decaying potential back to urest
 
-# NOTE: to use OnlineStats ExponentialWeighting, instantiate with ExponentialWeighting(dt / τ)
+# NOTE: to use OnlineStats ExponentialWeight, instantiate with ExponentialWeight(dt / τ)
 #       where dt is the simulation time step, and τ is the "decay period"
 
 # const dt = 0.25         # ms - simulation time step
@@ -74,7 +74,7 @@ Base.show(io::IO, n::SRMNeuron) = print(io, n)
 
 
 # decay q and u, then add (q * dt) to u
-function OnlineStats.update!(neuron::SRMNeuron, dt::Float64)
+function OnlineStats.fit!(neuron::SRMNeuron, dt::Float64)
   neuron.fired = false
 
   if neuron.qDecayRate > 0.0
@@ -103,7 +103,7 @@ function fire!(neuron::SRMNeuron)
 end
 
 
-function OnlineStats.state(neuron::SpikingNeuron)
+function OnlineStats.value(neuron::SpikingNeuron)
   neuron.u / neuron.ϑ + 10.0 * float(neuron.fired)
 end
 

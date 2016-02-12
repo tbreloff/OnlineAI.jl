@@ -21,7 +21,7 @@ note: w is a parameter for the case of tied weights (it can be a TransposeView!)
 type NormalizedLayer{A <: Activation,
                      MATF <: AbstractMatrix{Float64},
                      GSTATE <: GradientState,
-                     WGT <: Weighting} <: NeuralNetLayer
+                     WGT <: Weight} <: NeuralNetLayer
   nin::Int
   nout::Int
   activation::A
@@ -59,7 +59,7 @@ end
 function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation,
                          gradientModel::GradientModel, p::Float64 = 1.0;
                          weightInit::Function = _initialWeights,
-                         wgt = ExponentialWeighting(500))
+                         wgt = ExponentialWeight(500))
 
   w = weightInit(nin, nout, activation)
   NormalizedLayer(nin, nout, activation, p,
@@ -131,7 +131,7 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
     #       So on dropout, we are actually dropping out thr previous layer's nodes...
     for i in 1:layer.nin
       layer.r[i] = rand() <= layer.p ? 1.0 : 0.0
-      update!(layer.xvar[i], x[i])
+      fit!(layer.xvar[i], x[i])
     end
     p = 1.0
   else

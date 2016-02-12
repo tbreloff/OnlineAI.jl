@@ -105,7 +105,7 @@ function backward!(net::NeuralNet, multiplyDerivative::Bool)
   end
 
   # # update our η, μ, etc
-  # update!(net.params)
+  # fit!(net.params)
 end
 
 
@@ -113,7 +113,7 @@ end
 
 
 # online version... returns the feedforward estimate before updating
-function OnlineStats.update!(net::NeuralNet, x::AVecF, y::AVecF)
+function OnlineStats.fit!(net::NeuralNet, x::AVecF, y::AVecF)
   yhat = forward!(net, x, true)
   multiplyDerivative = costMultiplier!(net.params.costModel, net.costmult, y, yhat)
   backward!(net, multiplyDerivative)
@@ -122,19 +122,19 @@ end
 
 
 # batch version
-function OnlineStats.update!(net::NeuralNet, x::MatF, y::MatF)
+function OnlineStats.fit!(net::NeuralNet, x::MatF, y::MatF)
   @assert ncols(x) == net.nin
   @assert ncols(y) == net.nout
   @assert nrows(x) == nrows(y)
 
-  Float64[update!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
+  Float64[fit!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
 end
 
 # note: when yEqualsX is true, we are updating an autoencoder (or similar) and so we can
 # use net.transformedInput instead of y
-function OnlineStats.update!(net::NetStat, data::DataPoint, yEqualsX::Bool = false)
-  update!(net, data.x, yEqualsX ? net.transformedInput : data.y)
-  # update!(net, data.x, transformY ? transform(net.inputTransformer, data.y) : data.y)
+function OnlineStats.fit!(net::NetStat, data::DataPoint, yEqualsX::Bool = false)
+  fit!(net, data.x, yEqualsX ? net.transformedInput : data.y)
+  # fit!(net, data.x, transformY ? transform(net.inputTransformer, data.y) : data.y)
 end
 
 # ------------------------------------------------------------------------

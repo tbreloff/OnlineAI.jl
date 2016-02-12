@@ -169,7 +169,7 @@ end
 abstract LearningRateModel
 
 immutable FixedLearningRate <: LearningRateModel end
-OnlineStats.update!(lrmodel::FixedLearningRate, err::Float64) = nothing
+OnlineStats.fit!(lrmodel::FixedLearningRate, err::Float64) = nothing
 
 
 "Adapts learning rate based on relative variance of the changes in the test error"
@@ -184,14 +184,14 @@ end
 function AdaptiveLearningRate(gradientModel::GradientModel,
                               adjustmentPct = 1e-2,
                               cutoffRatio = 1e-1;
-                              wgt = ExponentialWeighting(20))
+                              wgt = ExponentialWeight(20))
   AdaptiveLearningRate(gradientModel, Diff(), Variance(wgt), adjustmentPct, cutoffRatio)
 end
 
 # if the error is decreasing at a large rate relative to the variance, increase the learning rate (speed it up)
-function OnlineStats.update!(lrmodel::AdaptiveLearningRate, err::Float64)
-  update!(lrmodel.errordiff, err)
-  update!(lrmodel.diffvar, diff(lrmodel.errordiff))
+function OnlineStats.fit!(lrmodel::AdaptiveLearningRate, err::Float64)
+  fit!(lrmodel.errordiff, err)
+  fit!(lrmodel.diffvar, diff(lrmodel.errordiff))
   m = mean(lrmodel.diffvar)
   s = std(lrmodel.diffvar)
   if s > 0.0

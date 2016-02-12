@@ -136,6 +136,7 @@ function step!{N<:SpikingNeuron, S<:SkanSynapse}(params::SkanParams,
     #   Δr(t) += ddr * s(t-1)
     for synapse in synapses
         synapse.ramp += synapse.ramp_flag * synapse.ramp_step
+        synapse.ramp = max(0, synapse.ramp)
         if synapse.postsynaptic.pulse
             synapse.ramp_step += synapse.ramp_flag * params.ramp_step_adjustment
         end

@@ -5,7 +5,7 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
                   params = NetParams(),
                   solverParams = SolverParams(),
                   inputTransformer::Transformer = IdentityTransformer(),
-                  wgt::Weighting = EqualWeighting())
+                  wgt::Weight = EqualWeight())
   layers = LAYER[]
   nin = numInputs
 

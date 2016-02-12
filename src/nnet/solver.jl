@@ -78,12 +78,12 @@ function solve!(net::NetStat, traindata::DataSampler, validationdata::DataSample
 
     # randomly sample one data item and update the network
     data = sample(traindata)
-    update!(net, data, transformY)
+    fit!(net, data, transformY)
 
     # update the plot?
     piter = net.solverParams.plotiter
     if (piter > 0 && i % net.solverParams.plotiter == 0) || piter == 0
-      update!(stats.plotter)
+      fit!(stats.plotter)
     end
 
     # # check for convergence

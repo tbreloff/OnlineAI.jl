@@ -6,19 +6,30 @@ default(leg=false)
 
 F = Float32
 S = SkanSynapse{F}
-params = SkanParams{F}()
+params = SkanParams{F}(
+    ramp_step_adjustment = 0,
+    ramp_step_initfunc = () -> F(rand(1:2)),
+    weight_init = 2
+  )
+
+txt = " ABC ACD ADA CDB"
+letters = sort(unique(txt))
+# letteridx = Dict([(l,i) for (i,l) in enumerate(letters)])
+I = length(letters)
 
 # init the neurons
-numinputs = 3
+numinputs = I
 inputs = [InputNeuron() for i in 1:numinputs]
-numoutputs = 1
+numoutputs = I
 outputs = [SkanNeuron(S[],
                       false,
                       false,
                       F(0),
                       params.weight_init,
-                      F(40numinputs),
-                      F(100numinputs)
+                      F(0),
+                      F(0)
+                      # F(20numinputs),
+                      # F(100numinputs)
                      ) for i in 1:numoutputs]
 neurons = vcat(inputs, outputs)
 
@@ -38,7 +49,7 @@ end
 
 
 # do a sim
-n = 10000
+n = 100
 
 synapse_fields = [:ramp,:ramp_step,:ramp_flag]
 sdict = Dict(zip(synapse_fields, [zeros(n, length(synapses)) for i=1:length(synapse_fields)]))
@@ -54,12 +65,21 @@ ndict = Dict(zip(neuron_fields, [zeros(n, numoutputs) for i=1:length(neuron_fiel
 
 # inputspikes = zeros(n, numinputs)
 
+
+
 for t in 1:n
 
     # create random spiking activity
-    for input in inputs
-        input.spike = rand() < 0.01
+    # for input in inputs
+    #     input.spike = rand() < 0.01
+    # end
+
+    # only the input neuron corresponding to the current letter spikes
+    l = txt[mod1(round(Int,t), length(txt))]
+    for (i,input) in enumerate(inputs)
+      input.spike = l == letters[i]
     end
+
 
     # update the network
     step!(params, neurons, synapses)
@@ -82,7 +102,7 @@ for t in 1:n
 
 end
 
-splts = [plot(sdict[k], title=k) for k in synapse_fields]
+splts = [plot(sdict[k], title=string(k)) for k in synapse_fields]
 # nplts = [plot(ndict[k], title=k) for k in neuron_fields]
 nplt = plot(ndict[:potential], title="Membrane Potential")
 plot!(ndict[:threshold])

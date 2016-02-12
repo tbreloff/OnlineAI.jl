@@ -4,7 +4,7 @@
 - cross validation (data.jl)
 
 - data samplers
-  - maybe they can be OnlineStats, so that update! will add to the dataset
+  - maybe they can be OnlineStats, so that fit! will add to the dataset
     - on this thought, we can stream data to a sampler which probablistically retains a limited subset of data points
 
 - ensembles

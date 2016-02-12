@@ -48,10 +48,10 @@ viz = visualize(lsm)
 plotiter = 10
 # anim = animation(viz.window, "/Users/tom/Pictures/gifs")
 for (i,t) = enumerate(lookahead:T)
-  update!(lsm, vec(x[t-lookahead+1,:]), vec(y[t,:]))
+  fit!(lsm, vec(x[t-lookahead+1,:]), vec(y[t,:]))
   
   if i % plotiter == 0
-    update!(viz, vec(y[t,:]))
+    fit!(viz, vec(y[t,:]))
     # saveframe(anim)
   end
 end

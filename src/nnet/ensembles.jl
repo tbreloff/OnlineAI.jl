@@ -92,7 +92,7 @@ end
 
 doc"""
 The Ensemble type represents a set of models which have been fit to the same data.
-A call to update! will update all the models with that data.  Then the outputs of 
+A call to fit! will update all the models with that data.  Then the outputs of 
 the models (yhatᵢⱼ) are stacked and get passed through to the `agg` aggregator. `agg`
 is another OnlineStat which regresses yhats (model estimates) on y (targets).
 
@@ -109,8 +109,8 @@ function Ensemble{AGG<:OnlineStat}(::Type{AGG}, buildFn::Function, ps::Parameter
   Ensemble(generateModels(buildFn, ps, numModels), AGG[AGG(args...; kwargs...) for i in 1:nout])
 end
 
-OnlineStats.statenames(o::Ensemble) = [:nobs]
-OnlineStats.state(o::Ensemble) = Any[nobs(o)]
+# OnlineStats.statenames(o::Ensemble) = [:nobs]
+# OnlineStats.state(o::Ensemble) = Any[nobs(o)]
 nobs(o::Ensemble) = 0
 
 StatsBase.predict(models::Vector{OnlineStat}, x::AVecF) = [predict(model, x) for model in models]
@@ -127,10 +127,10 @@ function StatsBase.predict(ensemble::Ensemble, x::AVecF)
   end
 end
 
-# similar to predict, but update! instead
-function OnlineStats.update!(ensemble::Ensemble, x::AVecF, y::AVecF)
+# similar to predict, but fit! instead
+function OnlineStats.fit!(ensemble::Ensemble, x::AVecF, y::AVecF)
   for model in ensemble.models
-    update!(model, x, y)
+    fit!(model, x, y)
   end
 
   ests = predict(ensemble.models)
@@ -138,7 +138,7 @@ function OnlineStats.update!(ensemble::Ensemble, x::AVecF, y::AVecF)
   yhat = similar(y)
   for i in 1:length(y)
     esti = Float64[est[i] for est in ests]
-    update!(ensemble.aggs[i], esti, y)
+    fit!(ensemble.aggs[i], esti, y)
   end
 end
 

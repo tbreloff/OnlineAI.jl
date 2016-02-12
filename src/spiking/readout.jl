@@ -3,7 +3,7 @@
 abstract Readout
 
 # default is to do nothing on update
-OnlineStats.update!{T <: SpikingNeuron}(readout::Readout, neurons::AbstractVector{T}) = nothing
+OnlineStats.fit!{T <: SpikingNeuron}(readout::Readout, neurons::AbstractVector{T}) = nothing
 
 # ----------------------------------------------------
 
@@ -32,7 +32,7 @@ type FireWindowReadout <: Readout
   FireWindowReadout(lookbackWindow::Integer) = new(lookbackWindow, CircularBuffer{Float64}[])
 end
 
-function OnlineStats.update!{T <: SpikingNeuron}(readout::Readout, neurons::AbstractVector{T})
+function OnlineStats.fit!{T <: SpikingNeuron}(readout::Readout, neurons::AbstractVector{T})
   
   # initialize on first pass
   if isempty(readout.firings)

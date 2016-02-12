@@ -28,7 +28,7 @@ function value(grf::GaussianReceptiveField, x::Float64)
   pdf(STANDARD_NORMAL, (OnlineStats.standardize(grf.variance, x) + grf.grf_offset) / grf.grf_width_factor) / CENTER_PDF
 end
 
-OnlineStats.update!(grf::GaussianReceptiveField, x::Float64) = update!(grf.variance, x)
+OnlineStats.fit!(grf::GaussianReceptiveField, x::Float64) = fit!(grf.variance, x)
 
 
 # function Qwt.plot(grfs::Vector{GaussianReceptiveField}, rng::FloatIterable)
@@ -93,12 +93,12 @@ function GRFInput(liquid, variance::Variance)
 end
 
 # increase neurons' u's by the value of the grf, then fire when threshold crossed
-function OnlineStats.update!(input::GRFInput, x::Float64, dt::Float64)
-  update!(input.variance, x)
+function OnlineStats.fit!(input::GRFInput, x::Float64, dt::Float64)
+  fit!(input.variance, x)
   for (j,grf) in enumerate(input.grfs)
     neuron = input.neurons[j]
     neuron.q = value(grf, x)
-    update!(neuron, dt)
+    fit!(neuron, dt)
     fire!(neuron)
   end
 end
