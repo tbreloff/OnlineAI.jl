@@ -1,6 +1,6 @@
 
-# const LAYER = Layer
-const LAYER = NormalizedLayer
+const LAYER = Layer
+# const LAYER = NormalizedLayer
 
 type NeuralNet <: NetStat
   layers::Vector{LAYER}  # note: this doesn't include input layer!!

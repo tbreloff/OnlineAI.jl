@@ -6,3 +6,4 @@ Distributions
 StatsBase
 OnlineStats
 Parameters
+ArrayViews

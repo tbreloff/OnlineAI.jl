@@ -64,7 +64,7 @@ facts("NNet") do
                               plotiter=-1,
                               plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
 
-  gradientModel = AdadeltaModel()
+  gradientModel = AdaMaxModel()
   # gradientModel = SGDModel(η=0.001)
   net, output, stats = testxor(params=NetParams(gradientModel=gradientModel, costModel=L2CostModel()),
                                solverParams=solverParams, doPretrain=false)
@@ -73,10 +73,10 @@ facts("NNet") do
   net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
+  net, output, stats = testxor(params=NetParams(gradientModel=AdaMaxModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  net, output, stats = testxor(params=NetParams(gradientModel=AdadeltaModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
+  net, output, stats = testxor(params=NetParams(gradientModel=AdaMaxModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
                                finalActivation=SigmoidActivation(), solverParams=solverParams,
                                hiddenLayerNodes = [6,6,6,6,6])
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)

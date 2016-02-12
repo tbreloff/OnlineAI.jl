@@ -13,14 +13,15 @@ using Distributions
 @reexport using StatsBase
 # using Plots
 using Requires
+using ArrayViews
 
-import OnlineStats: row, col, row!, col!, rows, cols, nrows, ncols,
-                    VecF, MatF, AMat, AVec, AVecF, AMatF, if0then1,
-                    standardize, unstandardize, standardize!
+import OnlineStats: nrows, ncols,
+                    VecF, MatF, AMat, AVec, AVecF, AMatF,
+                    standardize
 
 export row, col, row!, col!, rows, cols, nrows, ncols,
-       VecF, MatF, AVecF, AMatF, if0then1,
-       standardize, unstandardize, standardize!
+       VecF, MatF, AVecF, AMatF,
+       standardize
 
 
 

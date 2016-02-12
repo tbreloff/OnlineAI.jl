@@ -42,6 +42,28 @@ sizes(x) = map(size, x)
 
 mapf(functions, obj) = [f(obj) for f in functions]
 
+
+row(M::AMat, i::Integer) = rowvec_view(M, i)
+col(M::AMat, i::Integer) = view(M, :, i)
+column(M::AMat, i::Integer) = view(M, :, i)
+
+rows(M::AMat, rng::AVecI) = view(M, rng, :)
+cols(M::AMat, rng::AVecI) = view(M, :, rng)
+columns(M::AMat, rng::AVecI) = view(M, :, rng)
+
+row!{T}(M::AMat{T}, i::Integer, v::AVec{T}) = (M[i,:] = v; nothing)
+col!{T}(M::AMat{T}, i::Integer, v::AVec{T}) = (M[:,i] = v; nothing)
+column!{T}(M::AMat{T}, i::Integer, v::AVec{T}) = (M[:,i] = v; nothing)
+
+function if0then1(x::Real)
+  if isnan(x) || x == 0
+    one(typeof(x))
+  else
+    x
+  end
+end
+
+
 ####################################################
 
 

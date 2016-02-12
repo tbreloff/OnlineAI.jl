@@ -8,7 +8,6 @@ type Layer{A <: Activation, MATF <: AbstractMatrix{Float64}, GSTATE <: GradientS
   nin::Int
   nout::Int
   activation::A
-  # gradientState::GSTATE
   p::Float64  # dropout retention probability
 
   # the state of the layer
@@ -48,17 +47,6 @@ function Base.print{A,M,G}(io::IO, l::Layer{A,M,G})
 end
 
 
-# # gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
-# function dosigmamult!{A,G}(layer::Layer{A,TransposeView{Float64},G}, α::Float64)
-#   copy!(layer.Σ, layer.b)
-#   BLAS.gemv!('T', α, layer.w.mat, layer.x, 1.0, layer.Σ)
-# end
-# function dosigmamult!(layer::Layer, α::Float64)
-#   copy!(layer.Σ, layer.b)
-#   BLAS.gemv!('N', α, layer.w, layer.x, 1.0, layer.Σ)
-# end
-
-
 # gemv! :: Σ += p * w * x  (note: 'T' would imply p * w' * x)
 @generated function dosigmamult!(layer::Layer, α::Float64)
   if layer.parameters[2] <: TransposeView
@@ -86,24 +74,14 @@ function forward!(layer::Layer, x::AVecF, istraining::Bool)
       layer.r[i] = ri
       layer.x[i] = ri * x[i]
     end
-    # layer.r = float(rand(layer.nin) .<= layer.p)
-    # layer.x = layer.r .* x
 
     dosigmamult!(layer, 1.0)
-    # copy!(layer.Σ, layer.b)
-    # BLAS.gemv!('N', 1.0, layer.w, layer.x, 1.0, layer.Σ)    
-    # layer.Σ = layer.w * layer.x + layer.b
   else
     # test... need to multiply weights by dropout prob p
-    # layer.x = collect(x)
-    # layer.r = ones(layer.nin)
     fill!(layer.r, 1.0)
     copy!(layer.x, x)
 
     dosigmamult!(layer, layer.p)
-    # copy!(layer.Σ, layer.b)
-    # BLAS.gemv!('N', layer.p, layer.w, layer.x, 1.0, layer.Σ)
-    # layer.Σ = layer.p * (layer.w * layer.x) + layer.b
   end
 
   forward!(layer.activation, layer.a, layer.Σ)     # activate
@@ -119,7 +97,6 @@ function updateSensitivities!(layer::Layer, costmult::AVecF, multiplyDerivative:
       layer.δ[i] *= backward(layer.activation, layer.Σ[i])
     end
   end
-  # layer.δ = multiplyDerivative ? costmult .* backward(layer.activation, layer.Σ) : costmult
 end
 
 # this is the backward step for a hidden layer
@@ -132,7 +109,6 @@ function updateSensitivities!(layer::Layer, nextlayer::Layer)
     end
     layer.δ[i] = δi * backward(layer.activation, layer.Σ[i])
   end
-  # layer.δ = (nextlayer.w' * (nextlayer.nextr .* nextlayer.δ)) .* backward(layer.activation, layer.Σ)
 end
 
 # update weights/bias one column at a time... skipping over the dropped out nodes
@@ -146,15 +122,9 @@ function updateWeights!(layer::Layer, gradientModel::GradientModel)
       
       # if this node is retained, we can update incoming bias
       bGrad = layer.δ[i]  # δi is the gradient
-      # dbi = Δbi(gradientModel, layer.gradientState, bGrad, layer.b[i], i)
       dbi = Δij(gradientModel, layer.dbState, bGrad, layer.b[i], i, 1)
-      # Gbi = layer.Gb[i] + δi^2
-
-      # dbi = Gbi > 0.0 ? Δbi(params, δi / (params.useAdagrad ? sqrt(1.0+Gbi) : 1.0), layer.db[i]) : 0.0
 
       layer.b[i] += dbi
-      # layer.db[i] = dbi
-      # layer.Gb[i] = Gbi
       
       for j in 1:layer.nin
         
@@ -162,15 +132,9 @@ function updateWeights!(layer::Layer, gradientModel::GradientModel)
         if layer.r[j] > 0.0
           
           wGrad = bGrad * layer.x[j]
-          # dwij = Δwij(gradientModel, layer.gradientState, wGrad, layer.w[i,j], i, j)
           dwij = Δij(gradientModel, layer.dwState, wGrad, layer.w[i,j], i, j)
-          # Gwij = layer.Gw[i,j] + wGrad^2
-          
-          # dwij = Gwij > 0.0 ? Δbij(params, wGrad / (params.useAdagrad ? sqrt(1.0+Gwij) : 1.0), layer.w[i,j], layer.dw[i,j]) : 0.0
 
           layer.w[i,j] += dwij
-          # layer.dw[i,j] = dwij
-          # layer.Gw[i,j] = Gwij
         end
       end
     end

@@ -185,7 +185,7 @@ end
 # TODO: this is unstable... how can we stabilize correctly????
 function updateδΣ!(layer::NormalizedLayer, nextlayer::NormalizedLayer)
   for i in 1:layer.nout
-    σi = if0then1(std(nextlayer.xvar[i]))
+    σi = std(nextlayer.xvar[i]) |> if0then1
     βi = nextlayer.β[i]
     deriv = backward(layer.activation, layer.Σ[i])
     layer.δΣ[i] = nextlayer.δy[i] * (βi / σi) * deriv
