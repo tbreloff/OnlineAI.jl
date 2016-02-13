@@ -10,7 +10,7 @@
 # ------------------------------------------------------------------------------------
 
 export
-    layer,
+    gatedlayer,
     gate!,
     ALL,
     SAME,
@@ -39,6 +39,11 @@ immutable GatedLayer{T}
     tag::Symbol
 end
 
+stringtags(v::AbstractVector) = string("[", join([string(c.tag) for c in v], ", "), "]")
+
+function Base.show(io::IO, l::GatedLayer)
+    write(io, "GatedLayer{ tag=$(l.tag) n=$(l.n) in=$(stringtags(l.conn_in)) out=$(stringtags(l.conn_out)) gates=$(stringtags(l.gates)) state=$(l.state)}")
+end
 
 # ------------------------------------------------------------------------------------
 
@@ -63,6 +68,9 @@ type GatedConnection{T, CC <: ConnectionCalc}
     tag::Symbol
 end
 
+function Base.show(io::IO, c::GatedConnection)
+    write(io, "GatedConnection{ tag=$(c.tag) type=$(c.conn_type) from=$(c.layer_from.tag) to=$(c.layer_to.tag) $(isnull(c.gate) ? "" : get(c.gate).tag)}")
+end
 
 # ------------------------------------------------------------------------------------
 
@@ -73,12 +81,7 @@ function GatedLayer{T}(::Type{T}, n::Integer, tag::Symbol = gensym("layer"))
     GatedLayer(n, GatedConnection[], GatedConnection[], GatedConnection[], State(T, n), tag)
 end
 
-layer(n::Integer; tag::Symbol = gensym("layer")) = GatedLayer(Float64, n, tag)
-
-
-# function GatedConnection{T}(conn_type::ConnectionType, layer_from::GatedLayer{T}, layer_to::GatedLayer{T}, calc::ConnectionCalc)
-#     GatedConnection(conn_type, layer_from, layer_to, calc, Nullable{GatedLayer{T}}())
-# end
+gatedlayer(n::Integer; tag::Symbol = gensym("layer")) = GatedLayer(Float64, n, tag)
 
 
 # ------------------------------------------------------------------------------------

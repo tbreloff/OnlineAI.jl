@@ -1,16 +1,31 @@
 
-include("../src/lstm_g/layer.jl")
+include("../src/lstm_g/network.jl")
 
 nin = 3
 nhidden = 2
 nout = 1
 
-inputlayer = layer(3)
-hiddenlayer = layer(2, tag=:hidden)
-outputlayer = layer(1)
+# basic ANN
+inputlayer  = gatedlayer(3, tag=:input)
+hiddenlayer = gatedlayer(2, tag=:hidden)
+outputlayer = gatedlayer(1, tag=:output)
 @show inputlayer hiddenlayer outputlayer
 
-conn1 = connect(inputlayer, hiddenlayer)
-conn2 = connect(hiddenlayer, outputlayer)
-@show conn1 conn2
+ci = connect(inputlayer, hiddenlayer)
+co = connect(hiddenlayer, outputlayer)
+@show ci co
+
+
+# now add a gating gatedlayer
+gatinglayer = gatedlayer(2, tag=:gater)
+cg = connect(inputlayer, gatinglayer)
+
+# gate ci
+gate!(ci, gatinglayer)
+
+# peephole uses SAME type... node i maps to node i
+peep = connect(hiddenlayer, gatinglayer, SAME)
+
+@show gatinglayer
+
 
