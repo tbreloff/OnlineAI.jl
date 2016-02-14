@@ -72,6 +72,28 @@ function Base.show(io::IO, c::GatedConnection)
     write(io, "GatedConnection{ tag=$(c.tag) type=$(c.conn_type) from=$(c.layer_from.tag) to=$(c.layer_to.tag) $(isnull(c.gate) ? "" : get(c.gate).tag)}")
 end
 
+
+
+# ------------------------------------------------------------------------------------
+
+"""
+Reference to a set of connected layers, defined by the input/output layers.
+"""
+immutable GatedNetwork{T}
+    inputlayer::GatedLayer{T}
+    outputlayer::GatedLayer{T}
+    layers::Vector{GatedLayer{T}}
+end
+
+# TODO: constructor which takes inputlayer/outputlayer and initializes layers with a proper ordering (traversing connection graph)
+
+Base.start(net::GatedNetwork) = 1
+Base.done(net::GatedNetwork, state::Int) = state > length(net.layers)
+Base.next(net::GatedNetwork, state::Int) = (net.layers[state], state+1)
+
+Base.size(net::GatedNetwork) = size(net.layers)
+Base.length(net::GatedNetwork) = length(net.layers)
+
 # ------------------------------------------------------------------------------------
 
 # Constructors

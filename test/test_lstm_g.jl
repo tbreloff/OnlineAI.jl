@@ -1,5 +1,6 @@
 
 include("../src/lstm_g/network.jl")
+include("../src/lstm_g/viz.jl")
 
 nin = 3
 nhidden = 2
@@ -27,5 +28,7 @@ gate!(ci, gatinglayer)
 peep = connect(hiddenlayer, gatinglayer, SAME)
 
 @show gatinglayer
+
+net = GatedNetwork(inputlayer, hiddenlayer, GatedLayer{Float64}[inputlayer, gatinglayer, hiddenlayer, outputlayer])
 
 
