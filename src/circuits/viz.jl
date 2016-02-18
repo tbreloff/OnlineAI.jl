@@ -1,6 +1,4 @@
 
-using Plots
-
 import Graphs, GraphLayout
 
 """
@@ -22,19 +20,19 @@ end
 
 
 """
-Make a Graphs.Graph from the GatedNetwork
+Make a Graphs.Graph from the Circuit
 """
-function create_graph(net::GatedNetwork)
-    n = length(net.layers)
+function create_graph(net::Circuit)
+    n = length(net.nodes)
 
     # map layer to index
-    idxmap = Dict([(l,i) for (i,l) in enumerate(net)])
+    idxmap = Dict([(node,i) for (i,node) in enumerate(net)])
 
     # build the graph
     g = Graphs.simple_graph(n)
-    for (i,l) in enumerate(net)
-        for conn in l.conn_out
-            j = idxmap[conn.layer_to]
+    for (i,node) in enumerate(net)
+        for gate in node.gates_out
+            j = idxmap[gate.node_out]
             Graphs.add_edge!(g, i, j)
         end
     end
@@ -42,7 +40,7 @@ function create_graph(net::GatedNetwork)
 end
 
 
-function Plots._apply_recipe(d::Dict, net::GatedNetwork; kw...)
+function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
 
     # get the layout coordinates of the vertices
     g = create_graph(net)
@@ -67,7 +65,7 @@ function Plots._apply_recipe(d::Dict, net::GatedNetwork; kw...)
     get!(d, :ylims, (-1.5,1.5))
 
     # node tags
-    get!(d, :annotation, [text(l.tag) for l in net])
+    get!(d, :annotation, [text(node.tag) for node in net])
 
     # if !haskey(d, :annotation)
     #     ann = Array(Any, 1, 2)

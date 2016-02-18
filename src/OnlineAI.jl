@@ -1,5 +1,5 @@
 
-__precompile__()
+# __precompile__()
 
 module OnlineAI
 
@@ -14,9 +14,10 @@ using Distributions
 # using Plots
 using Requires
 using ArrayViews
+using Plots
 
 import OnlineStats: nrows, ncols,
-                    VecF, MatF, AMat, AVec, AVecF, AMatF,
+                    VecF, MatF, AVecF, AMatF,
                     standardize
 
 export row, col, row!, col!, rows, cols, nrows, ncols,

@@ -49,13 +49,13 @@ end
 stringtags(v::AbstractVector) = string("[", join([string(c.tag) for c in v], ", "), "]")
 
 function Base.show(io::IO, l::Node)
-    write(io, "Node{ tag=$(l.tag) n=$(l.n) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out)) state=$(l.state)}")
+    write(io, "Node{ tag=$(l.tag) n=$(l.n) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
 end
 
 # ------------------------------------------------------------------------------------
 
 "Holds a weight and bias for state calculation"
-immutable GateState{T, W <: AbstractArray{T}}
+immutable GateState{T, W <: AbstractArray}
     w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
     ε::Vector{T}    # eligibility trace for weight update:  ε = ∏yᵢ
     ∇::Vector{T}    # online gradient: ∇(τ) = γ ∇(τ-1) + δₒᵤₜδₙε
@@ -69,17 +69,17 @@ GateState{T}(n::Integer, w::AbstractArray{T}) = GateState(w, zeros(T,n), zeros(T
 """
 Connect one `Node` to another.  May have a gate as well.
 """
-type Gate{T, GS <: GateState{T}}
+type Gate{T}
     n::Int                  # number of cells of nodes projecting in
     gatetype::GateType      # connectivity type
-    nodes_in::Vector{Node{T}}
+    nodes_in::Vector
     node_out::Node{T}
-    state::GS
+    state::GateState
     tag::Symbol
 end
 
 function Base.show(io::IO, c::Gate)
-    write(io, "Gate{ tag=$(c.tag) type=$(c.gatetype) from=$(c.nodes_in.tag) to=$(c.nodes_out.tag)}")
+    write(io, "Gate{ tag=$(c.tag) type=$(c.gatetype) from=$(stringtags(c.nodes_in)) to=$(c.node_out.tag)}")
 end
 
 
@@ -89,21 +89,21 @@ end
 """
 Reference to a set of connected nodes, defined by the input/output nodes.
 """
-immutable Circuit{T}
-    nodes::Vector{Node{T}}
-    nodemap::Dict{Symbol,Node{T}}
-    gatemap::Dict{Symbol,Gate{T}}
+immutable Circuit
+    nodes::Vector{Node}
+    nodemap::Dict{Symbol,Node}
+    gatemap::Dict{Symbol,Gate}
 end
 
-function Circuit{T}(nodes::AVec{Node{T}}, gates = [])
+function Circuit(nodes::AbstractVector, gates = [])
     # first add missing gates
     gates = Set(gates)
     for node in nodes, gate in node.gates_in
         push!(gates, gate)
     end
 
-    nodemap = Dict([(node.tag, node) for node in nodes])
-    gatemap = Dict([(gate.tag, gate) for gate in gates])
+    nodemap = Dict{Symbol,Node}([(node.tag, node) for node in nodes])
+    gatemap = Dict{Symbol,Gate}([(gate.tag, gate) for gate in gates])
     Circuit(nodes, nodemap, gatemap)
 end
 
@@ -116,12 +116,27 @@ Base.next(net::Circuit, state::Int) = (net.nodes[state], state+1)
 Base.size(net::Circuit) = size(net.nodes)
 Base.length(net::Circuit) = length(net.nodes)
 
+function Base.show(io::IO, net::Circuit)
+    write(io, "Circuit{\n  Nodes:\n")
+    for node in net.nodes
+        write(io, " "^4)
+        show(io, node)
+        write(io, "\n")
+        for gate in node.gates_in
+            write(io, " "^6)
+            show(io, gate)
+            write(io, "\n")
+        end
+    end
+    write(io, "}")
+end
+
 # ------------------------------------------------------------------------------------
 
 # Constructors
 
 
-function Node{T}(::Type{T}, n::Integer, activation::Activation = IdentityActivation(); tag::Symbol = gensym("layer"))
+function Node{T}(::Type{T}, n::Integer, activation::Activation = IdentityActivation(); tag::Symbol = gensym("node"))
     Node(n, activation, Gate[], Gate[], NodeState(T, n), tag)
 end
 Node(args...; kw...) = Node(Float64, args...; kw...)
@@ -130,37 +145,49 @@ Node(args...; kw...) = Node(Float64, args...; kw...)
 # ------------------------------------------------------------------------------------
 
 
-function project!{T}(nodes_in::AVec{Node{T}}, node_out::Node{T}, gatetype::GateType = ALL; tag = gensym("conn"))
+function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType = ALL; tag = gensym("gate"))
     # TODO: assert n is the same for all of nodes_in
     n = nodes_in[1].n
-    numto = node_out.n
 
+    # construct the gate
+    g = gate!(node_out, n, gatetype; tag = tag)
+    g.nodes_in = nodes_in
+
+    # add gate references to nodes_in
+    for node in nodes_in
+        push!(node.gates_out, g)
+    end
+
+    g
+end
+
+function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL; tag = gensym("gate"))
     # construct the state (depends on connection type)
     #   TODO: initialize w properly... not zeros
-    w = gatetype == ALL ? zeros(T, numto, n) : zeros(T, numto)
+    numout = node_out.n
+    w = gatetype == ALL ? zeros(T, numout, n) : zeros(T, numout)
     state = GateState(n, w)
 
     # construct the connection
-    g = Gate(gatetype, nodes_in, nodes_out, state, tag)
+    g = Gate(n, gatetype, Node[], node_out, state, tag)
 
-    # add gate reference to nodes
-    push!(nodes_in.gates_out, g)
+    # add gate reference to node_out
     push!(node_out.gates_in, g)
 
     g
 end
 
 
-"Makes `by_layer` gate the connection `conn`"
-function gate!(g::Gate, by_layer::Node)
-    # don't overwrite the gate
-    @assert isnull(g.gate)
+# "Makes `by_layer` gate the connection `conn`"
+# function gate!(g::Gate, by_layer::Node)
+#     # don't overwrite the gate
+#     @assert isnull(g.gate)
 
-    # add the references
-    g.gate = Nullable(by_layer)
-    push!(by_layer.gates, g)
+#     # add the references
+#     g.gate = Nullable(by_layer)
+#     push!(by_layer.gates, g)
 
-    g
-end
+#     g
+# end
 
 
