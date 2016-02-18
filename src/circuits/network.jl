@@ -144,23 +144,17 @@ Node(args...; kw...) = Node(Float64, args...; kw...)
 
 # ------------------------------------------------------------------------------------
 
+"""
+Construct a new gate which projects to `node_out`.  Each node projecting to this gate should have `n` outputs.
 
-function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType = ALL; tag = gensym("gate"))
-    # TODO: assert n is the same for all of nodes_in
-    n = nodes_in[1].n
+`gatetype` should be one of:
+    ALL     fully connected
+    SAME    one-to-one connections
+    ELSE    setdiff(ALL, SAME)
+    RANDOM  randomly connected (placeholder for future function)
 
-    # construct the gate
-    g = gate!(node_out, n, gatetype; tag = tag)
-    g.nodes_in = nodes_in
-
-    # add gate references to nodes_in
-    for node in nodes_in
-        push!(node.gates_out, g)
-    end
-
-    g
-end
-
+All nodes and gates can be given a tag (Symbol) to identify/find in the network.
+"""
 function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL; tag = gensym("gate"))
     # construct the state (depends on connection type)
     #   TODO: initialize w properly... not zeros
@@ -177,17 +171,45 @@ function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL; tag =
     g
 end
 
+# ------------------------------------------------------------------------------------
 
-# "Makes `by_layer` gate the connection `conn`"
-# function gate!(g::Gate, by_layer::Node)
-#     # don't overwrite the gate
-#     @assert isnull(g.gate)
 
-#     # add the references
-#     g.gate = Nullable(by_layer)
-#     push!(by_layer.gates, g)
+"""
+Project a connection from nodes_in --> gate --> node_out, or add nodes_in to the projection list.
+    Asserts: all(node -> node.n == gate.n, nodes_in)
 
-#     g
-# end
+`gatetype` should be one of:
+    ALL     fully connected
+    SAME    one-to-one connections
+    ELSE    setdiff(ALL, SAME)
+    RANDOM  randomly connected (placeholder for future function)
+
+All nodes and gates can be given a tag (Symbol) to identify/find in the network.
+"""
+function project!(nodes_in::AbstractVector, g::Gate)
+    @assert all(node -> node.n == g.n, nodes_in)
+    # add gate references to nodes_in
+    for node in nodes_in
+        push!(node.gates_out, g)
+    end
+    g
+end
+
+function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType = ALL; tag = gensym("gate"))
+    # construct the gate
+    g = gate!(node_out, nodes_in[1].n, gatetype; tag = tag)
+    g.nodes_in = nodes_in
+
+    # project to the gate
+    project!(nodes_in, g)
+end
+
+# convenience when only one node_in
+function project!(node_in::Node, args...; kw...)
+    project!([node_in], args...; kw...)
+end
+
+
+
 
 

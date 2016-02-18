@@ -39,6 +39,9 @@ function create_graph(net::Circuit)
     g
 end
 
+const _rect_w = 2.0
+const _rect_h = 0.5
+const _node_rect = Shape([(-_rect_w,_rect_h),(_rect_w,_rect_h),(_rect_w,-_rect_h),(-_rect_w,-_rect_h)])
 
 function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
 
@@ -47,7 +50,7 @@ function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
     adjmat = Graphs.adjacency_matrix(g)
 
     # if x/y wasn't set manually, then use the spring layout
-    x, y = if haskey(d, :x) && haskey(d[:y])
+    x, y = if haskey(d, :x) && haskey(d, :y)
         d[:x], d[:y]
     else
         GraphLayout.layout_spring_adj(adjmat)
@@ -59,7 +62,7 @@ function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
 
     # setup... set defaults
     get!(d, :grid, false)
-    get!(d, :markersize, 20)
+    get!(d, :markersize, 50)
     get!(d, :label, ["edges" "nodes"])
     get!(d, :xlims, (-1.5,1.5))
     get!(d, :ylims, (-1.5,1.5))
@@ -75,7 +78,7 @@ function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
     # end
 
     d[:linetype] = [:path :scatter]
-    d[:markershape] = [:none get(d, :markershape, :rect)]
+    d[:markershape] = [:none get(d, :markershape, _node_rect)]
 
     # return the args
     Any[edgex, x], Any[edgey, y]
