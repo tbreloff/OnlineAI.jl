@@ -28,7 +28,7 @@ export row, col, row!, col!, rows, cols, nrows, ncols,
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
 abstract NetStat <: OnlineStat
 nobs(o::NetStat) = 0
-abstract Node
+abstract AbstractNode
 
 abstract NeuralNetLayer
 
@@ -162,6 +162,11 @@ include("nnet/ensembles.jl")
 
 # ----------------------------------------------------------------------
 
+include("circuits/network.jl")
+include("circuits/viz.jl")
+
+# ----------------------------------------------------------------------
+
 # NOTE: EXPERIMENTAL
 
 export 
@@ -193,7 +198,7 @@ export
   LiquidVisualizationNode
 
 abstract Synapse
-abstract SpikingNeuron <: Node
+abstract SpikingNeuron <: AbstractNode
 abstract LiquidInput
 
 
