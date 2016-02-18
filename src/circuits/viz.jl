@@ -47,7 +47,7 @@ function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
     adjmat = Graphs.adjacency_matrix(g)
 
     # if x/y wasn't set manually, then use the spring layout
-    x, y = if haskey(d, :x) && haskey(d[:y])
+    x, y = if haskey(d, :x) && haskey(d, :y)
         d[:x], d[:y]
     else
         GraphLayout.layout_spring_adj(adjmat)
