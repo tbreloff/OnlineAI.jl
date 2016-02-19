@@ -40,32 +40,104 @@ function create_graph(net::Circuit)
 end
 
 
-# # this code will take a start and end point and return points on the bezier curve between them
-function get_curve_from_centers(c1::P2, c2::P2, yoffset::Real)
-    offset = P2(0, yoffset)
-    BezierCurve(c1 + offset, c2 - offset)
+# # # this code will take a start and end point and return points on the bezier curve between them
+# function get_curve_from_centers(c1::P2, c2::P2)
+#     BezierCurve(c1, c2) |> points
+# end
+
+# function get_node_points(net::Circuit)
+#     n = length(net)
+#     x = 2rand(n)-1
+#     y = collect(1.:n)
+#     tags = Symbol[node.tag for node in net]
+#     types = fill(Node, n)
+# end
+
+# function get_node_points(net::Circuit; yoffset = -0.2)    
+#     # now add the gate info
+#     for (i,node) in enumerate(net), gate in node.gates_in
+#         push!(x, x[i])
+#         push!(y, y[i] + yoffset)
+#         push!(tags, gate.tag)
+#         push!(types, Gate)
+#     end
+
+#     x, y, tags, types
+# end
+
+function add_curve_points!(pts::AVec, curve::BezierCurve)
+    append!(pts, points(curve))
+    lastpt = pts[end]
+    sz = 0.02
+    append!(pts, [lastpt + P2(-sz,-2sz), lastpt + P2(sz,-2sz), lastpt])
+    push!(pts, NaN)
 end
 
-function get_circuit_points(net::Circuit; yoffset = -0.2)
+const _box_w = 1.0
+const _box_h = 0.2
+const _box = Shape([
+        (-_box_w, -_box_h),
+        (-_box_w,  _box_h),
+        ( _box_w,  _box_h),
+        ( _box_w, -_box_h)
+    ])
 
-    # populate vectors with the nodes
+function Plots.plot(net::Circuit; kw...)
+    d = Dict(kw)
+    noffset = P2(0, get(d, :noffset, 0.13))
+    goffset = P2(0, get(d, :goffset, 0.1))
+
     n = length(net)
-    x = 2rand(n)-1
-    y = collect(1.:n)
-    tags = Symbol[node.tag for node in net]
-    types = fill(Node, n)
-    
-    # now add the gate info
-    for (i,node) in enumerate(net), gate in node.gates_in
-        push!(x, x[i])
-        push!(y, y[i] + yoffset)
-        push!(tags, gate.tag)
-        push!(types, Gate)
+    node_pts = get(d, :node_pts) do
+        nodex = 2rand(n)-1
+        nodey = linspace(-1, 1, n)
+        P2[_ for _ in zip(nodex,nodey)]
     end
 
-    x, y, tags, types
-end
+    # collect point for gate positions and the curves
+    g2n_pts = P2[]
+    n2g_pts = P2[]
+    gate_pts = P2[]
+    for (i,node) in enumerate(net), g in node.gates_in
+        # # calc pt as average of connected nodes
+        # pt = if haskey(d, :gatediff)
+        #     node_pts[i] + d[:gatediff]
+        # else
+        #     mean(node_pts[i], node_pts[i],
+        #           [node_pts[findindex(net,nodein)] for nodein in g.nodes_in]...)
+        # end
+        pt = node_pts[i] + get(d, :gatediff, P2(0, -0.4))
+        push!(gate_pts, pt)
 
+        # create a bezier curve from the gate to the node_out
+        # complete the line segment with a NaN
+        add_curve_points!(g2n_pts, BezierCurve(pt + goffset, node_pts[i] - noffset))
+
+        # add curve from nodes_in to gates
+        for nodein in g.nodes_in
+            add_curve_points!(n2g_pts, BezierCurve(node_pts[findindex(net,nodein)] + noffset, pt - goffset))
+        end
+    end
+
+    w = get(d, :w, 2)
+
+    plot(n2g_pts,
+        grid = false,
+        lab = "node --> gate",
+        line = (w, 0.7),
+        xlims = (-1.5,1.5),
+        ylims = (-1.5,1.5))
+
+    plot!(g2n_pts, lab = "gate --> node", line = (w, 0.7))
+
+    scatter!(node_pts,
+            ann = [node.tag for node in net],
+            lab = "nodes",
+            m = (50, _box, 0.6, :cyan))
+
+    scatter!(gate_pts, lab = "gates", m = (10,:black, 0.6))
+
+end
 
 
 function Plots._apply_recipe(d::Dict, net::Circuit; kw...)

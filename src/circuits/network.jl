@@ -131,6 +131,15 @@ function Base.show(io::IO, net::Circuit)
     write(io, "}")
 end
 
+function findindex(net::Circuit, node::Node)
+    for (i,tmpnode) in enumerate(net)
+        if tmpnode === node
+            return i
+        end
+    end
+    error("couldn't find node: $node")
+end
+
 # ------------------------------------------------------------------------------------
 
 # Constructors
