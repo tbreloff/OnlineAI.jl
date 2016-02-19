@@ -119,10 +119,15 @@ function Plots.plot(net::Circuit; kw...)
         end
     end
 
+    g2n_pts = g2n_pts[1:end-1]
+    n2g_pts = n2g_pts[1:end-1]
+
     w = get(d, :w, 2)
 
     plot(n2g_pts,
         grid = false,
+        xticks = nothing,
+        yticks = nothing,
         lab = "node --> gate",
         line = (w, 0.7),
         xlims = (-1.5,1.5),
@@ -130,10 +135,11 @@ function Plots.plot(net::Circuit; kw...)
 
     plot!(g2n_pts, lab = "gate --> node", line = (w, 0.7))
 
+    ms = get(d, :ms, 50)
     scatter!(node_pts,
             ann = [node.tag for node in net],
             lab = "nodes",
-            m = (50, _box, 0.6, :cyan))
+            m = (ms, _box, 0.6, :cyan))
 
     scatter!(gate_pts, lab = "gates", m = (10,:black, 0.6))
 
