@@ -1,11 +1,11 @@
 
-# See: http://www.overcomplete.net/papers/nn2012.pdf  (Derek Monner 2012)
-
+# See for inspiration: http://www.overcomplete.net/papers/nn2012.pdf  (Derek Monner 2012)
 # Gist: LSTM-g (Generalized Long Short Term Memory) is a more general version of LSTM
 #       which can be easily used in alternative network configurations, including 
 #       hierarchically stacking.  Connections are gated, as opposed to the activations.
 
-# Important methods: GatedLayers can be `connect`ed together, and `gate`d by another layer.
+# Neural Circuits:
+#   `Node`s can be `project!`ed towards `Gate`s, which then project to a single `Node`.
 
 # ------------------------------------------------------------------------------------
 
@@ -129,6 +129,15 @@ function Base.show(io::IO, net::Circuit)
         end
     end
     write(io, "}")
+end
+
+function findindex(net::Circuit, node::Node)
+    for (i,tmpnode) in enumerate(net)
+        if tmpnode === node
+            return i
+        end
+    end
+    error("couldn't find node: $node")
 end
 
 # ------------------------------------------------------------------------------------
