@@ -39,43 +39,20 @@ function create_graph(net::Circuit)
     g
 end
 
-const _rect_w = 2.0
-const _rect_h = 0.5
-const _node_rect = Shape([(-_rect_w,_rect_h),(_rect_w,_rect_h),(_rect_w,-_rect_h),(-_rect_w,-_rect_h)])
-
-# # # this code will take a start and end point and return points on the bezier curve between them
-# function get_curve_from_centers(c1::P2, c2::P2)
-#     BezierCurve(c1, c2) |> points
-# end
-
-# function get_node_points(net::Circuit)
-#     n = length(net)
-#     x = 2rand(n)-1
-#     y = collect(1.:n)
-#     tags = Symbol[node.tag for node in net]
-#     types = fill(Node, n)
-# end
-
-# function get_node_points(net::Circuit; yoffset = -0.2)    
-#     # now add the gate info
-#     for (i,node) in enumerate(net), gate in node.gates_in
-#         push!(x, x[i])
-#         push!(y, y[i] + yoffset)
-#         push!(tags, gate.tag)
-#         push!(types, Gate)
-#     end
-
-#     x, y, tags, types
-# end
-
+"Append points from a BezierCurve to an existing list, adding an arrow at the end, plus a closing NaN"
 function add_curve_points!(pts::AVec, curve::BezierCurve)
     append!(pts, points(curve))
+
+    # add the arrow head
     lastpt = pts[end]
     sz = 0.02
     append!(pts, [lastpt + P2(-sz,-2sz), lastpt + P2(sz,-2sz), lastpt])
-    push!(pts, NaN)
+
+    # add a NaN point to separate line segments
+    push!(pts, P2(NaN,NaN))
 end
 
+# define a rectangle shape for representing Nodes
 const _box_w = 1.0
 const _box_h = 0.2
 const _box = Shape([
@@ -84,6 +61,8 @@ const _box = Shape([
         ( _box_w,  _box_h),
         ( _box_w, -_box_h)
     ])
+
+# -------------------------------------------------------------------
 
 function Plots.plot(net::Circuit; kw...)
     d = Dict(kw)
@@ -114,11 +93,11 @@ function Plots.plot(net::Circuit; kw...)
 
         # create a bezier curve from the gate to the node_out
         # complete the line segment with a NaN
-        add_curve_points!(g2n_pts, BezierCurve(pt + goffset, node_pts[i] - noffset))
+        add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
 
         # add curve from nodes_in to gates
         for nodein in g.nodes_in
-            add_curve_points!(n2g_pts, BezierCurve(node_pts[findindex(net,nodein)] + noffset, pt - goffset))
+            add_curve_points!(n2g_pts, directed_curve(node_pts[findindex(net,nodein)] + noffset, pt - goffset))
         end
     end
 
@@ -149,43 +128,45 @@ function Plots.plot(net::Circuit; kw...)
 end
 
 
-function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
+# -------------------------------------------------------------------
 
-    # get the layout coordinates of the vertices
-    g = create_graph(net)
-    adjmat = Graphs.adjacency_matrix(g)
+# function Plots._apply_recipe(d::Dict, net::Circuit; kw...)
 
-    # if x/y wasn't set manually, then use the spring layout
-    x, y = if haskey(d, :x) && haskey(d, :y)
-        d[:x], d[:y]
-    else
-        GraphLayout.layout_spring_adj(adjmat)
-    end
+#     # get the layout coordinates of the vertices
+#     g = create_graph(net)
+#     adjmat = Graphs.adjacency_matrix(g)
 
-    # get the coordinates of the edges
-    # TODO: have this return midpoints of the lines as well?  (for annotating connections)
-    edgex, edgey = graph_edge_xy(adjmat, x, y)
+#     # if x/y wasn't set manually, then use the spring layout
+#     x, y = if haskey(d, :x) && haskey(d, :y)
+#         d[:x], d[:y]
+#     else
+#         GraphLayout.layout_spring_adj(adjmat)
+#     end
 
-    # setup... set defaults
-    get!(d, :grid, false)
-    get!(d, :markersize, 50)
-    get!(d, :label, ["edges" "nodes"])
-    get!(d, :xlims, (-1.5,1.5))
-    get!(d, :ylims, (-1.5,1.5))
+#     # get the coordinates of the edges
+#     # TODO: have this return midpoints of the lines as well?  (for annotating connections)
+#     edgex, edgey = graph_edge_xy(adjmat, x, y)
 
-    # node tags
-    get!(d, :annotation, [text(node.tag) for node in net])
+#     # setup... set defaults
+#     get!(d, :grid, false)
+#     get!(d, :markersize, 50)
+#     get!(d, :label, ["edges" "nodes"])
+#     get!(d, :xlims, (-1.5,1.5))
+#     get!(d, :ylims, (-1.5,1.5))
 
-    # if !haskey(d, :annotation)
-    #     ann = Array(Any, 1, 2)
-    #     ann[1] = nothing
-    #     ann[2] = [text(l.tag) for l in net]
-    #     d[:annotation] = ann
-    # end
+#     # node tags
+#     get!(d, :annotation, [text(node.tag) for node in net])
 
-    d[:linetype] = [:path :scatter]
-    d[:markershape] = [:none get(d, :markershape, _node_rect)]
+#     # if !haskey(d, :annotation)
+#     #     ann = Array(Any, 1, 2)
+#     #     ann[1] = nothing
+#     #     ann[2] = [text(l.tag) for l in net]
+#     #     d[:annotation] = ann
+#     # end
 
-    # return the args
-    Any[edgex, x], Any[edgey, y]
-end
+#     d[:linetype] = [:path :scatter]
+#     d[:markershape] = [:none get(d, :markershape, _node_rect)]
+
+#     # return the args
+#     Any[edgex, x], Any[edgey, y]
+# end
