@@ -17,6 +17,8 @@ export
     gate!,
     project!,
 
+    @circuit_str,
+
     ALL,
     SAME,
     ELSE,
@@ -36,6 +38,8 @@ NodeState{T}(::Type{T}, n::Integer) = NodeState(zeros(T,n), zeros(T,n), zeros(T,
 
 """
 This is the core object... the Neural Circuit Node.  We track gates projecting in and projections out to gates.
+A Node is equivalent to a layer in an classic artificial neural network, with 1 to many cells representing the 
+individual neurons.
 """
 immutable Node{T, A <: Activation} <: NeuralNetLayer
     n::Int            # number of nodes in the layer
@@ -49,7 +53,7 @@ end
 stringtags(v::AbstractVector) = string("[", join([string(c.tag) for c in v], ", "), "]")
 
 function Base.show(io::IO, l::Node)
-    write(io, "Node{ tag=$(l.tag) n=$(l.n) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
+    write(io, "Node{ tag=$(l.tag) n=$(l.n) f=$(typeof(l.activation)) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
 end
 
 # ------------------------------------------------------------------------------------
@@ -150,6 +154,77 @@ function Node{T}(::Type{T}, n::Integer, activation::Activation = IdentityActivat
 end
 Node(args...; kw...) = Node(Float64, args...; kw...)
 
+
+# ------------------------------------------------------------------------------------
+
+const _activation_names = Dict(
+    "identity"  => "IdentityActivation",
+    "sigmoid"   => "SigmoidActivation",
+    "tanh"      => "TanhActivation",
+    "softsign"  => "SoftsignActivation",
+    "relu"      => "ReLUActivation",
+    "lrelu"     => "LReLUActivation",
+    "softmax"   => "SoftmaxActivation",
+    )
+
+"""
+Convenience macro to build a set of nodes into an ordered Neural Circuit.
+Each row defines a node.  The first value should be an integer which is the 
+number of output cells for that node.  The rest will greedily apply to other
+node features:
+    
+    - An activation name/alias will set the node's activation function.
+        - note: default activation is IdentityActivation
+    - Other symbols will set the tag.
+    - A vector-type or Function will initialize the bias vector.
+
+Example:
+
+```
+lstm = circuit\"\"\"
+    3 in
+    5 inputgate sigmoid
+    5 forgetgate sigmoid
+    5 memorycell
+    5 forgetgate sigmoid
+    1 output
+\"\"\"
+```
+"""
+macro circuit_str(str)
+
+    # set up the expression
+    expr = :(Circuit(Node[]))
+    constructor_list = expr.args[2].args
+
+    # parse out string into vector of args for each node
+    str2 = split(strip(str), '\n')
+    lines = map(s->split(strip(s)), str2)
+
+    for l in lines
+
+        # n = number of cells in this node
+        n = l[1]
+
+        # if it's an activation, override IdentityActivation, otherwise assume it's a tag
+        activation = "IdentityActivation"
+        tagstr = ""
+        for arg in l[2:end]
+            if haskey(_activation_names, arg)
+                activation = _activation_names[arg]
+            else
+                tagstr = "tag=symbol(\"$arg\")"
+            end
+        end
+
+        # create the Node
+        nodestr = "Node($n, $activation(); $tagstr)"
+
+        # add Node definition to the constructor_list
+        push!(constructor_list, parse(nodestr))
+    end
+    expr
+end
 
 # ------------------------------------------------------------------------------------
 
