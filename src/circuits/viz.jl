@@ -80,24 +80,36 @@ function Plots.plot(net::Circuit; kw...)
     g2n_pts = P2[]
     n2g_pts = P2[]
     gate_pts = P2[]
-    for (i,node) in enumerate(net), g in node.gates_in
-        # # calc pt as average of connected nodes
-        # pt = if haskey(d, :gatediff)
-        #     node_pts[i] + d[:gatediff]
-        # else
-        #     mean(node_pts[i], node_pts[i],
-        #           [node_pts[findindex(net,nodein)] for nodein in g.nodes_in]...)
-        # end
-        pt = node_pts[i] + get(d, :gatediff, P2(0, -0.4))
-        push!(gate_pts, pt)
+    for (i,node) in enumerate(net)
 
-        # create a bezier curve from the gate to the node_out
-        # complete the line segment with a NaN
-        add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
+        # this gives the x-offset for putting gates side-by-side
+        ng = length(node.gates_in)
+        xrng = if ng > 1
+            linspace(-1,1,length(node.gates_in)) * sqrt(length(node.gates_in)-1) * 0.05
+        else
+            0:0
+        end
 
-        # add curve from nodes_in to gates
-        for nodein in g.nodes_in
-            add_curve_points!(n2g_pts, directed_curve(node_pts[findindex(net,nodein)] + noffset, pt - goffset))
+        # compute the points and add the curves for each gate projecting in
+        for (j,g) in enumerate(node.gates_in)
+            # # calc pt as average of connected nodes
+            # pt = if haskey(d, :gatediff)
+            #     node_pts[i] + d[:gatediff]
+            # else
+            #     mean(node_pts[i], node_pts[i],
+            #           [node_pts[findindex(net,nodein)] for nodein in g.nodes_in]...)
+            # end
+            pt = node_pts[i] + get(d, :gatediff, P2(0, -0.4)) + P2(xrng[j],0)
+            push!(gate_pts, pt)
+
+            # create a bezier curve from the gate to the node_out
+            # complete the line segment with a NaN
+            add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
+
+            # add curve from nodes_in to gates
+            for nodein in g.nodes_in
+                add_curve_points!(n2g_pts, directed_curve(node_pts[findindex(net,nodein)] + noffset, pt - goffset))
+            end
         end
     end
 
