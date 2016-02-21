@@ -18,6 +18,7 @@ export
     project!,
 
     @circuit_str,
+    @gates_str,
 
     ALL,
     SAME,
@@ -120,6 +121,9 @@ Base.next(net::Circuit, state::Int) = (net.nodes[state], state+1)
 Base.size(net::Circuit) = size(net.nodes)
 Base.length(net::Circuit) = length(net.nodes)
 
+Base.getindex(net::Circuit, i::Integer) = net.nodes[i]
+Base.getindex(net::Circuit, s::Symbol) = get(net.nodemap, s, net.gatemap[s])
+
 function Base.show(io::IO, net::Circuit)
     write(io, "Circuit{\n  Nodes:\n")
     for node in net.nodes
@@ -167,6 +171,8 @@ const _activation_names = Dict(
     "softmax"   => "SoftmaxActivation",
     )
 
+_strip_comment_and_tokenize(str) = split(strip(split(str, '#')[1]))
+
 """
 Convenience macro to build a set of nodes into an ordered Neural Circuit.
 Each row defines a node.  The first value should be an integer which is the 
@@ -177,6 +183,8 @@ node features:
         - note: default activation is IdentityActivation
     - Other symbols will set the tag.
     - A vector-type or Function will initialize the bias vector.
+
+Note: comments (anything after `#`) and all spacing will be ignored
 
 Example:
 
@@ -198,8 +206,8 @@ macro circuit_str(str)
     constructor_list = expr.args[2].args
 
     # parse out string into vector of args for each node
-    str2 = split(strip(str), '\n')
-    lines = map(s->split(strip(s)), str2)
+    lines = split(strip(str), '\n')
+    lines = map(_strip_comment_and_tokenize, lines)
 
     for l in lines
 
@@ -239,11 +247,14 @@ Construct a new gate which projects to `node_out`.  Each node projecting to this
 
 All nodes and gates can be given a tag (Symbol) to identify/find in the network.
 """
-function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL; tag = gensym("gate"))
+function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL;
+                  tag = gensym("gate"),
+                  wgtinit = gatetype == ALL ? zeros(T, numout, n) : zeros(T, numout))
     # construct the state (depends on connection type)
     #   TODO: initialize w properly... not zeros
     numout = node_out.n
-    w = gatetype == ALL ? zeros(T, numout, n) : zeros(T, numout)
+    # w = gatetype == ALL ? zeros(T, numout, n) : zeros(T, numout)
+    w = isa(wgtinit, Function) ? wgtinit() : wgtinit
     state = GateState(n, w)
 
     # construct the connection
@@ -266,6 +277,7 @@ Project a connection from nodes_in --> gate --> node_out, or add nodes_in to the
     ALL     fully connected
     SAME    one-to-one connections
     ELSE    setdiff(ALL, SAME)
+    FIXED   no learning allowed
     RANDOM  randomly connected (placeholder for future function)
 
 All nodes and gates can be given a tag (Symbol) to identify/find in the network.
@@ -279,9 +291,9 @@ function project!(nodes_in::AbstractVector, g::Gate)
     g
 end
 
-function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType = ALL; tag = gensym("gate"))
+function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType = ALL; kw...)
     # construct the gate
-    g = gate!(node_out, nodes_in[1].n, gatetype; tag = tag)
+    g = gate!(node_out, nodes_in[1].n, gatetype; kw...)
     g.nodes_in = nodes_in
 
     # project to the gate
@@ -293,7 +305,75 @@ function project!(node_in::Node, args...; kw...)
     project!([node_in], args...; kw...)
 end
 
+# ------------------------------------------------------------------------------------
 
 
+"""
+Convenience macro to construct gates and define projections from nodes --> gates --> nodes.
+First line should be the circuit.  Subsequent lines have the format: `<nodes_in> --> <nodes_out>`.
+Since every gate has exactly one `node_out`, there will be one gate created for every node in `nodes_out`.
+
+    - Extra arguments should go after a semicolon
+    - Nodes can be Int or Symbol (tag)... they will be passed directly to Base.getindex
+    - Gate types accepted: ALL, SAME, ELSE, FIXED, RANDOM
+    - Vector, Matrix, or Function will be used to initialize the weight array
+    - Anything else will be applied as a tag
+
+Note: comments (anything after `#`) and all spacing will be ignored
+
+Example:
+
+```
+gates\"\"\"
+    lstm
+    1   --> 2,3,5             # input projections
+    1,2 --> 3                 # input gate
+    3,4 --> 4; FIXED ones(5)  # forget gate
+    4   --> 2,3,5             # peephole connections
+    4,5 --> 6                 # output gate
+end
+\"\"\"
+```
+"""
+macro gates_str(str)
+
+    # set up the expression
+    expr = Expr(:block)
+
+    # parse out string into vector of args for each node
+    lines = split(strip(str), '\n')
+    lines = map(_strip_comment_and_tokenize, lines)
+
+    # this is the circuit to add to
+    circuit = lines[1][1]
+
+    for l in lines
+
+        # TODO: build a call: project!(circuit, [nodein1 nodein2, ...], nodeout) for each nodeout
+        # set wgtinit kw with Function or Array
+        kwdict = Dict()
+        for arg in l
+            # TODO: add to command
+        end
+
+        # # if it's an activation, override IdentityActivation, otherwise assume it's a tag
+        # activation = "IdentityActivation"
+        # tagstr = ""
+        # for arg in l[2:end]
+        #     if haskey(_activation_names, arg)
+        #         activation = _activation_names[arg]
+        #     else
+        #         tagstr = "tag=symbol(\"$arg\")"
+        #     end
+        # end
+
+        # # create the Node
+        # nodestr = "Node($n, $activation(); $tagstr)"
+
+        # add Node definition to the constructor_list
+        push!(expr.args, parse(exstr))
+    end
+    expr
+end
 
 
