@@ -122,8 +122,14 @@ Base.size(net::Circuit) = size(net.nodes)
 Base.length(net::Circuit) = length(net.nodes)
 
 Base.getindex(net::Circuit, i::Integer) = net.nodes[i]
-Base.getindex(net::Circuit, s::Symbol) = get(net.nodemap, s, net.gatemap[s])
 Base.getindex(net::Circuit, s::AbstractString) = net[symbol(s)]
+function Base.getindex(net::Circuit, s::Symbol)
+    try
+        net.nodemap[s]
+    catch
+        net.gatemap[s]
+    end
+end
 
 function Base.show(io::IO, net::Circuit)
     write(io, "Circuit{\n  Nodes:\n")
@@ -244,19 +250,17 @@ Construct a new gate which projects to `node_out`.  Each node projecting to this
     ALL     fully connected
     SAME    one-to-one connections
     ELSE    setdiff(ALL, SAME)
+    FIXED   no learning allowed
     RANDOM  randomly connected (placeholder for future function)
 
 All nodes and gates can be given a tag (Symbol) to identify/find in the network.
 """
 function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL;
                   tag = gensym("gate"),
-                  wgtinit = gatetype == ALL ? zeros(T, numout, n) : zeros(T, numout))
+                  w = (gatetype == ALL ? zeros(T, node_out.n, n) : zeros(T, node_out.n)))
     # construct the state (depends on connection type)
     #   TODO: initialize w properly... not zeros
-    numout = node_out.n
-    # w = gatetype == ALL ? zeros(T, numout, n) : zeros(T, numout)
-    w = isa(wgtinit, Function) ? wgtinit() : wgtinit
-    state = GateState(n, w)
+    state = GateState(n, isa(w, Function) ? w() : w)
 
     # construct the connection
     g = Gate(n, gatetype, Node[], node_out, state, tag)
@@ -310,6 +314,7 @@ end
 
 "split up the string `str` by the character(s)/string(s) `chars`, strip each token, and filter empty tokens"
 tokenize(str, chars) = map(strip, split(str, chars, keep=false))
+tokenize_commas(str) = tokenize(str, [' ', ','])
 
 "might need to wrap in quotes"
 function index_val(idx)
@@ -338,11 +343,11 @@ Example:
 ```
 gates\"\"\"
     lstm
-    1   --> 2,3,5             # input projections
-    1,2 --> 3                 # input gate
-    3,4 --> 4; FIXED ones(5)  # forget gate
-    4   --> 2,3,5             # peephole connections
-    4,5 --> 6                 # output gate
+    1   --> 2,3,5               # input projections
+    1,2 --> 3                   # input gate
+    3,4 --> 4; FIXED, w=ones(5) # forget gate
+    4   --> 2,3,5               # peephole connections
+    4,5 --> 6                   # output gate
 end
 \"\"\"
 ```
@@ -365,52 +370,45 @@ macro gates_str(str)
         contains(l, "-->") || continue
 
         # grab kw args if any
-        mapping, kwargs = if ';' in l
+        mapping, args = if ';' in l
             tokenize(l, ";")
         else
             l, ""
         end
 
-        # process the mapping
-        nodes_in, nodes_out = map(s -> tokenize(s, [' ',',']), tokenize(mapping, "-->"))
-
-        for node_out in nodes_out
-            @show node_out
-
-            # build an expression to project from nodes_in to node_out
-            ex = :(project!($circuit, Node[], $circuit[$(index_val(node_out))]))
-            ninargs = ex.args[3].args
-            for node_in in nodes_in
-                push!(ninargs, :($circuit[$(index_val(node_in))]))
+        # handle extra arguments greedily
+        gatetype = :ALL
+        kw = Dict()
+        for arg in tokenize(args, ',')
+            if arg in ["ALL", "SAME", "ELSE", "FIXED", "RANDOM"]
+                gatetype = symbol(arg)
+            else
+                try
+                    # keyword arg
+                    k,v = tokenize(arg, "=")
+                    kw[symbol(k)] = parse(v)
+                catch
+                    # assume it's a tag
+                    kw[:tag] = symbol(arg)
+                end
             end
-
-            # TODO: add args/kw to expression
-
-            @show ex
         end
 
-        # TODO: build a call: project!(circuit, [nodein1 nodein2, ...], nodeout) for each nodeout
-        # set wgtinit kw with Function or Array
-        # kwdict = Dict()
-        # for arg in l
-        #     # TODO: add to command
-        # end
+        # process the mapping
+        nodes_in, nodes_out = map(tokenize_commas, tokenize(mapping, "-->"))
+        for node_out in nodes_out
 
-        # # if it's an activation, override IdentityActivation, otherwise assume it's a tag
-        # activation = "IdentityActivation"
-        # tagstr = ""
-        # for arg in l[2:end]
-        #     if haskey(_activation_names, arg)
-        #         activation = _activation_names[arg]
-        #     else
-        #         tagstr = "tag=symbol(\"$arg\")"
-        #     end
-        # end
+            # build an expression to project from nodes_in to node_out
+            ex = :(project!(Node[], $(esc(circuit))[$(index_val(node_out))], $gatetype; $kw...))
 
-        # # create the Node
-        # nodestr = "Node($n, $activation(); $tagstr)"
+            # add the nodes_in
+            ninargs = ex.args[3].args
+            for node_in in nodes_in
+                push!(ninargs, :($(esc(circuit))[$(index_val(node_in))]))
+            end
 
-        # push!(expr.args, parse(exstr))
+            push!(expr.args, ex)
+        end
     end
     expr
 end
