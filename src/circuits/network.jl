@@ -14,6 +14,8 @@ export
     Node,
     Circuit,
 
+    nodes,
+    circuits,
     gate!,
     project!,
 
@@ -23,8 +25,10 @@ export
     ALL,
     SAME,
     ELSE,
+    FIXED,
     RANDOM
 
+abstract AbstractNode <: NeuralNetLayer
 
 # ------------------------------------------------------------------------------------
 
@@ -42,7 +46,7 @@ This is the core object... the Neural Circuit Node.  We track gates projecting i
 A Node is equivalent to a layer in an classic artificial neural network, with 1 to many cells representing the 
 individual neurons.
 """
-immutable Node{T, A <: Activation} <: NeuralNetLayer
+immutable Node{T, A <: Activation} <: AbstractNode
     n::Int            # number of nodes in the layer
     activation::A
     gates_in::Vector  # connections coming in
@@ -51,10 +55,15 @@ immutable Node{T, A <: Activation} <: NeuralNetLayer
     tag::Symbol
 end
 
+Node(node::AbstractNode, args...; kw...) = node
+
+gates_in(node::Node) = node.gates_in
+gates_out(node::Node) = node.gates_out
+
 stringtags(v::AbstractVector) = string("[", join([string(c.tag) for c in v], ", "), "]")
 
-function Base.show(io::IO, l::Node)
-    write(io, "Node{ tag=$(l.tag) n=$(l.n) f=$(typeof(l.activation)) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
+function Base.show(io::IO, l::Node; prefix = "")
+    write(io, prefix, "Node{ tag=$(l.tag) n=$(l.n) f=$(typeof(l.activation)) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
 end
 
 # ------------------------------------------------------------------------------------
@@ -94,22 +103,24 @@ end
 """
 Reference to a set of connected nodes, defined by the input/output nodes.
 """
-immutable Circuit
-    nodes::Vector{Node}
-    nodemap::Dict{Symbol,Node}
+immutable Circuit <: AbstractNode
+    n::Int
+    nodes::Vector{AbstractNode}
+    nodemap::Dict{Symbol,AbstractNode}
     gatemap::Dict{Symbol,Gate}
+    tag::Symbol
 end
 
-function Circuit(nodes::AbstractVector, gates = [])
+function Circuit(nodes::AbstractVector, gates = []; tag::Symbol = gensym("circuit"))
     # first add missing gates
     gates = Set(gates)
-    for node in nodes, gate in node.gates_in
+    for node in nodes, gate in gates_in(node)
         push!(gates, gate)
     end
 
-    nodemap = Dict{Symbol,Node}([(node.tag, node) for node in nodes])
+    nodemap = Dict{Symbol,AbstractNode}([(node.tag, node) for node in nodes])
     gatemap = Dict{Symbol,Gate}([(gate.tag, gate) for gate in gates])
-    Circuit(nodes, nodemap, gatemap)
+    Circuit(nodes[1].n, nodes, nodemap, gatemap, tag)
 end
 
 # TODO: constructor which takes inputlayer/outputlayer and initializes nodes with a proper ordering (traversing connection graph)
@@ -131,29 +142,38 @@ function Base.getindex(net::Circuit, s::Symbol)
     end
 end
 
-function Base.show(io::IO, net::Circuit)
-    write(io, "Circuit{\n  Nodes:\n")
+function Base.show(io::IO, net::Circuit; prefix = "")
+    write(io, prefix, "Circuit{ tag=$(net.tag) n=$(net.n)\n$prefix Nodes:\n")
     for node in net.nodes
         write(io, " "^4)
-        show(io, node)
+        show(io, node, prefix = prefix*" "^4)
         write(io, "\n")
-        for gate in node.gates_in
-            write(io, " "^6)
+        for gate in gates_in(node)
+            write(io, prefix, " "^6)
             show(io, gate)
             write(io, "\n")
         end
     end
-    write(io, "}")
+    write(io, prefix, "}")
 end
 
-function findindex(net::Circuit, node::Node)
+function findindex(net::Circuit, node::AbstractNode)
     for (i,tmpnode) in enumerate(net)
         if tmpnode === node
             return i
+        elseif isa(tmpnode, Circuit)
+            try
+                return findindex(tmpnode, node)
+            end
         end
     end
     error("couldn't find node: $node")
 end
+
+nodes(net::Circuit) = filter(n -> isa(n, Node), net.nodes)
+circuits(net::Circuit) = filter(n -> isa(n, Circuit), net.nodes)
+gates_in(net::Circuit) = gates_in(net.nodes[end])
+gates_out(net::Circuit) = gates_out(net.nodes[end])
 
 # ------------------------------------------------------------------------------------
 
@@ -290,6 +310,10 @@ function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL;
     g
 end
 
+function gate!(circuit::Circuit, args...; kw...)
+    gate!(circuit.nodes[end], args...; kw...)
+end
+
 # ------------------------------------------------------------------------------------
 
 
@@ -314,12 +338,12 @@ function project!(nodes_in::AbstractVector, g::Gate)
 
     # add gate references to nodes_in
     for node in nodes_in
-        push!(node.gates_out, g)
+        push!(gates_out(node), g)
     end
     g
 end
 
-function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType = ALL; kw...)
+function project!(nodes_in::AbstractVector, node_out::AbstractNode, gatetype::GateType = ALL; kw...)
     # construct the gate
     g = gate!(node_out, nodes_in[1].n, gatetype; kw...)
     g.nodes_in = nodes_in
@@ -329,7 +353,7 @@ function project!(nodes_in::AbstractVector, node_out::Node, gatetype::GateType =
 end
 
 # convenience when only one node_in
-function project!(node_in::Node, args...; kw...)
+function project!(node_in::AbstractNode, args...; kw...)
     project!([node_in], args...; kw...)
 end
 
@@ -409,7 +433,7 @@ macro gates_str(str)
         for node_out in nodes_out
 
             # build an expression to project from nodes_in to node_out
-            ex = :(project!(Node[], $(esc(circuit))[$(index_val(node_out))], $gatetype; $kw...))
+            ex = :(project!(AbstractNode[], $(esc(circuit))[$(index_val(node_out))], $gatetype; $kw...))
 
             # add the nodes_in
             ninargs = ex.args[3].args

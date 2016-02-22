@@ -83,27 +83,34 @@ function Plots.plot(net::Circuit; kw...)
         P2[_ for _ in zip(nodex,nodey)]
     end
 
-    # collect point for gate positions and the curves
+    n_pts = P2[]
+    c_pts = P2[]
+    g_pts = P2[]
     g2n_pts = P2[]
     n2g_pts = P2[]
     n2g_recur_pts = P2[]
-    gate_pts = P2[]
+
+    # collect points for gate positions and the curves
     for (i,node_out) in enumerate(net)
 
+        # populate node/circuit poits lists
+        push!(isa(node_out, Circuit) ? c_pts : n_pts, node_pts[i])
+
         # this gives the x-offset for putting gates side-by-side
-        ng = length(node_out.gates_in)
+        gatesin = gates_in(node_out)
+        ng = length(gatesin)
         xrng = if ng > 1
-            linspace(-1, 1, length(node_out.gates_in)) * sqrt(length(node_out.gates_in)-1) * 0.025
+            linspace(-1, 1, length(gatesin)) * sqrt(length(gatesin)-1) * 0.025
         else
             0:0
         end
 
         # compute the points and add the curves for each gate projecting in
-        for (j,g) in enumerate(node_out.gates_in)
+        for (j,g) in enumerate(gatesin)
 
             # calc and add the gate point
             pt = node_pts[i] + gatediff + P2(xrng[j],0)
-            push!(gate_pts, pt)
+            push!(g_pts, pt)
 
             # create a directed curve from the gate to the node_out
             add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
@@ -129,31 +136,40 @@ function Plots.plot(net::Circuit; kw...)
         plot!(n2g_pts, lab = "forward", line = lineargs)
     end
 
+    # recurrent nodes-to-gates 
     if !isempty(n2g_recur_pts)
-        # recurrent nodes-to-gates 
         plot!(n2g_recur_pts, line = lineargs, lab = "recurrent")
     end
 
+    # gates-to-nodes curves
     if !isempty(g2n_pts)
-        # gates-to-nodes curves
         plot!(g2n_pts, lab = "gate to node", line = lineargs)
     end
 
-    if !isempty(node_pts)
-        # nodes
+    # nodes
+    if !isempty(n_pts)
         ms = get(d, :ms, 50)
-        scatter!(node_pts,
-                ann = [node.tag for node in net],
+        scatter!(n_pts,
+                ann = [text(node.tag,12) for node in nodes(net)],
                 lab = "nodes",
                 m = (ms, _box, 0.6, :cyan))
     end
 
-    if !isempty(gate_pts)
-        # gates
+    # circuits
+    if !isempty(c_pts)
+        ms = get(d, :ms, 50)
+        scatter!(c_pts,
+                ann = [text(c.tag,12) for c in circuits(net)],
+                lab = "circuits",
+                m = (ms, :hex, 0.6, :pink))
+    end
+
+    # gates
+    if !isempty(g_pts)
         txt = text("Π", :white, 5)
-        scatter!(gate_pts, lab = "gates",
+        scatter!(g_pts, lab = "gates",
                  m = (6,:black, 0.7),
-                 ann = fill(txt, length(gate_pts)))
+                 ann = fill(txt, length(g_pts)))
     end
 
     plt

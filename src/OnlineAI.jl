@@ -29,7 +29,7 @@ export row, col, row!, col!, rows, cols, nrows, ncols,
 # represents a node in an arbitrary graph... typically representing a neuron within a neural net
 abstract NetStat <: OnlineStat
 nobs(o::NetStat) = 0
-abstract AbstractNode
+abstract AbstractNeuron
 
 abstract NeuralNetLayer
 
@@ -199,7 +199,7 @@ export
   LiquidVisualizationNode
 
 abstract Synapse
-abstract SpikingNeuron <: AbstractNode
+abstract SpikingNeuron <: AbstractNeuron
 abstract LiquidInput
 
 
