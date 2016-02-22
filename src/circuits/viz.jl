@@ -76,7 +76,9 @@ function Plots.plot(net::Circuit; kw...)
     # get the positions of the nodes
     n = length(net)
     node_pts = get(d, :node_pts) do
-        nodex = get(d, :node_x, 2rand(n)-1)
+        nodex = get(d, :node_x) do
+            n < 2 ? rand(n) : vcat(0.5, rand(n-2), 0.5)
+        end
         nodey = linspace(0, 1, n)
         P2[_ for _ in zip(nodex,nodey)]
     end
@@ -115,35 +117,46 @@ function Plots.plot(net::Circuit; kw...)
         end
     end
 
+    # set up the plot
+    plt = plot(grid = false,
+               xticks = nothing,
+               yticks = nothing,
+               xlims = (-0.1,1.1),
+               ylims = (-0.1,1.1))
+
     # nodes-to-gates curves
-    plot(n2g_pts,
-        grid = false,
-        xticks = nothing,
-        yticks = nothing,
-        lab = "forward",
-        line = lineargs,
-        xlims = (-0.1,1.1),
-        ylims = (-0.1,1.1))
+    if !isempty(n2g_pts)
+        plot!(n2g_pts, lab = "forward", line = lineargs)
+    end
 
-    # recurrent nodes-to-gates 
-    plot!(n2g_recur_pts, line = lineargs, lab = "recurrent")
+    if !isempty(n2g_recur_pts)
+        # recurrent nodes-to-gates 
+        plot!(n2g_recur_pts, line = lineargs, lab = "recurrent")
+    end
 
-    # gates-to-nodes curves
-    plot!(g2n_pts, lab = "gate to node", line = lineargs)
+    if !isempty(g2n_pts)
+        # gates-to-nodes curves
+        plot!(g2n_pts, lab = "gate to node", line = lineargs)
+    end
 
-    # nodes
-    ms = get(d, :ms, 50)
-    scatter!(node_pts,
-            ann = [node.tag for node in net],
-            lab = "nodes",
-            m = (ms, _box, 0.6, :cyan))
+    if !isempty(node_pts)
+        # nodes
+        ms = get(d, :ms, 50)
+        scatter!(node_pts,
+                ann = [node.tag for node in net],
+                lab = "nodes",
+                m = (ms, _box, 0.6, :cyan))
+    end
 
-    # gates
-    txt = text("Π", :white, 5)
-    scatter!(gate_pts, lab = "gates",
-             m = (6,:black, 0.7),
-             ann = fill(txt, length(gate_pts)))
+    if !isempty(gate_pts)
+        # gates
+        txt = text("Π", :white, 5)
+        scatter!(gate_pts, lab = "gates",
+                 m = (6,:black, 0.7),
+                 ann = fill(txt, length(gate_pts)))
+    end
 
+    plt
 end
 
 

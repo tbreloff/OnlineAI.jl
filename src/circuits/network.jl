@@ -83,8 +83,8 @@ type Gate{T}
     tag::Symbol
 end
 
-function Base.show(io::IO, c::Gate)
-    write(io, "Gate{ tag=$(c.tag) type=$(c.gatetype) from=$(stringtags(c.nodes_in)) to=$(c.node_out.tag)}")
+function Base.show(io::IO, g::Gate)
+    write(io, "Gate{ tag=$(g.tag) n=$(g.n) type=$(g.gatetype) from=$(stringtags(g.nodes_in)) to=$(g.node_out.tag)}")
 end
 
 
@@ -169,17 +169,36 @@ Node(args...; kw...) = Node(Float64, args...; kw...)
 # ------------------------------------------------------------------------------------
 
 const _activation_names = Dict(
-    "identity"  => "IdentityActivation",
-    "sigmoid"   => "SigmoidActivation",
-    "tanh"      => "TanhActivation",
-    "softsign"  => "SoftsignActivation",
-    "relu"      => "ReLUActivation",
-    "lrelu"     => "LReLUActivation",
-    "softmax"   => "SoftmaxActivation",
+    "identity"  => IdentityActivation,
+    "sigmoid"   => SigmoidActivation,
+    "tanh"      => TanhActivation,
+    "softsign"  => SoftsignActivation,
+    "relu"      => ReLUActivation,
+    "lrelu"     => LReLUActivation,
+    "softmax"   => SoftmaxActivation,
     )
 
 strip_comment(str) = strip(split(str, '#')[1])
 # strip_comment_and_tokenize(str) = split(strip(split(str, '#')[1]))
+
+"split up the string `str` by the character(s)/string(s) `chars`, strip each token, and filter empty tokens"
+tokenize(str, chars) = map(strip, split(str, chars, keep=false))
+tokenize_commas(str) = tokenize(str, [' ', ','])
+
+nop(x) = x
+
+"might need to wrap in quotes"
+index_val(str::AbstractString) = try; parse(Int, str); catch; str; end
+index_val(str::AbstractString, f::Function) = try; parse(Int, str); catch; f(str); end
+# function index_val(idx, f::Function = nop)
+#     try
+#         parse(Int, idx)
+#     catch
+#         f(idx)
+#     end
+# end
+
+# ------------------------------------------------------------------------------------
 
 """
 Convenience macro to build a set of nodes into an ordered Neural Circuit.
@@ -219,26 +238,26 @@ macro circuit_str(str)
         args = split(strip_comment(l))
 
         # n = number of cells in this node
-        n = args[1]
+        n = index_val(args[1], symbol)
 
         # if it's an activation, override IdentityActivation, otherwise assume it's a tag
-        activation = "IdentityActivation"
-        tagstr = ""
+        activation = IdentityActivation
+        tag = string(gensym("node"))
         for arg in args[2:end]
             if haskey(_activation_names, arg)
                 activation = _activation_names[arg]
             else
-                tagstr = "tag=symbol(\"$arg\")"
+                tag = arg
             end
         end
 
         # create the Node
-        nodestr = "Node($n, $activation(); $tagstr)"
+        nodeexpr = :(Node($n, $activation(); tag = symbol($tag)))
 
         # add Node definition to the constructor_list
-        push!(constructor_list, parse(nodestr))
+        push!(constructor_list, nodeexpr)
     end
-    expr
+    esc(expr)
 end
 
 # ------------------------------------------------------------------------------------
@@ -288,7 +307,11 @@ Project a connection from nodes_in --> gate --> node_out, or add nodes_in to the
 All nodes and gates can be given a tag (Symbol) to identify/find in the network.
 """
 function project!(nodes_in::AbstractVector, g::Gate)
-    @assert all(node -> node.n == g.n, nodes_in)
+    if !all(node -> node.n == g.n, nodes_in)
+        @show nodes_in g
+        error("Size mismatch in projecting nodes to gate.")
+    end
+
     # add gate references to nodes_in
     for node in nodes_in
         push!(node.gates_out, g)
@@ -311,19 +334,6 @@ function project!(node_in::Node, args...; kw...)
 end
 
 # ------------------------------------------------------------------------------------
-
-"split up the string `str` by the character(s)/string(s) `chars`, strip each token, and filter empty tokens"
-tokenize(str, chars) = map(strip, split(str, chars, keep=false))
-tokenize_commas(str) = tokenize(str, [' ', ','])
-
-"might need to wrap in quotes"
-function index_val(idx)
-    try
-        parse(Int, idx)
-    catch
-        idx
-    end
-end
 
 """
 Convenience macro to construct gates and define projections from nodes --> gates --> nodes.
