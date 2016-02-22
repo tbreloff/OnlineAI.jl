@@ -41,11 +41,11 @@ end
 
 "Append points from a BezierCurve to an existing list, adding an arrow at the end, plus a closing NaN"
 function add_curve_points!(pts::AVec, curve::BezierCurve)
-    append!(pts, points(curve))
+    append!(pts, curve_points(curve))
 
     # add the arrow head
     lastpt = pts[end]
-    sz = 0.02
+    sz = 0.005
     append!(pts, [lastpt + P2(-sz,-2sz), lastpt + P2(sz,-2sz), lastpt])
 
     # add a NaN point to separate line segments
@@ -66,76 +66,83 @@ const _box = Shape([
 
 function Plots.plot(net::Circuit; kw...)
     d = Dict(kw)
-    noffset = P2(0, get(d, :noffset, 0.13))
-    goffset = P2(0, get(d, :goffset, 0.1))
 
+    # collect some parameters
+    noffset = P2(0, get(d, :noffset, 0.04))
+    goffset = P2(0, get(d, :goffset, 0.02))
+    lineargs = get(d, :line, (2, 0.7))
+    gatediff = get(d, :gatediff, P2(0, -0.15))
+
+    # get the positions of the nodes
     n = length(net)
     node_pts = get(d, :node_pts) do
-        nodex = 2rand(n)-1
-        nodey = linspace(-1, 1, n)
+        nodex = get(d, :node_x, 2rand(n)-1)
+        nodey = linspace(0, 1, n)
         P2[_ for _ in zip(nodex,nodey)]
     end
 
     # collect point for gate positions and the curves
     g2n_pts = P2[]
     n2g_pts = P2[]
+    n2g_recur_pts = P2[]
     gate_pts = P2[]
-    for (i,node) in enumerate(net)
+    for (i,node_out) in enumerate(net)
 
         # this gives the x-offset for putting gates side-by-side
-        ng = length(node.gates_in)
+        ng = length(node_out.gates_in)
         xrng = if ng > 1
-            linspace(-1,1,length(node.gates_in)) * sqrt(length(node.gates_in)-1) * 0.05
+            linspace(-1, 1, length(node_out.gates_in)) * sqrt(length(node_out.gates_in)-1) * 0.025
         else
             0:0
         end
 
         # compute the points and add the curves for each gate projecting in
-        for (j,g) in enumerate(node.gates_in)
-            # # calc pt as average of connected nodes
-            # pt = if haskey(d, :gatediff)
-            #     node_pts[i] + d[:gatediff]
-            # else
-            #     mean(node_pts[i], node_pts[i],
-            #           [node_pts[findindex(net,nodein)] for nodein in g.nodes_in]...)
-            # end
-            pt = node_pts[i] + get(d, :gatediff, P2(0, -0.4)) + P2(xrng[j],0)
+        for (j,g) in enumerate(node_out.gates_in)
+
+            # calc and add the gate point
+            pt = node_pts[i] + gatediff + P2(xrng[j],0)
             push!(gate_pts, pt)
 
-            # create a bezier curve from the gate to the node_out
-            # complete the line segment with a NaN
+            # create a directed curve from the gate to the node_out
             add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
 
             # add curve from nodes_in to gates
-            for nodein in g.nodes_in
-                add_curve_points!(n2g_pts, directed_curve(node_pts[findindex(net,nodein)] + noffset, pt - goffset))
+            for node_in in g.nodes_in
+                k = findindex(net, node_in)
+                add_curve_points!(k < i ? n2g_pts : n2g_recur_pts,
+                                  directed_curve(node_pts[k] + noffset, pt - goffset))
             end
         end
     end
 
-    g2n_pts = g2n_pts[1:end-1]
-    n2g_pts = n2g_pts[1:end-1]
-
-    w = get(d, :w, 2)
-
+    # nodes-to-gates curves
     plot(n2g_pts,
         grid = false,
         xticks = nothing,
         yticks = nothing,
-        lab = "node --> gate",
-        line = (w, 0.7),
-        xlims = (-1.5,1.5),
-        ylims = (-1.5,1.5))
+        lab = "forward",
+        line = lineargs,
+        xlims = (-0.1,1.1),
+        ylims = (-0.1,1.1))
 
-    plot!(g2n_pts, lab = "gate --> node", line = (w, 0.7))
+    # recurrent nodes-to-gates 
+    plot!(n2g_recur_pts, line = lineargs, lab = "recurrent")
 
+    # gates-to-nodes curves
+    plot!(g2n_pts, lab = "gate to node", line = lineargs)
+
+    # nodes
     ms = get(d, :ms, 50)
     scatter!(node_pts,
             ann = [node.tag for node in net],
             lab = "nodes",
             m = (ms, _box, 0.6, :cyan))
 
-    scatter!(gate_pts, lab = "gates", m = (10,:black, 0.6))
+    # gates
+    txt = text("Π", :white, 5)
+    scatter!(gate_pts, lab = "gates",
+             m = (6,:black, 0.7),
+             ann = fill(txt, length(gate_pts)))
 
 end
 

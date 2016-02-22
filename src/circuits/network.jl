@@ -69,7 +69,7 @@ end
 GateState{T}(n::Integer, w::AbstractArray{T}) = GateState(w, zeros(T,n), zeros(T,n), zeros(T,n))
 
 # TODO: need to be able to pass parameters for random connectivity!
-@enum GateType ALL SAME ELSE RANDOM
+@enum GateType ALL SAME ELSE FIXED RANDOM
 
 """
 Connect one `Node` to another.  May have a gate as well.
