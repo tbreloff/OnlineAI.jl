@@ -123,6 +123,7 @@ Base.length(net::Circuit) = length(net.nodes)
 
 Base.getindex(net::Circuit, i::Integer) = net.nodes[i]
 Base.getindex(net::Circuit, s::Symbol) = get(net.nodemap, s, net.gatemap[s])
+Base.getindex(net::Circuit, s::AbstractString) = net[symbol(s)]
 
 function Base.show(io::IO, net::Circuit)
     write(io, "Circuit{\n  Nodes:\n")
@@ -171,7 +172,8 @@ const _activation_names = Dict(
     "softmax"   => "SoftmaxActivation",
     )
 
-_strip_comment_and_tokenize(str) = split(strip(split(str, '#')[1]))
+strip_comment(str) = strip(split(str, '#')[1])
+# strip_comment_and_tokenize(str) = split(strip(split(str, '#')[1]))
 
 """
 Convenience macro to build a set of nodes into an ordered Neural Circuit.
@@ -207,17 +209,16 @@ macro circuit_str(str)
 
     # parse out string into vector of args for each node
     lines = split(strip(str), '\n')
-    lines = map(_strip_comment_and_tokenize, lines)
-
     for l in lines
+        args = split(strip_comment(l))
 
         # n = number of cells in this node
-        n = l[1]
+        n = args[1]
 
         # if it's an activation, override IdentityActivation, otherwise assume it's a tag
         activation = "IdentityActivation"
         tagstr = ""
-        for arg in l[2:end]
+        for arg in args[2:end]
             if haskey(_activation_names, arg)
                 activation = _activation_names[arg]
             else
@@ -307,6 +308,17 @@ end
 
 # ------------------------------------------------------------------------------------
 
+"split up the string `str` by the character(s)/string(s) `chars`, strip each token, and filter empty tokens"
+tokenize(str, chars) = map(strip, split(str, chars, keep=false))
+
+"might need to wrap in quotes"
+function index_val(idx)
+    try
+        parse(Int, idx)
+    catch
+        idx
+    end
+end
 
 """
 Convenience macro to construct gates and define projections from nodes --> gates --> nodes.
@@ -342,19 +354,47 @@ macro gates_str(str)
 
     # parse out string into vector of args for each node
     lines = split(strip(str), '\n')
-    lines = map(_strip_comment_and_tokenize, lines)
+    lines = map(strip_comment, lines)
 
     # this is the circuit to add to
-    circuit = lines[1][1]
+    circuit = symbol(lines[1])
 
-    for l in lines
+    for l in lines[2:end]
+
+        # gotta have a mapping in order to process this line
+        contains(l, "-->") || continue
+
+        # grab kw args if any
+        mapping, kwargs = if ';' in l
+            tokenize(l, ";")
+        else
+            l, ""
+        end
+
+        # process the mapping
+        nodes_in, nodes_out = map(s -> tokenize(s, [' ',',']), tokenize(mapping, "-->"))
+
+        for node_out in nodes_out
+            @show node_out
+
+            # build an expression to project from nodes_in to node_out
+            ex = :(project!($circuit, Node[], $circuit[$(index_val(node_out))]))
+            ninargs = ex.args[3].args
+            for node_in in nodes_in
+                push!(ninargs, :($circuit[$(index_val(node_in))]))
+            end
+
+            # TODO: add args/kw to expression
+
+            @show ex
+        end
 
         # TODO: build a call: project!(circuit, [nodein1 nodein2, ...], nodeout) for each nodeout
         # set wgtinit kw with Function or Array
-        kwdict = Dict()
-        for arg in l
-            # TODO: add to command
-        end
+        # kwdict = Dict()
+        # for arg in l
+        #     # TODO: add to command
+        # end
 
         # # if it's an activation, override IdentityActivation, otherwise assume it's a tag
         # activation = "IdentityActivation"
@@ -370,8 +410,7 @@ macro gates_str(str)
         # # create the Node
         # nodestr = "Node($n, $activation(); $tagstr)"
 
-        # add Node definition to the constructor_list
-        push!(expr.args, parse(exstr))
+        # push!(expr.args, parse(exstr))
     end
     expr
 end
