@@ -1,4 +1,10 @@
 
+
+_initial_weights{T <: AbstractFloat}(::Type{T}, nin::Integer, nout::Integer, gatetype::Val{ALL}) = map(T, 0.5randn(nout, nin) / sqrt(nin))
+_initial_weights{T <: AbstractFloat}(::Type{T}, nin::Integer, nout::Integer, gatetype) = map(T, 0.5randn(nout) / sqrt(nin))
+
+_initial_biases{T <: AbstractFloat}(::Type{T}, nout::Integer) = ones(T, nout)
+
 """
 Construct a new gate which projects to `node_out`.  Each node projecting to this gate should have `n` outputs.
 
@@ -13,10 +19,15 @@ All nodes and gates can be given a tag (Symbol) to identify/find in the network.
 """
 function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL;
                   tag = gensym("gate"),
-                  w = (gatetype == ALL ? zeros(T, node_out.n, n) : zeros(T, node_out.n)))
+                  w = _initial_weights(T, n, node_out.n, gatetype))
     # construct the state (depends on connection type)
     #   TODO: initialize w properly... not zeros
-    state = GateState(n, isa(w, Function) ? w() : w)
+    dump(gatetype)
+    w = isa(w, Function) ? w(n, node_out.n) : w
+    if isa(w, AbstractVector)
+        w = Diagonal(w)
+    end
+    state = GateState(n, w)
 
     # construct the connection
     g = Gate(n, gatetype, Node[], node_out, state, tag)

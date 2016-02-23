@@ -10,6 +10,7 @@
 # ------------------------------------------------------------------------------------
 
 export
+    AbstractNode,
     Gate,
     Node,
     Circuit,
@@ -75,8 +76,8 @@ end
 "Holds a weight and bias for state calculation"
 immutable GateState{T, W <: AbstractArray}
     w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
-    ε::Vector{T}    # eligibility trace for weight update:  ε = ∏yᵢ
-    ∇::Vector{T}    # online gradient: ∇(τ) = γ ∇(τ-1) + δₒᵤₜδₙε
+    ε::Vector{T}    # \epsilon: eligibility trace for weight update:  ε = ∏yᵢ
+    ∇::Vector{T}    # \nabla:   online gradient: ∇(τ) = γ ∇(τ-1) + δₒᵤₜδₙε
     s::Vector{T}    # the state of the gate: s(τ) = w * ∏yᵢ
 end
 GateState{T}(n::Integer, w::AbstractArray{T}) = GateState(w, zeros(T,n), zeros(T,n), zeros(T,n))
@@ -167,7 +168,8 @@ function findindex(net::Circuit, node::AbstractNode)
             return i
         elseif isa(tmpnode, Circuit)
             try
-                return findindex(tmpnode, node)
+                findindex(tmpnode, node)
+                return i
             end
         end
     end

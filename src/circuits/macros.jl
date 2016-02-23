@@ -52,7 +52,7 @@ lstm = circuit\"\"\"
 macro circuit_str(str)
 
     # set up the expression
-    expr = :(Circuit(Node[]))
+    expr = :(Circuit(AbstractNode[]))
     constructor_list = expr.args[2].args
 
     # parse out string into vector of args for each node
@@ -140,17 +140,28 @@ macro gates_str(str)
         # handle extra arguments greedily
         gatetype = :ALL
         kw = Dict()
-        for arg in tokenize(args, ',')
-            if arg in ["ALL", "SAME", "ELSE", "FIXED", "RANDOM"]
-                gatetype = symbol(arg)
-            else
-                try
-                    # keyword arg
-                    k,v = tokenize(arg, "=")
-                    kw[symbol(k)] = parse(v)
-                catch
+        # dump(parse(args), 10)
+        argexpr = parse(args)
+        if isa(argexpr, Expr) && argexpr.head == :tuple
+            for arg in argexpr.args
+                if arg in [:ALL, :SAME, :ELSE, :FIXED, :RANDOM]
+                    gatetype = arg
+                elseif isa(arg, Expr)
+                    # assume it's an initial weight
+                    kw[:w] = esc(arg)
+                elseif isa(arg, Symbol)
                     # assume it's a tag
-                    kw[:tag] = symbol(arg)
+                    kw[:tag] = arg
+                else
+                    warn("arg not processed in gates_str macro: $arg")
+                    # try
+                    #     # keyword arg
+                    #     k,v = tokenize(arg, "=")
+                    #     kw[symbol(k)] = parse(v)
+                    # catch
+                    #     # assume it's a tag
+                    #     kw[:tag] = symbol(arg)
+                    # end
                 end
             end
         end
@@ -160,10 +171,15 @@ macro gates_str(str)
         for node_out in nodes_out
 
             # build an expression to project from nodes_in to node_out
-            ex = :(project!(AbstractNode[], $(esc(circuit))[$(index_val(node_out))], $gatetype; $kw...))
+            ex = :(project!(AbstractNode[], $(esc(circuit))[$(index_val(node_out))], $gatetype))
+
+            # add the kw
+            for (k,v) in kw
+                push!(ex.args, Expr(:kw, k, v))
+            end
 
             # add the nodes_in
-            ninargs = ex.args[3].args
+            ninargs = ex.args[2].args
             for node_in in nodes_in
                 push!(ninargs, :($(esc(circuit))[$(index_val(node_in))]))
             end
@@ -171,5 +187,8 @@ macro gates_str(str)
             push!(expr.args, ex)
         end
     end
+    push!(expr.args, esc(circuit))
+    # dump(expr, 10)
+    @show expr
     expr
 end

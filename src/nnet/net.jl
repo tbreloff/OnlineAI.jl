@@ -166,7 +166,7 @@ end
 
 # note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
 #       is also approximately standard normal
-_initialWeights(nin::Int, nout::Int, activation::Activation) = 0.5randn(nout, nin) / sqrt(nin)
+_initialWeights(nin::Int, nout::Int, activation::Activation = IdentityActivation()) = 0.5randn(nout, nin) / sqrt(nin)
 
 
 # initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
