@@ -183,4 +183,6 @@ gates_out(net::Circuit) = gates_out(net.nodes[end])
 
 include("gates.jl")
 include("macros.jl")
+include("learn.jl")
+include("viz.jl")
 

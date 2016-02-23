@@ -163,8 +163,7 @@ include("nnet/ensembles.jl")
 
 # ----------------------------------------------------------------------
 
-include("circuits/network.jl")
-include("circuits/viz.jl")
+include("circuits/circuits.jl")
 
 # ----------------------------------------------------------------------
 
