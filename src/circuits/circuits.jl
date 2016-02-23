@@ -34,13 +34,21 @@ abstract AbstractNode <: NeuralNetLayer
 # ------------------------------------------------------------------------------------
 
 "Holds the current state of the layer"
-immutable NodeState{T}
+immutable NodeState{T, GS}
     s::Vector{T}
     y::Vector{T}
     δ::Vector{T}
     b::Vector{T}
+    b_gradient::GS
 end
-NodeState{T}(::Type{T}, n::Integer) = NodeState(zeros(T,n), zeros(T,n), zeros(T,n), ones(T,n))
+
+function NodeState{T}(::Type{T}, n::Integer)
+    NodeState(zeros(T,n),
+              zeros(T,n),
+              zeros(T,n),
+              ones(T,n),
+              gradient_state(n))
+end
 
 """
 This is the core object... the Neural Circuit Node.  We track gates projecting in and projections out to gates.
@@ -74,13 +82,22 @@ end
 # ------------------------------------------------------------------------------------
 
 "Holds a weight and bias for state calculation"
-immutable GateState{T, W <: AbstractArray}
-    w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
+type GateState{T, W <: AbstractArray, GS <: GradientState}
+    s::Vector{T}    # the state of the gate: s(τ) = w * ∏y
     ε::Vector{T}    # \epsilon: eligibility trace for weight update:  ε = ∏yᵢ
-    ∇::Vector{T}    # \nabla:   online gradient: ∇(τ) = γ ∇(τ-1) + δₒᵤₜδₙε
-    s::Vector{T}    # the state of the gate: s(τ) = w * ∏yᵢ
+    ∇::W            # \nabla:   online gradient: ∇ᵢⱼ(τ) = γ ∇ᵢⱼ(τ-1) + δⱼεᵢ
+    w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
+    w_gradient::GS  # state of the gradient calc
 end
-GateState{T}(n::Integer, w::AbstractArray{T}) = GateState(w, zeros(T,n), zeros(T,n), zeros(T,n))
+
+function GateState{T}(w::AbstractMatrix{T})
+    n, m = size(w)
+    GateState(zeros(T,n),
+              zeros(T,n),
+              fill!(similar(w), 0),
+              w,
+              gradient_state(n, m))
+end
 
 # TODO: need to be able to pass parameters for random connectivity!
 @enum GateType ALL SAME ELSE FIXED RANDOM

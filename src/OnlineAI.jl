@@ -85,6 +85,9 @@ include("nnet/costs.jl")
 export
   GradientModel,
   GradientState,
+  gradient_model,
+  gradient_model!,
+  gradient_state,
   SGDModel,
   SGDState,
   AdagradModel,

@@ -33,8 +33,8 @@ function Layer(nin::Integer, nout::Integer, activation::Activation,
                wgt = nothing, weightInit::Function = _initialWeights)
   w = weightInit(nin, nout, activation)
   Layer(nin, nout, activation, p,
-            getGradientState(gradientModel, nout, nin),
-            getGradientState(gradientModel, nout, 1),
+            gradient_state(gradientModel, nout, nin),
+            gradient_state(gradientModel, nout, 1),
             zeros(nin),
             w,
             [zeros(nout) for i in 1:4]...,

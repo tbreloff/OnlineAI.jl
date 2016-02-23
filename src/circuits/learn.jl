@@ -66,11 +66,7 @@ function backward!(gate::Gate, y::AVec, model::GradientModel, γ::AbstractFloat 
     # then we can update the weight matrix using the gradient model
     for i=1:n, j=1:m
         state.∇[i,j] = γ * state.∇[i,j] + gate.node_out.state.δ[j] * state.ε[i]
-    end
-
-    # now we can update the weight matrix
-    for i=1:n, j=1:m
-        dwij = Δij(model, state.gradient_state, state.)
+        state.w[i,j] += Δij(model, state.gradient_state, state.∇[i,j], state.w[i,j], i, j)
     end
 
     gate

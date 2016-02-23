@@ -4,6 +4,24 @@ abstract GradientState
 
 # ----------------------------------------
 
+"Allows for global storage of a gradient model, so that you don't need to pass it around."
+type CurrentGradientModel
+  model::GradientModel
+end
+
+const _current_gradient_model = CurrentGradientModel(AdaMaxModel())
+
+"Get the current global gradient model used for gradient updates."
+gradient_model() = _current_gradient_model.model
+
+"Set the current global gradient model used for gradient updates."
+gradient_model!(model::GradientModel) = (_current_gradient_model.model = model)
+
+"Construct a new `GradientState` object using the model returned from `gradient_model()`."
+gradient_state(n::Integer, m::Integer = 1) = gradient_state(gradient_model(), n, m)
+
+# ----------------------------------------
+
 doc"Stochastic Gradient Descent with Momentum"
 type SGDModel <: GradientModel
   η::Float64 # learning rate
@@ -16,7 +34,7 @@ immutable SGDState <: GradientState
   lastChanges::MatF
 end
 SGDState(n::Int, m::Int) = SGDState(zeros(n,m))
-getGradientState(model::SGDModel, n::Int, m::Int) = SGDState(n,m)
+gradient_state(model::SGDModel, n::Int, m::Int) = SGDState(n,m)
 
 # update and return the change
 function Δij(model::SGDModel, state::SGDState, gradient::Float64, val::Float64, i::Int, j::Int)
@@ -38,7 +56,7 @@ immutable AdagradState <: GradientState
 end
 AdagradState(n::Int, m::Int) = AdagradState(zeros(n,m))
 
-getGradientState(model::AdagradModel, n::Int, m::Int) = AdagradState(n,m)
+gradient_state(model::AdagradModel, n::Int, m::Int) = AdagradState(n,m)
 
 function Δij(model::AdagradModel, state::AdagradState, gradient::Float64, val::Float64, i::Int, j::Int)
   state.G[i,j] += gradient^2
@@ -67,7 +85,7 @@ immutable AdadeltaState <: GradientState
   GMean::MatF
 end
 AdadeltaState(n::Int, m::Int) = AdadeltaState(zeros(n,m), zeros(n,m))
-getGradientState(model::AdadeltaModel, n::Int, m::Int) = AdadeltaState(n,m)
+gradient_state(model::AdadeltaModel, n::Int, m::Int) = AdadeltaState(n,m)
 
 function Δij(model::AdadeltaModel, state::AdadeltaState, gradient::Float64, val::Float64, i::Int, j::Int)
   ε, ρ = model.ε, model.ρ
@@ -108,7 +126,7 @@ type AdamState <: GradientState
   ρ2t::Float64  # β₂ᵗ from the paper... t-th power of β₂
 end
 AdamState(n::Integer, m::Integer) = AdamState(zeros(n,m), zeros(n,m), 1.0, 1.0)
-getGradientState(model::AdamModel, n::Integer, m::Integer) = AdamState(n,m)
+gradient_state(model::AdamModel, n::Integer, m::Integer) = AdamState(n,m)
 
 function Δij(model::AdamModel, state::AdamState, gradient::Float64, val::Float64, i::Int, j::Int)
   ρ1, ρ2 = model.ρ1, model.ρ2
@@ -144,7 +162,7 @@ immutable AdaMaxState <: GradientState
   # ρ2t::Float64  # β₂ᵗ from the paper... t-th power of β₂
 end
 AdaMaxState(n::Integer, m::Integer) = AdaMaxState(zeros(n,m), zeros(n,m), [1.0])
-getGradientState(model::AdaMaxModel, n::Integer, m::Integer) = AdaMaxState(n,m)
+gradient_state(model::AdaMaxModel, n::Integer, m::Integer) = AdaMaxState(n,m)
 
 function Δij(model::AdaMaxModel, state::AdaMaxState, gradient::Float64, val::Float64, i::Int, j::Int)
   # ρ1, ρ2 = model.ρ1, model.ρ2

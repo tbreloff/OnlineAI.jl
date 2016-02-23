@@ -71,7 +71,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     # l1, l2 = autoencoder.layers
     if tiedweights
       setSecondAutoencoderLayer(autoencoder, autoencoder.layers...)
-      # gradientState = getGradientState(encoderParams.gradientModel, l2.nin, l2.nout)
+      # gradientState = gradient_state(encoderParams.gradientModel, l2.nin, l2.nout)
       # autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p,
       #                               l2.dwState,
       #                               l2.dbState,
