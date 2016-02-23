@@ -68,10 +68,10 @@ function Plots.plot(net::Circuit; kw...)
     d = Dict(kw)
 
     # collect some parameters
-    noffset = P2(0, get(d, :noffset, 0.04))
-    goffset = P2(0, get(d, :goffset, 0.02))
+    noffset = P2(0, get(d, :noffset, 0.02))
+    goffset = P2(0, get(d, :goffset, 0.0))
     lineargs = get(d, :line, (2, 0.7))
-    gatediff = get(d, :gatediff, P2(0, -0.15))
+    gatediff = get(d, :gatediff, P2(0, -0.05))
 
     # get the positions of the nodes
     n = length(net)
@@ -86,7 +86,7 @@ function Plots.plot(net::Circuit; kw...)
     n_pts = P2[]
     c_pts = P2[]
     g_pts = P2[]
-    g2n_pts = P2[]
+    # g2n_pts = P2[]
     n2g_pts = P2[]
     n2g_recur_pts = P2[]
 
@@ -100,7 +100,7 @@ function Plots.plot(net::Circuit; kw...)
         gatesin = gates_in(node_out)
         ng = length(gatesin)
         xrng = if ng > 1
-            linspace(-1, 1, length(gatesin)) * sqrt(length(gatesin)-1) * 0.025
+            linspace(-1, 1, length(gatesin)) * sqrt(length(gatesin)-1) * 0.02
         else
             0:0
         end
@@ -112,8 +112,8 @@ function Plots.plot(net::Circuit; kw...)
             pt = node_pts[i] + gatediff + P2(xrng[j],0)
             push!(g_pts, pt)
 
-            # create a directed curve from the gate to the node_out
-            add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
+            # # create a directed curve from the gate to the node_out
+            # add_curve_points!(g2n_pts, directed_curve(pt + goffset, node_pts[i] - noffset))
 
             # add curve from nodes_in to gates
             for node_in in g.nodes_in
@@ -141,10 +141,10 @@ function Plots.plot(net::Circuit; kw...)
         plot!(n2g_recur_pts, line = lineargs, lab = "recurrent")
     end
 
-    # gates-to-nodes curves
-    if !isempty(g2n_pts)
-        plot!(g2n_pts, lab = "gate to node", line = lineargs)
-    end
+    # # gates-to-nodes curves
+    # if !isempty(g2n_pts)
+    #     plot!(g2n_pts, lab = "gate to node", line = lineargs)
+    # end
 
     # nodes
     if !isempty(n_pts)
