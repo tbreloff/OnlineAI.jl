@@ -93,7 +93,7 @@ end
 function GateState{T}(w::AbstractMatrix{T})
     n, m = size(w)
     GateState(zeros(T,n),
-              zeros(T,n),
+              zeros(T,m),
               fill!(similar(w), 0),
               w,
               gradient_state(n, m))

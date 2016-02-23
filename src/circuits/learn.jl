@@ -1,4 +1,8 @@
 
+# helper method so we don't calculate all positions for diagonal matrices
+_cols_to_compute(A::Diagonal, i::Integer) = i:i
+_cols_to_compute(A::AbstractMatrix, i::Integer) = 1:size(A,2)
+
 # ----------------------------------------------------------------------------
 
 function forward!(net::Circuit, x::AVec)
@@ -19,12 +23,33 @@ end
 
 
 function forward!(node::Node)
-    # calculate activations, storing any state necessary for backward pass
+    state = node.state
     # TODO: special handling for input node... might want a special "input gate" for setting the xₜ
+
+    # compute the node state (sum of gates plus bias):
+    #       sⱼ = ∑ sᵢ  +  bⱼ
+    copy!(state.s, state.b)
+    for gate in node.gates_in, i=1:node.n
+        state.s[i] += gate.s[i]
+    end
+
+    # and apply the activation function:
+    #       yⱼ = fⱼ(sⱼ)
+    forward!(node.activation, node.y, node.s)
+
+    # return the node
+    node
 end
 
 function backward!(node::Node, model::GradientModel)
-    # compute sensitivities and adjust weights/biases
+    state = node.state
+    # TODO: special handling for output node... might want a special "output gate" for δₒᵤₜ calc
+
+    # compute the sensitivity δⱼ = ∂C ./ ∂sⱼ
+    #                            = (∂C ./ ∂sₒᵤₜ) .* (∂sₒᵤₜ ./ ∂sⱼ)
+    #                            = δₒᵤₜ .* ζⱼ
+    
+    
 end
 
 
@@ -34,17 +59,16 @@ end
 function forward!(gate::Gate)
     state = gate.state
     
-    # first compute: ε = ∏ yᵢ
+    # first compute the eligibility trace for this gate:
+    #       ε = ∏ yᵢ
     fill!(state.ε, 1)
-    for node in gate.nodes_in
-        for i in 1:gate.n
-            state.ε[i] *= node.state.y[i]
-        end
+    for node in gate.nodes_in, i=1:gate.n
+        state.ε[i] *= node.state.y[i]
     end
 
-    # next compute: s = w * ε
-    # note: we use gemv! to do:  s = 1 * w * ε + 0 * s
-    BLAS.gemv!('N', 1.0, state.w, state.ε, 0.0, state.s)
+    # next compute the state of the gate:
+    #       s = w * ε
+    state.s[:] = state.w * state.ε
 
     # return the gate
     gate
@@ -57,14 +81,14 @@ function backward!(gate::Gate, y::AVec, model::GradientModel, γ::AbstractFloat 
         return gate
     end
 
-    # deltahat from my notes is zeta: ζ
+    # note: deltahat from my notes is zeta: ζ
     # δₙ = δₒᵤₜ .* ζₙ
     state = gate.state
     n, m = size(state.w)
 
     # our goal is to calculate: ∇ᵢⱼ = γ ∇ᵢⱼ + δⱼ .* εᵢ
     # then we can update the weight matrix using the gradient model
-    for i=1:n, j=1:m
+    for i=1:n, j in _cols_to_compute(state.w, i)
         state.∇[i,j] = γ * state.∇[i,j] + gate.node_out.state.δ[j] * state.ε[i]
         state.w[i,j] += Δij(model, state.gradient_state, state.∇[i,j], state.w[i,j], i, j)
     end

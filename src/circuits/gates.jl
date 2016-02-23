@@ -23,11 +23,11 @@ function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL;
     # construct the state (depends on connection type)
     #   TODO: initialize w properly... not zeros
     dump(gatetype)
-    w = isa(w, Function) ? w(n, node_out.n) : w
+    w = isa(w, Function) ? w(node_out.n, n) : w
     if isa(w, AbstractVector)
         w = Diagonal(w)
     end
-    state = GateState(n, w)
+    state = GateState(w)
 
     # construct the connection
     g = Gate(n, gatetype, Node[], node_out, state, tag)
