@@ -103,7 +103,7 @@ end
 """
 Reference to a set of connected nodes, defined by the input/output nodes.
 """
-immutable Circuit <: AbstractNode
+type Circuit <: AbstractNode
     n::Int
     nodes::Vector{AbstractNode}
     nodemap::Dict{Symbol,AbstractNode}
@@ -172,7 +172,7 @@ end
 
 nodes(net::Circuit) = filter(n -> isa(n, Node), net.nodes)
 circuits(net::Circuit) = filter(n -> isa(n, Circuit), net.nodes)
-gates_in(net::Circuit) = gates_in(net.nodes[end])
+gates_in(net::Circuit) = gates_in(net.nodes[1])
 gates_out(net::Circuit) = gates_out(net.nodes[end])
 
 # ------------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ function gate!{T}(node_out::Node{T}, n::Integer, gatetype::GateType = ALL;
 end
 
 function gate!(circuit::Circuit, args...; kw...)
-    gate!(circuit.nodes[end], args...; kw...)
+    gate!(circuit.nodes[1], args...; kw...)
 end
 
 # ------------------------------------------------------------------------------------
