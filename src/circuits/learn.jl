@@ -6,48 +6,87 @@ _cols_to_compute(A::AbstractMatrix, i::Integer) = 1:size(A,2)
 # ----------------------------------------------------------------------------
 
 function forward!(net::Circuit, x::AVec)
-    # calculate activations, storing any state necessary for backward pass
+
+    # forward pass on input node
+    forward!(net[1], s_override = Nullable(x))
+
+    # forward pass for the rest (in order!)
+    for i in 2:length(net)
+        forward!(net[i])
+    end
+
+    # return the final output
+    net[end].state.y
 end
 
-function backward!(net::Circuit, y::AVec)
+# backprop pass given error E(t)
+function backward!(net::Circuit, E::Real)
     # compute sensitivities and adjust weights/biases
     # note: net should contain a GradientModel for updating 
 end
 
-function OnlineStats.fit!(net::Circuit, x::AVec, y::AVec)
-    yhat = forward!(net, x)
-    backward!(net, y)
+function OnlineStats.fit!(net::Circuit, input::AVec, target::AVec; costmodel = L2CostModel())
+    
+    # forward pass through circuit
+    ouput = forward!(net, input)
+
+    # compute error
+    E = cost(costmodel, target, ouput)
+
+    # backprop
+    backward!(net, E)
+
+    # return the net
+    net
 end
 
 # ----------------------------------------------------------------------------
 
 
-function forward!(node::Node)
+function forward!{T}(node::Node{T}; s_override = Nullable{Vector{T}}())
     state = node.state
-    # TODO: special handling for input node... might want a special "input gate" for setting the xₜ
 
-    # compute the node state (sum of gates plus bias):
-    #       sⱼ = ∑ sᵢ  +  bⱼ
-    copy!(state.s, state.b)
-    for gate in node.gates_in, i=1:node.n
-        state.s[i] += gate.s[i]
+    # compute f_ratio(t-1) using previous state/output
+    for i=1:node.n
+        yi = state.y[i]
+        state.f_ratio_prev[i] = yi == 0 ? 0 : backward(node.activation, state.s[i]) / yi
     end
 
-    # and apply the activation function:
-    #       yⱼ = fⱼ(sⱼ)
-    forward!(node.activation, node.y, node.s)
+    # when s_override is null, we must update the state.  otherwise don't update anything.
+    # we will mostly use this for the input node
+    if isnull(s_override)
+        
+        # first compute gates
+        for gate in node.gates_in
+            forward!(gate)
+        end
 
-    # return the node
-    node
+        # compute the node state (sum of gates plus bias):
+        #       sⱼ = ∑ sᵢ  +  bⱼ
+        copy!(state.s, state.b)
+        for gate in node.gates_in, i=1:node.n
+            state.s[i] += gate.g[i]
+        end
+
+    else
+        copy!(state.s, get(s_override))
+    end
+
+    # apply the activation function:
+    #       yⱼ = fⱼ(sⱼ)
+    forward!(node.activation, state.y, state.s)
+
+    # return the output
+    state.y
 end
 
 function backward!(node::Node, model::GradientModel)
     state = node.state
-    # TODO: special handling for output node... might want a special "output gate" for δₒᵤₜ calc
+    # TODO: special handling for output node... might want a special "output gate" for δₒ calc
 
     # compute the sensitivity δⱼ = ∂C ./ ∂sⱼ
-    #                            = (∂C ./ ∂sₒᵤₜ) .* (∂sₒᵤₜ ./ ∂sⱼ)
-    #                            = δₒᵤₜ .* ζⱼ
+    #                            = (∂C ./ ∂sₒ) .* (∂sₒ ./ ∂sⱼ)
+    #                            = δₒ .* ζⱼ
 
     
 end
@@ -58,23 +97,23 @@ end
 
 function forward!(gate::Gate)
     state = gate.state
+
+    # store ε(t-1) before we make any updates
+    copy!(state.ε_prev, state.ε)
     
-    # first compute the eligibility trace for this gate:
-    #       ε = ∏ yᵢ
-    # then store the node output that generated the trace (for δ calc):
-    #       yhatᵢ = yᵢ
+    # compute the eligibility trace for this gate:
+    #       ε = x = ∏ yᵢ
     fill!(state.ε, 1)
     for node in gate.nodes_in, i=1:gate.n
         state.ε[i] *= node.state.y[i]
-        state.yhat[i] = node.state.y[i]
     end
 
     # next compute the state of the gate:
-    #       s = w * ε
-    state.s[:] = state.w * state.ε
+    #       s = w x = w ε
+    state.g[:] = state.w * state.ε
 
-    # return the gate
-    gate
+    # return the output
+    state.g
 end
 
 function backward!(gate::Gate, y::AVec, model::GradientModel, γ::AbstractFloat = 0.99)

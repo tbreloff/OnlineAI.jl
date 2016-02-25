@@ -34,16 +34,22 @@ abstract AbstractNode <: NeuralNetLayer
 # ------------------------------------------------------------------------------------
 
 "Holds the current state of the layer"
-immutable NodeState{T, GS}
-    s::Vector{T}
-    y::Vector{T}
-    δ::Vector{T}
-    b::Vector{T}
-    b_gradient::GS
+immutable NodeState{T, GS <: GradientState}
+    s::Vector{T}            # state of the node: sⱼ = ∑ gᴳⱼ + bⱼ
+    y::Vector{T}            # output of the node: yⱼ = f(sⱼ)
+    δ::Vector{T}            # error responsibility: ∂(E(t-1) + E(t)) / ∂sⱼ  ==  ϕⱼ + ψⱼ
+    ϕ::Vector{T}            # error responsibility for feedforward connections only
+    ψ::Vector{T}            # error responsibility for recurrent connections only
+    f_ratio_prev::Vector{T}  # used in computation of ψ: f_ratio(t-1) = f'(s(t-1)) / y(t-1)
+    b::Vector{T}            # bias
+    b_gradient::GS          # bias state
 end
 
 function NodeState{T}(::Type{T}, n::Integer)
     NodeState(zeros(T,n),
+              zeros(T,n),
+              zeros(T,n),
+              zeros(T,n),
               zeros(T,n),
               zeros(T,n),
               ones(T,n),
@@ -83,11 +89,10 @@ end
 
 "Holds a weight and bias for state calculation"
 type GateState{T, W <: AbstractArray, GS <: GradientState}
-    s::Vector{T}    # the state of the gate: s(τ) = w * ∏y
-    ε::Vector{T}    # \epsilon: eligibility trace for weight update:  ε = ∏yᵢ
-    yhat::Vector{Vector{T}} # activations used in calculation of gate state:
-                            #       yhat[N][i] is the activation of cell i for input node N
-    ∇::W            # \nabla:   online gradient: ∇ⱼᵢ(τ) = γ ∇ⱼᵢ(τ-1) + δⱼεᵢ
+    g::Vector{T}    # the state of the gate: g(τ) = w * ∏y
+    ε::Vector{T}    # \epsilon: eligibility trace for weight update:  ε(t) = x(t) = ∏yᵢ
+    ε_prev::Vector{T} # ε(t-1)
+    ∇::W            # \nabla:   online gradient for weight matrix: ∇ⱼᵢ(τ) = γ (∇ⱼᵢ(τ-1) + ψⱼ εᵢ(t-1)) + ϕⱼ εᵢ(t)
     w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
     w_gradient::GS  # state of the gradient calc
 end
@@ -96,8 +101,9 @@ function GateState{T}(w::AbstractMatrix{T})
     n, m = size(w)
     GateState(zeros(T,n),
               zeros(T,m),
-              fill!(similar(w), 0),
+              zeros(T,m),
               w,
+              fill!(similar(w), 0),
               gradient_state(n, m))
 end
 
