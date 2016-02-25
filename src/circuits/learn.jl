@@ -48,7 +48,7 @@ function backward!(node::Node, model::GradientModel)
     # compute the sensitivity δⱼ = ∂C ./ ∂sⱼ
     #                            = (∂C ./ ∂sₒᵤₜ) .* (∂sₒᵤₜ ./ ∂sⱼ)
     #                            = δₒᵤₜ .* ζⱼ
-    
+
     
 end
 
@@ -61,9 +61,12 @@ function forward!(gate::Gate)
     
     # first compute the eligibility trace for this gate:
     #       ε = ∏ yᵢ
+    # then store the node output that generated the trace (for δ calc):
+    #       yhatᵢ = yᵢ
     fill!(state.ε, 1)
     for node in gate.nodes_in, i=1:gate.n
         state.ε[i] *= node.state.y[i]
+        state.yhat[i] = node.state.y[i]
     end
 
     # next compute the state of the gate:
