@@ -85,7 +85,9 @@ end
 type GateState{T, W <: AbstractArray, GS <: GradientState}
     s::Vector{T}    # the state of the gate: s(τ) = w * ∏y
     ε::Vector{T}    # \epsilon: eligibility trace for weight update:  ε = ∏yᵢ
-    ∇::W            # \nabla:   online gradient: ∇ᵢⱼ(τ) = γ ∇ᵢⱼ(τ-1) + δⱼεᵢ
+    yhat::Vector{Vector{T}} # activations used in calculation of gate state:
+                            #       yhat[N][i] is the activation of cell i for input node N
+    ∇::W            # \nabla:   online gradient: ∇ⱼᵢ(τ) = γ ∇ⱼᵢ(τ-1) + δⱼεᵢ
     w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
     w_gradient::GS  # state of the gradient calc
 end
