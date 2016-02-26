@@ -138,10 +138,15 @@ type Circuit <: AbstractNode
     nodes::Vector{AbstractNode}
     nodemap::Dict{Symbol,AbstractNode}
     gatemap::Dict{Symbol,Gate}
+    gradmodel::GradientModel
+    costmodel::CostModel
     tag::Symbol
 end
 
-function Circuit(nodes::AbstractVector, gates = []; tag::Symbol = gensym("circuit"))
+function Circuit(nodes::AbstractVector, gates = [];
+                 gradmodel::GradientModel = gradient_model(),
+                 costmodel::CostModel = L2CostModel(),
+                 tag::Symbol = gensym("circuit"))
     # first add missing gates
     gates = Set(gates)
     for node in nodes, gate in gates_in(node)
@@ -150,7 +155,7 @@ function Circuit(nodes::AbstractVector, gates = []; tag::Symbol = gensym("circui
 
     nodemap = Dict{Symbol,AbstractNode}([(node.tag, node) for node in nodes])
     gatemap = Dict{Symbol,Gate}([(gate.tag, gate) for gate in gates])
-    Circuit(nodes[1].n, nodes, nodemap, gatemap, tag)
+    Circuit(nodes[1].n, nodes, nodemap, gatemap, gradmodel, costmodel, tag)
 end
 
 # TODO: constructor which takes inputlayer/outputlayer and initializes nodes with a proper ordering (traversing connection graph)

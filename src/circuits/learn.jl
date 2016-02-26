@@ -20,21 +20,37 @@ function forward!(net::Circuit, x::AVec)
 end
 
 # backprop pass given error E(t)
-function backward!(net::Circuit, E::Real)
-    # compute sensitivities and adjust weights/biases
-    # note: net should contain a GradientModel for updating 
+function backward!(net::Circuit, costmult::AVec, multderiv::Bool)
+
+    # first compute the forward error responsibility of the final layer, and override ϕ calc
+    # ϕₒ = copy()
+    ϕₒ = costmult
+    backward!(net[end], ϕ_override = Nullable(ϕₒ), multderiv = multderiv)
+
+    # backprop
+    for i in length(net)-1:-1:1
+        backward!(net[i])
+    end
+
+    # return the net
+    net
 end
 
-function OnlineStats.fit!(net::Circuit, input::AVec, target::AVec; costmodel = L2CostModel())
+function OnlineStats.fit!(net::Circuit, input::AVec, target::AVec)
     
     # forward pass through circuit
     ouput = forward!(net, input)
 
-    # compute error
-    E = cost(costmodel, target, ouput)
+    # get the 
+    costmult = zeros(net[end].n)
+    multderiv = costMultiplier!(net.costModel, costmult, target, output)
+    # backward!(net, multderiv)
+
+    # # compute error
+    # E = cost(net.costmodel, target, ouput)
 
     # backprop
-    backward!(net, E)
+    backward!(net, costmult, multderiv)
 
     # return the net
     net

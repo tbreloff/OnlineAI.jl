@@ -15,6 +15,7 @@ using Distributions
 using Requires
 using ArrayViews
 using Plots
+using LearnBase
 
 import OnlineStats: nrows, ncols,
                     VecF, MatF, AVecF, AMatF,
