@@ -34,7 +34,7 @@ abstract AbstractNode <: NeuralNetLayer
 # ------------------------------------------------------------------------------------
 
 "Holds the current state of the layer"
-immutable NodeState{T, GS <: GradientState}
+immutable NodeState{T, PUSTATE <: ParameterUpdaterState}
     s::Vector{T}            # state of the node: sⱼ = ∑ gᴳⱼ + bⱼ
     y::Vector{T}            # output of the node: yⱼ = f(sⱼ)
     δ::Vector{T}            # error responsibility: ∂(E(t-1) + E(t)) / ∂sⱼ  ==  ϕⱼ + ψⱼ
@@ -42,7 +42,7 @@ immutable NodeState{T, GS <: GradientState}
     ψ::Vector{T}            # error responsibility for recurrent connections only
     f_ratio_prev::Vector{T}  # used in computation of ψ: f_ratio(t-1) = f'(s(t-1)) / y(t-1)
     b::Vector{T}            # bias
-    b_gradient::GS          # bias state
+    b_states::Vector{PUSTATE}  # bias states
 end
 
 function NodeState{T}(::Type{T}, n::Integer)
@@ -53,7 +53,7 @@ function NodeState{T}(::Type{T}, n::Integer)
               zeros(T,n),
               zeros(T,n),
               ones(T,n),
-              gradient_state(n))
+              ParameterUpdaterState(n))
 end
 
 """
@@ -88,13 +88,13 @@ end
 # ------------------------------------------------------------------------------------
 
 "Holds a weight and bias for state calculation"
-type GateState{T, W <: AbstractArray, GS <: GradientState}
+type GateState{T, W <: AbstractArray, PUSTATE <: ParameterUpdaterState}
     g::Vector{T}    # the state of the gate: g(τ) = w * ∏y
     ε::Vector{T}    # \epsilon: eligibility trace for weight update:  ε(t) = x(t) = ∏yᵢ
     ε_prev::Vector{T} # ε(t-1)
     ∇::W            # \nabla:   online gradient for weight matrix: ∇ⱼᵢ(τ) = γ (∇ⱼᵢ(τ-1) + ψⱼ εᵢ(t-1)) + ϕⱼ εᵢ(t)
     w::W            # weight matrix (may be diagonal for SAME or sparse for RANDOM)
-    w_gradient::GS  # state of the gradient calc
+    w_states::Matrix{PUSTATE}  # states of the gradient calc
 end
 
 function GateState{T}(w::AbstractMatrix{T})
@@ -104,7 +104,7 @@ function GateState{T}(w::AbstractMatrix{T})
               zeros(T,m),
               w,
               fill!(similar(w), 0),
-              gradient_state(n, m))
+              ParameterUpdaterState(n, m))
 end
 
 # TODO: need to be able to pass parameters for random connectivity!
@@ -138,14 +138,14 @@ type Circuit <: AbstractNode
     nodes::Vector{AbstractNode}
     nodemap::Dict{Symbol,AbstractNode}
     gatemap::Dict{Symbol,Gate}
-    gradmodel::GradientModel
-    costmodel::CostModel
+    updater::ParameterUpdater
+    loss::PredictionLoss
     tag::Symbol
 end
 
 function Circuit(nodes::AbstractVector, gates = [];
-                 gradmodel::GradientModel = gradient_model(),
-                 costmodel::CostModel = L2CostModel(),
+                 updater::ParameterUpdater = current_updater(),
+                 loss::PredictionLoss = L2PredictionLoss(),
                  tag::Symbol = gensym("circuit"))
     # first add missing gates
     gates = Set(gates)
@@ -155,7 +155,7 @@ function Circuit(nodes::AbstractVector, gates = [];
 
     nodemap = Dict{Symbol,AbstractNode}([(node.tag, node) for node in nodes])
     gatemap = Dict{Symbol,Gate}([(gate.tag, gate) for gate in gates])
-    Circuit(nodes[1].n, nodes, nodemap, gatemap, gradmodel, costmodel, tag)
+    Circuit(nodes[1].n, nodes, nodemap, gatemap, updater, loss, tag)
 end
 
 # TODO: constructor which takes inputlayer/outputlayer and initializes nodes with a proper ordering (traversing connection graph)

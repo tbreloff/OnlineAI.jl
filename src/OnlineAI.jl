@@ -38,16 +38,16 @@ abstract NeuralNetLayer
 
 include("utils.jl")
 
-export 
-  Activation,
-  IdentityActivation,
-  SigmoidActivation,
-  TanhActivation,
-  SoftsignActivation,
-  ReLUActivation,
-  LReLUActivation,
-  SoftmaxActivation
-include("nnet/activations.jl")
+# export 
+#   Activation,
+#   IdentityActivation,
+#   SigmoidActivation,
+#   TanhActivation,
+#   SoftsignActivation,
+#   ReLUActivation,
+#   LReLUActivation,
+#   SoftmaxActivation
+# include("nnet/activations.jl")
 
 export
   DataPoint,
@@ -74,31 +74,31 @@ export
 include("nnet/data.jl")
 
 export
-  CostModel,
-  L2CostModel,
-  L1CostModel,
-  WeightedL2CostModel,
-  CrossEntropyCostModel,
+  # CostModel,
+  # L2CostModel,
+  # L1CostModel,
+  # WeightedL2CostModel,
+  # CrossEntropyCostModel,
   cost,
   totalCost
 include("nnet/costs.jl")
 
 export
-  GradientModel,
-  GradientState,
-  gradient_model,
-  gradient_model!,
-  gradient_state,
-  SGDModel,
-  SGDState,
-  AdagradModel,
-  AdagradState,
-  AdadeltaModel,
-  AdadeltaState,
-  AdamModel,
-  AdamState,
-  AdaMaxModel,
-  AdaMaxState,
+  # GradientModel,
+  # GradientState,
+  # gradient_model,
+  # gradient_model!,
+  # gradient_state,
+  # SGDModel,
+  # SGDState,
+  # AdagradModel,
+  # AdagradState,
+  # AdadeltaModel,
+  # AdadeltaState,
+  # AdamModel,
+  # AdamState,
+  # AdaMaxModel,
+  # AdaMaxState,
   LearningRateModel,
   FixedLearningRate,
   AdaptiveLearningRate
