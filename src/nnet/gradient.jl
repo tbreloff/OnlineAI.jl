@@ -4,22 +4,37 @@
 
 # # ----------------------------------------
 
-"Allows for global storage of a gradient model, so that you don't need to pass it around."
+"Allows for global storage of a ParameterUpdater, so that you don't need to pass it around."
 type CurrentUpdater
   updater::ParameterUpdater
 end
 
-const _current_gradient_model = CurrentUpdater(AdaMaxModel())
+const _current_updater = CurrentUpdater(AdaMaxUpdater())
 
 "Get the current global gradient updater used for gradient updates."
-current_updater() = _current_gradient_model.updater
+current_updater() = _current_updater.updater
 
 "Set the current global gradient updater used for gradient updates."
-current_updater!(updater::ParameterUpdater) = (_current_gradient_model.updater = updater)
+current_updater!(updater::ParameterUpdater) = (_current_updater.updater = updater)
 
 # "Construct a new `GradientState` object using the model returned from `current_updater()`."
 # gradient_state(n::Integer, m::Integer = 1) = gradient_state(current_updater(), n, m)
 ParameterUpdaterState(dims::Integer...) = ParameterUpdaterState(current_updater(), dims...)
+
+# # ----------------------------------------
+
+"Allows for global storage of a ParameterLoss, so that you don't need to pass it around."
+type CurrentParameterLoss
+  ploss::ParameterLoss
+end
+
+const _current_ploss = CurrentParameterLoss(NoParameterLoss())
+
+"Get the current global gradient ploss used for gradient updates."
+current_ploss() = _current_ploss.ploss
+
+"Set the current global gradient ploss used for gradient updates."
+current_ploss!(ploss::ParameterLoss) = (_current_ploss.ploss = ploss)
 
 # # ----------------------------------------
 

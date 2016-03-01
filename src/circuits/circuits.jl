@@ -145,7 +145,7 @@ end
 
 function Circuit(nodes::AbstractVector, gates = [];
                  updater::ParameterUpdater = current_updater(),
-                 loss::PredictionLoss = L2PredictionLoss(),
+                 loss::PredictionLoss = current_ploss(),
                  tag::Symbol = gensym("circuit"))
     # first add missing gates
     gates = Set(gates)

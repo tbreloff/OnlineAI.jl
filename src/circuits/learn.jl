@@ -30,9 +30,9 @@ function backward!(net::Circuit, input::AVec, target::AVec)
 
     # first compute the forward error responsibility of the final layer, and override ϕ calc
     # ϕₒ = copy()
-    
+
     ϕₒ = xxxxxxx # TODO: compute error deriv * activation deriv
-    backward!(net[end], ϕ_override = Nullable(ϕₒ))
+    backward!(net[end], net.updater, net.ploss, ϕ_override = Nullable(ϕₒ))
 
     # backprop
     for i in length(net)-1:-1:1
@@ -105,7 +105,7 @@ function forward!{T}(node::Node{T}; s_override = Nullable{Vector{T}}())
     state.y
 end
 
-function backward!(node::Node, updater::ParameterUpdater)
+function backward!{T}(node::Node{T}, updater::ParameterUpdater, ploss::ParameterLoss; ϕ_override = Nullable{Vector{T}}())
     state = node.state
     # TODO: special handling for output node... might want a special "output gate" for δₒ calc
 
@@ -141,7 +141,7 @@ function forward!(gate::Gate)
     state.g
 end
 
-function backward!(gate::Gate, updater::ParameterUpdater, y::AVec, γ::AbstractFloat = 0.99)
+function backward!(gate::Gate, updater::ParameterUpdater, ploss::ParameterLoss, y::AVec, γ::AbstractFloat = 0.99)
 
     # don't do anything when the gatetype is FIXED
     if gate.gatetype == FIXED
@@ -157,8 +157,7 @@ function backward!(gate::Gate, updater::ParameterUpdater, y::AVec, γ::AbstractF
     # then we can update the weight matrix using the gradient updater
     for i=1:n, j in _cols_to_compute(state.w, i)
         state.∇[i,j] = γ * state.∇[i,j] + gate.node_out.state.δ[j] * state.ε[i]
-        # state.w[i,j] += Δij(updater, state.gradient_state, state.∇[i,j], state.w[i,j], i, j)
-        state.w[i,j] += param_change!(state.w_states[i,j], updater, state.∇[i,j], state.w[i,j])
+        state.w[i,j] += param_change!(state.w_states[i,j], updater, ploss, state.∇[i,j], state.w[i,j])
     end
 
     gate
