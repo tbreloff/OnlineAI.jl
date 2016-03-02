@@ -41,18 +41,25 @@ immutable NodeState{T, PUSTATE <: ParameterUpdaterState}
     ϕ::Vector{T}            # error responsibility for feedforward connections only
     ψ::Vector{T}            # error responsibility for recurrent connections only
     f_ratio_prev::Vector{T}  # used in computation of ψ: f_ratio(t-1) = f'(s(t-1)) / y(t-1)
+    ∇::Vector{T}            # \nabla:   online gradient for weight matrix: ∇ⱼᵢ(τ) = γ (∇ⱼᵢ(τ-1) + ψⱼ εᵢ(t-1)) + ϕⱼ εᵢ(t)
     b::Vector{T}            # bias
     b_states::Vector{PUSTATE}  # bias states
 end
 
 function NodeState{T}(::Type{T}, n::Integer)
+    NodeState(ones(T, n))
+end
+
+function NodeState{T}(b::AbstractVector{T})
+    n = length(b)
     NodeState(zeros(T,n),
               zeros(T,n),
               zeros(T,n),
               zeros(T,n),
               zeros(T,n),
               zeros(T,n),
-              ones(T,n),
+              zeros(T,n),
+              b,
               ParameterUpdaterState(n)) # TODO: handle updaters different from current_updater?
 end
 

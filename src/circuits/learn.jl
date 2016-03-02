@@ -4,6 +4,8 @@ _cols_to_compute(A::Diagonal, i::Integer) = i:i
 _cols_to_compute(A::AbstractMatrix, i::Integer) = 1:size(A,2)
 
 # ----------------------------------------------------------------------------
+# Circuits
+# ----------------------------------------------------------------------------
 
 function forward!(net::Circuit, x::AVec)
 
@@ -37,11 +39,11 @@ function backward!(net::Circuit, input::AVec, target::AVec)
                       input,
                       output,
                       target)
-    backward!(outputnode, net.updater, net.ploss, compute_ϕ = false)
+    backward!(outputnode, net.updater, net.ploss, net.γ, compute_ϕ = false)
 
     # backprop
     for i in length(net)-1:-1:1
-        backward!(net[i], net.updater, net.ploss)
+        backward!(net[i], net.updater, net.ploss, net.γ)
     end
 
     # return the net
@@ -55,6 +57,8 @@ function OnlineStats.fit!(net::Circuit, input::AVec, target::AVec)
     net
 end
 
+# ----------------------------------------------------------------------------
+# Nodes
 # ----------------------------------------------------------------------------
 
 
@@ -93,19 +97,46 @@ function forward!{T}(node::Node{T}; compute_s::Bool = true)
     state.y
 end
 
-function backward!{T}(node::Node{T}, updater::ParameterUpdater, ploss::ParameterLoss; compute_ϕ::Bool = true)
+function backward!{T}(node::Node{T}, updater::ParameterUpdater,
+                      ploss::ParameterLoss, γ::Number;
+                      compute_ϕ::Bool = true)
     state = node.state
 
     # compute the sensitivity δⱼ = ∂C ./ ∂sⱼ
     #                            = (∂C ./ ∂sₒ) .* (∂sₒ ./ ∂sⱼ)
     #                            = δₒ .* ζⱼ
     
+    # Note: j, k, H, OH are chosen to match my notes
+
     if compute_ϕ
+        fill!(state.ϕ, zero(T))
+        fill!(state.ψ, zero(T))
+        for j=1:node.n
 
-        # compute ϕ = error responsibility of feedforward connections
-        # compute ψ = error responsibility of recurrent connections
+            # loop over the outgoing connections, adding to ϕ or ψ
+            for H in node.gates_out
+                OH = H.node_out
+                tot = zero(T)
+                for k=1:OH.n
+                    tot += OH.state.δ[k] * H.state.w[k,j]
+                end
+                tot *= H.state.ε[j]
 
+                # TODO: how do we do this node comparison??
+                #       this means OH's backward pass has been computed...
+                #       store a bool: computed?
 
+                # compute ϕ = error responsibility of feedforward connections
+                #   or
+                # compute ψ = error responsibility of recurrent connections
+                arr = OH > node ? state.ϕ : state.ψ
+                arr[j] = tot
+            end
+
+            # now multiply the f_ratio.  use f_ratio(t) for ϕ and f_ratio(t-1) for ψ
+            state.ϕ[j] *= (state.y[j] == 0 ? 0 : deriv(node.mapping, state.s[i]) / state.y[j])
+            state.ψ[j] *= state.f_ratio_prev[j]
+        end
     end
 
     # compute δ = ϕ + ψ
@@ -114,10 +145,23 @@ function backward!{T}(node::Node{T}, updater::ParameterUpdater, ploss::Parameter
     end
 
     # update the bias
-    
+    for i=1:node.n
+        state.∇[i] = γ * state.∇[i] + state.δ[j]
+        state.b[i] += param_change!(state.b_states[i], updater, ploss, state.∇[i], state.b[i])
+    end
+
+    # update the incoming gates
+    for gate in node.gates_in
+        backward!(gate, updater, ploss, γ)
+    end
+
+    # return the node
+    node
 end
 
 
+# ----------------------------------------------------------------------------
+# Gates
 # ----------------------------------------------------------------------------
 
 
@@ -142,7 +186,8 @@ function forward!(gate::Gate)
     state.g
 end
 
-function backward!(gate::Gate, updater::ParameterUpdater, ploss::ParameterLoss, y::AVec, γ::AbstractFloat = 0.99)
+function backward!(gate::Gate, updater::ParameterUpdater,
+                   ploss::ParameterLoss, γ::Number)
 
     # don't do anything when the gatetype is FIXED
     if gate.gatetype == FIXED
