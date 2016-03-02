@@ -23,6 +23,21 @@ ParameterUpdaterState(dims::Integer...) = ParameterUpdaterState(current_updater(
 
 # # ----------------------------------------
 
+"Allows for global storage of a ModelLoss, so that you don't need to pass it around."
+type CurrentModelLoss
+  mloss::ModelLoss
+end
+
+const _current_mloss = CurrentModelLoss(L2DistLoss())
+
+"Get the current global gradient mloss used for gradient updates."
+current_mloss() = _current_mloss.mloss
+
+"Set the current global gradient mloss used for gradient updates."
+current_mloss!(mloss::ModelLoss) = (_current_mloss.mloss = mloss)
+
+# # ----------------------------------------
+
 "Allows for global storage of a ParameterLoss, so that you don't need to pass it around."
 type CurrentParameterLoss
   ploss::ParameterLoss

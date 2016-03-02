@@ -53,7 +53,7 @@ function NodeState{T}(::Type{T}, n::Integer)
               zeros(T,n),
               zeros(T,n),
               ones(T,n),
-              ParameterUpdaterState(n))
+              ParameterUpdaterState(n)) # TODO: handle updaters different from current_updater?
 end
 
 """
@@ -61,9 +61,9 @@ This is the core object... the Neural Circuit Node.  We track gates projecting i
 A Node is equivalent to a layer in an classic artificial neural network, with 1 to many cells representing the 
 individual neurons.
 """
-immutable Node{T, A <: Activation} <: AbstractNode
+immutable Node{T, A <: Mapping} <: AbstractNode
     n::Int            # number of nodes in the layer
-    activation::A
+    mapping::A
     gates_in::Vector  # connections coming in
     gates_out::Vector # connections going out
     state::NodeState{T}   # current state of the layer
@@ -71,8 +71,8 @@ immutable Node{T, A <: Activation} <: AbstractNode
 end
 
 Node(node::AbstractNode, args...; kw...) = node
-function Node{T}(::Type{T}, n::Integer, activation::Activation = IdentityActivation(); tag::Symbol = gensym("node"))
-    Node(n, activation, Gate[], Gate[], NodeState(T, n), tag)
+function Node{T}(::Type{T}, n::Integer, mapping::Mapping = IdentityActivation(); tag::Symbol = gensym("node"))
+    Node(n, mapping, Gate[], Gate[], NodeState(T, n), tag)
 end
 Node(args...; kw...) = Node(Float64, args...; kw...)
 
@@ -82,7 +82,7 @@ gates_out(node::Node) = node.gates_out
 stringtags(v::AbstractVector) = string("[", join([string(c.tag) for c in v], ", "), "]")
 
 function Base.show(io::IO, l::Node; prefix = "")
-    write(io, prefix, "Node{ tag=$(l.tag) n=$(l.n) f=$(typeof(l.activation)) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
+    write(io, prefix, "Node{ tag=$(l.tag) n=$(l.n) f=$(typeof(l.mapping)) in=$(stringtags(l.gates_in)) out=$(stringtags(l.gates_out))}")
 end
 
 # ------------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ function GateState{T}(w::AbstractMatrix{T})
               zeros(T,m),
               w,
               fill!(similar(w), 0),
-              ParameterUpdaterState(n, m))
+              ParameterUpdaterState(n, m)) # TODO: handle updaters different from current_updater?
 end
 
 # TODO: need to be able to pass parameters for random connectivity!
@@ -139,13 +139,15 @@ type Circuit <: AbstractNode
     nodemap::Dict{Symbol,AbstractNode}
     gatemap::Dict{Symbol,Gate}
     updater::ParameterUpdater
-    loss::PredictionLoss
+    mloss::ModelLoss
+    ploss::ParameterLoss
     tag::Symbol
 end
 
 function Circuit(nodes::AbstractVector, gates = [];
                  updater::ParameterUpdater = current_updater(),
-                 loss::PredictionLoss = current_ploss(),
+                 mloss::ModelLoss = current_mloss(),
+                 ploss::ModelLoss = current_ploss(),
                  tag::Symbol = gensym("circuit"))
     # first add missing gates
     gates = Set(gates)
@@ -155,7 +157,7 @@ function Circuit(nodes::AbstractVector, gates = [];
 
     nodemap = Dict{Symbol,AbstractNode}([(node.tag, node) for node in nodes])
     gatemap = Dict{Symbol,Gate}([(gate.tag, gate) for gate in gates])
-    Circuit(nodes[1].n, nodes, nodemap, gatemap, updater, loss, tag)
+    Circuit(nodes[1].n, nodes, nodemap, gatemap, updater, mloss, ploss, tag)
 end
 
 # TODO: constructor which takes inputlayer/outputlayer and initializes nodes with a proper ordering (traversing connection graph)

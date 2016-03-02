@@ -1,12 +1,12 @@
 
-const _activation_names = Dict(
-    "identity"  => IdentityActivation,
-    "sigmoid"   => SigmoidActivation,
-    "tanh"      => TanhActivation,
-    "softsign"  => SoftsignActivation,
-    "relu"      => ReLUActivation,
-    "lrelu"     => LReLUActivation,
-    "softmax"   => SoftmaxActivation,
+const _mapping_names = Dict(
+    "identity"  => IdentityMapping,
+    "sigmoid"   => SigmoidMapping,
+    "tanh"      => TanhMapping,
+    "softsign"  => SoftsignMapping,
+    "relu"      => ReLUMapping,
+    "lrelu"     => LReLUMapping,
+    "softmax"   => SoftmaxMapping,
     )
 
 strip_comment(str) = strip(split(str, '#')[1])
@@ -29,8 +29,8 @@ Each row defines a node.  The first value should be an integer which is the
 number of output cells for that node.  The rest will greedily apply to other
 node features:
     
-    - An activation name/alias will set the node's activation function.
-        - note: default activation is IdentityActivation
+    - An mapping name/alias will set the node's mapping function.
+        - note: default mapping is IdentityMapping
     - Other symbols will set the tag.
     - A vector-type or Function will initialize the bias vector.
 
@@ -63,19 +63,19 @@ macro circuit_str(str)
         # n = number of cells in this node
         n = index_val(args[1], symbol)
 
-        # if it's an activation, override IdentityActivation, otherwise assume it's a tag
-        activation = IdentityActivation
+        # if it's an mapping, override IdentityMapping, otherwise assume it's a tag
+        mapping = IdentityMapping
         tag = string(gensym("node"))
         for arg in args[2:end]
-            if haskey(_activation_names, arg)
-                activation = _activation_names[arg]
+            if haskey(_mapping_names, arg)
+                mapping = _mapping_names[arg]
             else
                 tag = arg
             end
         end
 
         # create the Node
-        nodeexpr = :(Node($n, $activation(); tag = symbol($tag)))
+        nodeexpr = :(Node($n, $mapping(); tag = symbol($tag)))
 
         # add Node definition to the constructor_list
         push!(constructor_list, nodeexpr)

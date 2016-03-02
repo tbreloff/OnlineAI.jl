@@ -84,6 +84,12 @@ export
 include("nnet/costs.jl")
 
 export
+  current_updater,
+  current_mloss,
+  current_ploss,
+  current_updater!,
+  current_mloss!,
+  current_ploss!,
   # GradientModel,
   # GradientState,
   # gradient_model,

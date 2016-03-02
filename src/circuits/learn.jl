@@ -8,7 +8,8 @@ _cols_to_compute(A::AbstractMatrix, i::Integer) = 1:size(A,2)
 function forward!(net::Circuit, x::AVec)
 
     # forward pass on input node
-    forward!(net[1], s_override = Nullable(x))
+    copy!(net[1].s, x)
+    forward!(net[1], compute_s = false)
 
     # forward pass for the rest (in order!)
     for i in 2:length(net)
@@ -22,63 +23,53 @@ end
 # TODO: the backward pass should compute ϕₒ = f'(sₒ) * dC/dyₒ  for final layer, then backprop the rest
 
 # TODO: LearnBase should have a "sensitivity" function which does that ϕ calc... this way we can skip multiplying
-#       deriv(activation) * deriv(loss) for softmax/cross entropy
+#       deriv(mapping) * deriv(loss) for softmax/cross entropy
 
 # backprop pass given error E(t)
-# function backward!(net::Circuit, costmult::AVec, multderiv::Bool)
 function backward!(net::Circuit, input::AVec, target::AVec)
 
-    # first compute the forward error responsibility of the final layer, and override ϕ calc
-    # ϕₒ = copy()
-
-    ϕₒ = xxxxxxx # TODO: compute error deriv * activation deriv
-    backward!(net[end], net.updater, net.ploss, ϕ_override = Nullable(ϕₒ))
+    # first compute the forward error responsibility of the final layer
+    outputnode = net[end]
+    output = outputnode.state.y
+    ϕₒ = sensitivity!(outputnode.state.ϕ,
+                      outputnode.mapping,
+                      net.mloss,
+                      input,
+                      output,
+                      target)
+    backward!(outputnode, net.updater, net.ploss, compute_ϕ = false)
 
     # backprop
     for i in length(net)-1:-1:1
-        backward!(net[i])
+        backward!(net[i], net.updater, net.ploss)
     end
 
     # return the net
     net
 end
 
+# go forwards to compute outputs, then backwards to update Learnables
 function OnlineStats.fit!(net::Circuit, input::AVec, target::AVec)
-    
-    # forward pass through circuit
     ouput = forward!(net, input)
     backward!(net, input, target)
-
-    # get the 
-    # costmult = zeros(net[end].n)
-    # multderiv = costMultiplier!(net.costModel, costmult, target, output)
-    # backward!(net, multderiv)
-
-    # # compute error
-    # E = cost(net.costmodel, target, ouput)
-
-    # backprop
-    # backward!(net, costmult, multderiv)
-
-    # return the net
     net
 end
 
 # ----------------------------------------------------------------------------
 
 
-function forward!{T}(node::Node{T}; s_override = Nullable{Vector{T}}())
+function forward!{T}(node::Node{T}; compute_s::Bool = true)
     state = node.state
 
     # compute f_ratio(t-1) using previous state/output
     for i=1:node.n
         yi = state.y[i]
-        state.f_ratio_prev[i] = yi == 0 ? 0 : deriv(node.activation, state.s[i]) / yi
+        state.f_ratio_prev[i] = yi == 0 ? 0 : deriv(node.mapping, state.s[i]) / yi
     end
 
     # when s_override is null, we must update the state.  otherwise don't update anything.
     # we will mostly use this for the input node
-    if isnull(s_override)
+    if compute_s
         
         # first compute gates
         for gate in node.gates_in
@@ -92,27 +83,37 @@ function forward!{T}(node::Node{T}; s_override = Nullable{Vector{T}}())
             state.s[i] += gate.g[i]
         end
 
-    else
-        copy!(state.s, get(s_override))
     end
 
-    # apply the activation function:
+    # apply the mapping function:
     #       yⱼ = fⱼ(sⱼ)
-    # forward!(node.activation, state.y, state.s)
-    value!(state.y, node.activation, state.s)
+    value!(state.y, node.mapping, state.s)
 
     # return the output
     state.y
 end
 
-function backward!{T}(node::Node{T}, updater::ParameterUpdater, ploss::ParameterLoss; ϕ_override = Nullable{Vector{T}}())
+function backward!{T}(node::Node{T}, updater::ParameterUpdater, ploss::ParameterLoss; compute_ϕ::Bool = true)
     state = node.state
-    # TODO: special handling for output node... might want a special "output gate" for δₒ calc
 
     # compute the sensitivity δⱼ = ∂C ./ ∂sⱼ
     #                            = (∂C ./ ∂sₒ) .* (∂sₒ ./ ∂sⱼ)
     #                            = δₒ .* ζⱼ
+    
+    if compute_ϕ
 
+        # compute ϕ = error responsibility of feedforward connections
+        # compute ψ = error responsibility of recurrent connections
+
+
+    end
+
+    # compute δ = ϕ + ψ
+    for i in eachindex(state.δ)
+        state.δ[i] = state.ϕ[i] + state.ψ[i]
+    end
+
+    # update the bias
     
 end
 
