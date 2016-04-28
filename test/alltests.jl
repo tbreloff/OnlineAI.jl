@@ -50,7 +50,7 @@ function updatesinplot(net::NeuralNet, params::SolverParams, datasets::DataSets,
 end
 
 function buildRegNN1()
-  buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
+  buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhMapping())
 end
 
 function buildRegNN2()
@@ -59,7 +59,7 @@ function buildRegNN2()
   NeuralNet(Layer[
     buildLayer(1, 10),
     buildLayer(10, 10),
-    buildLayer(10, 1, IdentityActivation())
+    buildLayer(10, 1, IdentityMapping())
     ], η, μ)
 end
 
@@ -82,8 +82,8 @@ function testsin(maxiter::Int, dogif = false)
   data = buildSolverData(inputs, targets)
   datasets = DataSets(data, sample(data,30), data)
 
-  # net = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhActivation())
-  net = buildRegressionNet(1, 1, [30,30]; hiddenActivation = ReLUActivation(), solver=NNetSolver(η = 0.05, dropout=DropoutStrategy(on=false)))
+  # net = buildNeuralNet([1,10,10,1]; η=0.005, μ=0.1, activation=TanhMapping())
+  net = buildRegressionNet(1, 1, [30,30]; hiddenMapping = ReLUMapping(), solver=NNetSolver(η = 0.05, dropout=DropoutStrategy(on=false)))
 
   params = SolverParams(maxiter=maxiter, onbreak=updatesinplot, displayiter=10000, minerror=1e-3)
   solve!(net, params, datasets)

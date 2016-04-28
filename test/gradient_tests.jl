@@ -2,16 +2,16 @@
 using OnlineAI, FactCheck
 import OnlineStats: @LOG
 
-A = SigmoidActivation()
-# A = TanhActivation()
-C = CrossEntropyCostModel()
+A = SigmoidMapping()
+# A = TanhMapping()
+C = CrossentropyCostModel()
 # C = L2CostModel()
 
 nin, nout = 3, 1
 hidden = [2]
 net = buildClassificationNet(nin, nout, hidden;
-                              finalActivation = A,
-                              params = NetParams(costModel = C)
+                              finalMapping = A,
+                              params = NetParams(mloss = C)
                             )
 
 x = rand(nin) - 0.5
@@ -45,7 +45,7 @@ end
 
 
 yhat = forward!(net, x, true)
-multiplyDerivative = OnlineAI.costMultiplier!(net.params.costModel, net.costmult, y, yhat)
+multiplyDerivative = OnlineAI.costMultiplier!(net.params.mloss, net.costmult, y, yhat)
 OnlineAI.updateSensitivities!(ls[end], net.costmult, multiplyDerivative)
 for i in length(ls)-1:-1:1
   OnlineAI.updateSensitivities!(ls[i:i+1]...)
@@ -82,7 +82,7 @@ end
 
 # now update the weights
 for l in ls
-  OnlineAI.updateWeights!(l, net.params.gradientModel)
+  OnlineAI.updateWeights!(l, net.params.updater)
 end
 
 

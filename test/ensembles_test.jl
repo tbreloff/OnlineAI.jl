@@ -14,8 +14,8 @@ end
 
 
 # function testxor(; hiddenLayerNodes = [2],
-#                    hiddenActivation = SigmoidActivation(),
-#                    finalActivation = IdentityActivation(),
+#                    hiddenMapping = SigmoidMapping(),
+#                    finalMapping = IdentityMapping(),
 #                    params = NetParams(),
 #                    solverParams = SolverParams(maxiter=10000))
 
@@ -32,8 +32,8 @@ end
 #   net = buildRegressionNet(ncols(inputs),
 #                            ncols(targets),
 #                            hiddenLayerNodes;
-#                            hiddenActivation = hiddenActivation,
-#                            finalActivation = finalActivation,
+#                            hiddenMapping = hiddenMapping,
+#                            finalMapping = finalMapping,
 #                            params = params)
 #   show(net)
 
@@ -54,7 +54,7 @@ facts("Ensembles") do
   # minerror = 0.05
   # solverParams = SolverParams(maxiter=10000, minerror=minerror*0.8)
 
-  # net, output, stats = testxor(params=NetParams(μ=0.0, λ=0.0, costModel=L1CostModel()), solverParams=solverParams)
+  # net, output, stats = testxor(params=NetParams(μ=0.0, λ=0.0, mloss=L1CostModel()), solverParams=solverParams)
   # @fact net --> anything
   # @fact output --> roughly([0., 1., 1., 0.], atol=0.05)
 

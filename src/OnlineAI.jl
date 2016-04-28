@@ -15,7 +15,8 @@ using Distributions
 using Requires
 using ArrayViews
 using Plots
-using LearnBase
+@reexport using LearnBase
+import LearnBase: value
 
 import OnlineStats: nrows, ncols,
                     VecF, MatF, AVecF, AMatF,
@@ -38,15 +39,15 @@ abstract NeuralNetLayer
 
 include("utils.jl")
 
-# export 
-#   Activation,
-#   IdentityActivation,
-#   SigmoidActivation,
-#   TanhActivation,
-#   SoftsignActivation,
-#   ReLUActivation,
-#   LReLUActivation,
-#   SoftmaxActivation
+# export
+#   Mapping,
+#   IdentityMapping,
+#   SigmoidMapping,
+#   TanhMapping,
+#   SoftsignMapping,
+#   ReLUMapping,
+#   LReLUMapping,
+#   SoftmaxMapping
 # include("nnet/activations.jl")
 
 export
@@ -74,11 +75,6 @@ export
 include("nnet/data.jl")
 
 export
-  # CostModel,
-  # L2CostModel,
-  # L1CostModel,
-  # WeightedL2CostModel,
-  # CrossEntropyCostModel,
   cost,
   totalCost
 include("nnet/costs.jl")
@@ -90,21 +86,6 @@ export
   current_updater!,
   current_mloss!,
   current_ploss!,
-  # GradientModel,
-  # GradientState,
-  # gradient_model,
-  # gradient_model!,
-  # gradient_state,
-  # SGDModel,
-  # SGDState,
-  # AdagradModel,
-  # AdagradState,
-  # AdadeltaModel,
-  # AdadeltaState,
-  # AdamModel,
-  # AdamState,
-  # AdaMaxModel,
-  # AdaMaxState,
   LearningRateModel,
   FixedLearningRate,
   AdaptiveLearningRate
@@ -125,9 +106,9 @@ include("nnet/solver.jl")
 
 export
   NeuralNetLayer,
-  Layer
-  forward,
-  backward,
+  Layer,
+  # forward,
+  # backward,
   forward!,
   backward!
 include("nnet/layer.jl")
@@ -175,9 +156,9 @@ include("nnet/ensembles.jl")
 
 # NOTE: EXPERIMENTAL
 
-export 
+export
   GaussianReceptiveField,
-  value,
+  # value,
   Synapse,
   DelaySynapse,
   fire!,    # checks for threshold crossing, then fires

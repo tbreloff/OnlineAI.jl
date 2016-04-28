@@ -20,26 +20,25 @@ getDropoutProb(strat::NoDropout, isinput::Bool) = 1.0
 
 # ----------------------------------------
 
-type NetParams{GRAD<:GradientModel, DROP<:DropoutStrategy, ERR<:CostModel}
-  gradientModel::GRAD
+type NetParams{GRAD<:ParameterUpdater, DROP<:DropoutStrategy, ERR<:Loss}
+  updater::GRAD
   dropoutStrategy::DROP
-  costModel::ERR
+  mloss::ERR
   weightInit::Function
 end
 
-function NetParams(; 
-                    gradientModel::GradientModel = AdaMaxModel(),
+function NetParams(;
+                    updater::ParameterUpdater = AdaMaxUpdater(),
                     dropout::DropoutStrategy = NoDropout(),
-                    costModel::CostModel = L2CostModel(),
+                    mloss::Loss = L2DistLoss(),
                     weightInit::Function = _initialWeights
                   )
-  NetParams(gradientModel, dropout, costModel, weightInit)
+  NetParams(updater, dropout, mloss, weightInit)
 end
 
 
-Base.print(io::IO, p::NetParams) = print(io, "NetParams{$(p.gradientModel) $(p.dropoutStrategy) $(p.costModel)}")
+Base.print(io::IO, p::NetParams) = print(io, "NetParams{$(p.updater) $(p.dropoutStrategy) $(p.mloss)}")
 Base.show(io::IO, p::NetParams) = print(io, p)
 
 # get the probability that we retain a node using the dropout strategy (returns 1.0 if off)
 getDropoutProb(params::NetParams, isinput::Bool) = getDropoutProb(params.dropoutStrategy, isinput)
-

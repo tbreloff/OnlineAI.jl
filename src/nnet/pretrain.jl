@@ -36,7 +36,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
                     encoderParams::NetParams = NetParams(dropout=dropout),
                     # solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=typemax(Int), breakiter=typemax(Int)),  #probably don't set this manually??
                     solverParams::SolverParams = SolverParams(maxiter=maxiter, erroriter=2000, breakiter=2000, stopepochs=40),
-                    inputActivation::Activation = IdentityActivation())
+                    inputMapping::Mapping = IdentityMapping())
 
   # lets pre-load the input dataset for simplicity... just need the x vec, since we're trying to map: x --> somthing --> x
   # trainData = DataPoints([DataPoint(dp.x, dp.x) for dp in DataPoints(trainSampler)])
@@ -52,17 +52,17 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
   # for each layer (which is not the output layer), fit the weights/bias as guided by the pretrain strategy
   for layer in net.layers[1:end-1]
 
-    # NOTE: we are mapping input --> hidden --> input, which is why the "center" activation is called hiddenActivation
-    #       and the "final" activation is called inputActivation
+    # NOTE: we are mapping input --> hidden --> input, which is why the "center" activation is called hiddenMapping
+    #       and the "final" activation is called inputMapping
 
     # some setup
-    hiddenActivation = layer.activation
+    hiddenMapping = layer.activation
     inputTransformer = layer === first(net.layers) ? net.inputTransformer : IdentityTransformer()
 
     # build a neural net which maps: nin -> nout -> nin
     autoencoder = buildNet(layer.nin, layer.nin, [layer.nout];
-                            hiddenActivation = hiddenActivation,
-                            finalActivation = inputActivation,
+                            hiddenMapping = hiddenMapping,
+                            finalMapping = inputMapping,
                             params = encoderParams,
                             solverParams = solverParams,
                             inputTransformer = inputTransformer)
@@ -71,7 +71,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     # l1, l2 = autoencoder.layers
     if tiedweights
       setSecondAutoencoderLayer(autoencoder, autoencoder.layers...)
-      # gradientState = gradient_state(encoderParams.gradientModel, l2.nin, l2.nout)
+      # gradientState = ParameterUpdaterState(encoderParams.updater, l2.nin, l2.nout)
       # autoencoder.layers[2] = Layer(l2.nin, l2.nout, l2.activation, l2.p,
       #                               l2.dwState,
       #                               l2.dbState,
@@ -79,7 +79,7 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
       #                               l2.Σ, l2.a, l2.r, l2.nextr)
     end
 
-    println("netlayer: $layer  oact: $inputActivation")
+    println("netlayer: $layer  oact: $inputMapping")
     println("autoenc: $autoencoder")
 
     # solve for the weights and bias... note we're not using stopping criteria... only maxiter
@@ -99,8 +99,8 @@ function pretrain(::Type{DenoisingAutoencoder}, net::NeuralNet, trainSampler::Da
     layer.w = copy(l1.w)
     layer.b = copy(l1.b)
 
-    # update the inputActivation, so that this layer's activation becomes the next autoencoder's inputActivation
-    inputActivation = hiddenActivation
+    # update the inputMapping, so that this layer's activation becomes the next autoencoder's inputMapping
+    inputMapping = hiddenMapping
 
     # feed the data forward to the next layer
     for i in 1:length(trainData)

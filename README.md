@@ -21,7 +21,7 @@ datasets = DataSets(data, data, data)
 #   μ := momentum term
 #   λ := L2-penalty param
 #   dropoutStrategy
-#   costModel
+#   mloss
 hiddenLayerNodes = [2]
 net = buildRegressionNet(ncols(inputs),
                          ncols(targets),

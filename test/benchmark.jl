@@ -11,8 +11,8 @@ end
 nin, nout = 2, 1
 hidden = [100,100]
 params = NetParams(
-    # gradientModel = SGDModel()
-    gradientModel = AdaMaxModel()
+    # updater = SGDModel()
+    updater = AdaMaxModel()
   )
 net = buildTanhClassificationNet(nin, nout, hidden; params = params)
 x = randn(nin)

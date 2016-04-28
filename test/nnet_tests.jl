@@ -14,8 +14,8 @@ end
 
 
 function testxor(; hiddenLayerNodes = [4],
-                   hiddenActivation = SoftsignActivation(),
-                   finalActivation = SigmoidActivation(),
+                   hiddenMapping = SoftsignMapping(),
+                   finalMapping = SigmoidMapping(),
                    params = NetParams(),
                    solverParams = SolverParams(maxiter=100000),
                    inputTransformer = IdentityTransformer(),
@@ -34,8 +34,8 @@ function testxor(; hiddenLayerNodes = [4],
   net = buildRegressionNet(ncols(inputs),
                            ncols(targets),
                            hiddenLayerNodes;
-                           hiddenActivation = hiddenActivation,
-                           finalActivation = finalActivation,
+                           hiddenMapping = hiddenMapping,
+                           finalMapping = finalMapping,
                            params = params,
                            solverParams = solverParams,
                            inputTransformer = inputTransformer)
@@ -64,20 +64,20 @@ facts("NNet") do
                               plotiter=-1,
                               plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
 
-  gradientModel = AdaMaxModel()
-  # gradientModel = SGDModel(η=0.001)
-  net, output, stats = testxor(params=NetParams(gradientModel=gradientModel, costModel=L2CostModel()),
+  updater = AdaMaxUpdater()
+  # updater = SGDModel(η=0.001)
+  net, output, stats = testxor(params=NetParams(updater=updater, mloss=L2DistLoss()),
                                solverParams=solverParams, doPretrain=false)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  net, output, stats = testxor(params=NetParams(gradientModel=AdagradModel(), costModel=L2CostModel()), solverParams=solverParams)
+  net, output, stats = testxor(params=NetParams(updater=AdagradUpdater(), mloss=L2DistLoss()), solverParams=solverParams)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  net, output, stats = testxor(params=NetParams(gradientModel=AdaMaxModel(), costModel=CrossEntropyCostModel()), finalActivation=SigmoidActivation(), solverParams=solverParams)
+  net, output, stats = testxor(params=NetParams(updater=AdaMaxUpdater(), mloss=CrossentropyLoss()), finalMapping=SigmoidMapping(), solverParams=solverParams)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
-  net, output, stats = testxor(params=NetParams(gradientModel=AdaMaxModel(), costModel=CrossEntropyCostModel(), dropout=Dropout(1.0,0.9)),
-                               finalActivation=SigmoidActivation(), solverParams=solverParams,
+  net, output, stats = testxor(params=NetParams(updater=AdaMaxUpdater(), mloss=CrossentropyLoss(), dropout=Dropout(1.0,0.9)),
+                               finalMapping=SigmoidMapping(), solverParams=solverParams,
                                hiddenLayerNodes = [6,6,6,6,6])
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 

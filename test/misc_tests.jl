@@ -8,10 +8,10 @@ y = rand(n, 1)
 nin = ncols(x)
 nout = ncols(y)
 
-gradientModel = AdadeltaModel(1e-6, 0.95, 1e-6)
+updater = AdadeltaModel(1e-6, 0.95, 1e-6)
 dropout = Dropout()
-costModel = L2CostModel()
-params = NetParams(gradientModel, dropout, costModel)
+mloss = L2CostModel()
+params = NetParams(updater, dropout, mloss)
 
 
 

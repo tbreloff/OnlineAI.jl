@@ -1,7 +1,7 @@
 
 function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec{Int};
-                  hiddenActivation::Activation = SigmoidActivation(),
-                  finalActivation::Activation = SigmoidActivation(),
+                  hiddenMapping::Mapping = SigmoidMapping(),
+                  finalMapping::Mapping = SigmoidMapping(),
                   params = NetParams(),
                   solverParams = SolverParams(),
                   inputTransformer::Transformer = IdentityTransformer(),
@@ -17,8 +17,8 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
     # push the hidden layer
     push!(layers, LAYER(nin,
                         nout,
-                        hiddenActivation,
-                        params.gradientModel,
+                        hiddenMapping,
+                        params.updater,
                         pDropout;
                         wgt = wgt,
                         weightInit = params.weightInit
@@ -32,8 +32,8 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
   # push the output layer
   push!(layers, LAYER(nin,
                       numOutputs,
-                      finalActivation,
-                      params.gradientModel,
+                      finalMapping,
+                      params.updater,
                       pDropout;
                       wgt = wgt,
                       weightInit = params.weightInit
@@ -42,6 +42,6 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
   NeuralNet(layers, params, solverParams, inputTransformer)
 end
 
-buildClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., finalActivation = SigmoidActivation())
-buildTanhClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., hiddenActivation = TanhActivation(), finalActivation = TanhActivation())
-buildRegressionNet(args...; kwargs...) = buildNet(args...; kwargs..., finalActivation = IdentityActivation())
+buildClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., finalMapping = SigmoidMapping())
+buildTanhClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., hiddenMapping = TanhMapping(), finalMapping = TanhMapping())
+buildRegressionNet(args...; kwargs...) = buildNet(args...; kwargs..., finalMapping = IdentityMapping())

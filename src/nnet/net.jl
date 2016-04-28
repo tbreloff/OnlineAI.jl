@@ -8,7 +8,7 @@ type NeuralNet <: NetStat
   solverParams::SolverParams
   inputTransformer::Transformer
   transformedInput::VecF   # so we can avoid allocations
-  costmult::VecF
+  # costmult::VecF
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
   function NeuralNet(layers::Vector{LAYER},
@@ -17,15 +17,15 @@ type NeuralNet <: NetStat
                       inputTransformer::Transformer = IdentityTransformer())
 
     # do some sanity checking on activation/costmodel combos
-    if isa(params.costModel, CrossEntropyCostModel)
-      @assert isa(layers[end].activation, layers[end].nout > 1 ? SoftmaxActivation : SigmoidActivation)
+    if isa(params.mloss, CrossentropyLoss)
+      @assert isa(layers[end].activation, layers[end].nout > 1 ? SoftmaxMapping : SigmoidMapping)
     end
 
-    if isa(layers[end].activation, SoftmaxActivation)
-      @assert isa(params.costModel, CrossEntropyCostModel)
+    if isa(layers[end].activation, SoftmaxMapping)
+      @assert isa(params.mloss, CrossentropyLoss)
     end
 
-    new(layers, params, solverParams, inputTransformer, zeros(first(layers).nin), zeros(last(layers).nout))
+    new(layers, params, solverParams, inputTransformer, zeros(first(layers).nin)) #, zeros(last(layers).nout))
   end
 end
 
@@ -35,7 +35,7 @@ end
 # function NeuralNet(structure::AVec{Int};
 #                     params = NetParams(),
 #                     solverParams = SolverParams(),
-#                     activation::Activation = TanhActivation(),
+#                     activation::Mapping = TanhMapping(),
 #                     inputTransformer::Transformer = IdentityTransformer())
 #   @assert length(structure) > 1
 
@@ -43,7 +43,7 @@ end
 #   for i in 1:length(structure)-1
 #     nin, nout = structure[i:i+1]
 #     pDropout = getDropoutProb(params, i==1)
-#     push!(layers, layerType(nin, nout, activation, params.gradientModel, pDropout))
+#     push!(layers, layerType(nin, nout, activation, params.updater, pDropout))
 #   end
 
 #   NeuralNet(layers, params, solverParams, inputTransformer)
@@ -63,17 +63,17 @@ Base.print(io::IO, net::NeuralNet) = show(io, net)
 
 # ------------------------------------------------------------------------
 
-# produces a vector of yhat (estimated outputs) from the network
-function forward!(net::NeuralNet, x::AVecF, istraining::Bool = false)
-  
+# produces a vector of output (estimated outputs) from the network
+function forward!(net::NeuralNet, input::AVecF, istraining::Bool = false)
+
   # first transform the input
-  transform!(net.inputTransformer, net.transformedInput, x)
+  transform!(net.inputTransformer, net.transformedInput, input)
 
   # now feed it forward
-  yhat = net.transformedInput
+  output = net.transformedInput
   for layer in net.layers
-    forward!(layer, yhat, istraining)
-    yhat = layer.a
+    forward!(layer, output, istraining)
+    output = layer.a
   end
 
   # update nextr
@@ -81,15 +81,16 @@ function forward!(net::NeuralNet, x::AVecF, istraining::Bool = false)
     net.layers[i].nextr = net.layers[i+1].r
   end
 
-  yhat
+  output
 end
 
 
-# given a vector of errors (y - yhat), update network weights
-function backward!(net::NeuralNet, multiplyDerivative::Bool)
+# given a vector of errors (target - output), update network weights
+function backward!(net::NeuralNet, output, target)
 
-  # update δᵢ starting from the output layer using the error multiplier
-  updateSensitivities!(net.layers[end], net.costmult, multiplyDerivative)
+  # update δᵢ starting from the output layer
+  layer = net.layers[end]
+  δ = sensitivity!(layer.δ, layer.activation, net.params.mloss, layer.x, output, target)
 
   # now update the remaining sensitivities using bakckprop
   for i in length(net.layers)-1:-1:1
@@ -98,7 +99,7 @@ function backward!(net::NeuralNet, multiplyDerivative::Bool)
 
   # now update the weights
   for layer in net.layers
-    updateWeights!(layer, net.params.gradientModel)
+    updateWeights!(layer, net.params.updater)
 
     # println()
     # @show layer
@@ -111,27 +112,32 @@ end
 
 # ------------------------------------------------------------------------
 
+# ϕₒ = sensitivity!(outputnode.state.ϕ,
+#                   outputnode.mapping,
+#                   net.mloss,
+#                   input,
+#                   output,
+#                   target)
 
 # online version... returns the feedforward estimate before updating
-function OnlineStats.fit!(net::NeuralNet, x::AVecF, y::AVecF)
-  yhat = forward!(net, x, true)
-  multiplyDerivative = costMultiplier!(net.params.costModel, net.costmult, y, yhat)
-  backward!(net, multiplyDerivative)
-  yhat
+function OnlineStats.fit!(net::NeuralNet, input::AVecF, target::AVecF)
+  output = forward!(net, input, true)
+  backward!(net, output, target)
+  output
 end
 
 
 # batch version
-function OnlineStats.fit!(net::NeuralNet, x::MatF, y::MatF)
-  @assert ncols(x) == net.nin
-  @assert ncols(y) == net.nout
-  @assert nrows(x) == nrows(y)
+function OnlineStats.fit!(net::NeuralNet, input::MatF, target::MatF)
+  @assert ncols(input) == net.nin
+  @assert ncols(target) == net.nout
+  @assert nrows(input) == nrows(target)
 
-  Float64[fit!(net, row(x,i), row(y,i)) for i in 1:nrows(x)]
+  Float64[fit!(net, row(input,i), row(target,i)) for i in 1:nrows(input)]
 end
 
 # note: when yEqualsX is true, we are updating an autoencoder (or similar) and so we can
-# use net.transformedInput instead of y
+# use net.transformedInput instead of target
 function OnlineStats.fit!(net::NetStat, data::DataPoint, yEqualsX::Bool = false)
   fit!(net, data.x, yEqualsX ? net.transformedInput : data.y)
   # fit!(net, data.x, transformY ? transform(net.inputTransformer, data.y) : data.y)
@@ -139,9 +145,9 @@ end
 
 # ------------------------------------------------------------------------
 
-function cost(net::NeuralNet, x::AVecF, y::AVecF)
-  yhat = forward!(net, x)
-  cost(net.params.costModel, y, yhat)
+function cost(net::NeuralNet, input::AVecF, target::AVecF)
+  output = forward!(net, input)
+  value(net.params.mloss, target, output)
 end
 totalCost(net::NetStat, data::DataPoint) = cost(net, data.x, data.y)
 totalCost(net::NetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])
@@ -149,16 +155,16 @@ totalCost(net::NetStat, sampler::DataSampler) = totalCost(net, DataPoints(sample
 
 # ------------------------------------------------------------------------
 
-function StatsBase.predict(net::NeuralNet, x::AVecF)
-  forward!(net, x)
+function StatsBase.predict(net::NeuralNet, input::AVecF)
+  forward!(net, input)
 end
 
-function StatsBase.predict(net::NeuralNet, x::AMatF)
-  yhat = zeros(nrows(x), net.layers[end].nout)
-  for i in 1:nrows(x)
-    row!(yhat, i, predict(net, row(x, i)))
+function StatsBase.predict(net::NeuralNet, input::AMatF)
+  output = zeros(nrows(input), net.layers[end].nout)
+  for i in 1:nrows(input)
+    row!(output, i, predict(net, row(input, i)))
   end
-  yhat
+  output
 end
 
 # ------------------------------------------------------------------------
@@ -166,15 +172,13 @@ end
 
 # note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
 #       is also approximately standard normal
-_initialWeights(nin::Int, nout::Int, activation::Activation = IdentityActivation()) = 0.5randn(nout, nin) / sqrt(nin)
+_initialWeights(nin::Int, nout::Int, activation::Mapping = IdentityMapping()) = 0.5randn(nout, nin) / sqrt(nin)
 
 
-# initialWeights(nin::Int, nout::Int, activation::Activation) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
+# initialWeights(nin::Int, nout::Int, activation::Mapping) = (rand(nout, nin) - 0.5) * 2.0 * sqrt(6.0 / (nin + nout))
 
 # note: we scale standard random normals by (1/sqrt(nin)) so that the distribution of initial (Σ = wx + b)
 #       is also approximately standard normal
-# initialWeights(nin::Int, nout::Int, activation::Activation) = randn(nout, nin) / sqrt(nin)
+# initialWeights(nin::Int, nout::Int, activation::Mapping) = randn(nout, nin) / sqrt(nin)
 
 # ------------------------------------------------------------------------
-
-

@@ -18,9 +18,9 @@ to compute all gradients.
 
 note: w is a parameter for the case of tied weights (it can be a TransposeView!)
 """
-type NormalizedLayer{A <: Activation,
+type NormalizedLayer{A <: Mapping,
                      MATF <: AbstractMatrix{Float64},
-                     GSTATE <: GradientState,
+                     GSTATE <: ParameterUpdaterState,
                      WGT <: Weight} <: NeuralNetLayer
   nin::Int
   nout::Int
@@ -56,17 +56,17 @@ end
 
 
 
-function NormalizedLayer(nin::Integer, nout::Integer, activation::Activation,
-                         gradientModel::GradientModel, p::Float64 = 1.0;
+function NormalizedLayer(nin::Integer, nout::Integer, activation::Mapping,
+                         updater::ParameterUpdater, p::Float64 = 1.0;
                          weightInit::Function = _initialWeights,
                          wgt = ExponentialWeight(500))
 
   w = weightInit(nin, nout, activation)
   NormalizedLayer(nin, nout, activation, p,
-                  gradient_state(gradientModel, nout, nin),
-                  gradient_state(gradientModel, nout, 1),
-                  gradient_state(gradientModel, nin, 1),
-                  gradient_state(gradientModel, nin, 1),
+                  ParameterUpdaterState(updater, nout, nin),
+                  ParameterUpdaterState(updater, nout, 1),
+                  ParameterUpdaterState(updater, nin, 1),
+                  ParameterUpdaterState(updater, nin, 1),
                   [Variance(wgt) for i in 1:nin],
                   w,
                   [zeros(nin) for i in 1:5]...,
@@ -212,7 +212,7 @@ gradients:
   αGrad = δy
   βGrad = δy * xhat
 ```"""
-function updateWeights!(layer::NormalizedLayer, gradientModel::GradientModel)
+function updateWeights!(layer::NormalizedLayer, updater::ParameterUpdater)
 
   # note: i refers to the output, j refers to the input
   # TODO: change gradient state to operate on one vector only... then have dbState, dwState, etc
@@ -222,12 +222,12 @@ function updateWeights!(layer::NormalizedLayer, gradientModel::GradientModel)
   for i in 1:layer.nout
     if layer.nextr[i] > 0.0
 
-      layer.b[i] += Δij(gradientModel, layer.dbState, layer.δΣ[i], 0.0, i, 1)
+      layer.b[i] += Δij(updater, layer.dbState, layer.δΣ[i], 0.0, i, 1)
       
       for j in 1:layer.nin
         if layer.r[j] > 0.0
 
-          layer.w[i,j] += Δij(gradientModel, layer.dwState, layer.δΣ[i] * layer.y[j], layer.w[i,j], i, j)
+          layer.w[i,j] += Δij(updater, layer.dwState, layer.δΣ[i] * layer.y[j], layer.w[i,j], i, j)
 
         end
       end
@@ -239,8 +239,8 @@ function updateWeights!(layer::NormalizedLayer, gradientModel::GradientModel)
   for i in 1:layer.nin
     if layer.r[i] > 0.0
 
-      layer.α[i] += Δij(gradientModel, layer.dαState, layer.δy[i], 0.0, i, 1)
-      layer.β[i] += Δij(gradientModel, layer.dβState, layer.δy[i] * layer.xhat[i], 0.0, i, 1)
+      layer.α[i] += Δij(updater, layer.dαState, layer.δy[i], 0.0, i, 1)
+      layer.β[i] += Δij(updater, layer.dβState, layer.δy[i] * layer.xhat[i], 0.0, i, 1)
 
     end
   end
