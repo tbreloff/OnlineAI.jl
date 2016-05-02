@@ -13,7 +13,7 @@ forward value := a = f(Σ)
   y = xhat * β + α
   xhat = (x - μ) / σ
 
-Note: that we solve for w, b, β, and α, and require intermediate sensitivities δΣ and δy 
+Note: that we solve for w, b, β, and α, and require intermediate sensitivities δΣ and δy
 to compute all gradients.
 
 note: w is a parameter for the case of tied weights (it can be a TransposeView!)
@@ -25,21 +25,22 @@ type NormalizedLayer{A <: Mapping,
   nin::Int
   nout::Int
   activation::A
+  ploss::ParameterLoss
   p::Float64  # dropout retention probability
 
   # the state of the layer
 
-  dwState::GSTATE
-  dbState::GSTATE
-  dβState::GSTATE
-  dαState::GSTATE
-  
+  dwState::Matrix{GSTATE}
+  dbState::Matrix{GSTATE}
+  dβState::Matrix{GSTATE}
+  dαState::Matrix{GSTATE}
+
   xvar::Vector{Variance{WGT}}  # nin x 1 -- online variances to calculate μ and σ for the normalization step
   w::MATF               # nout x nin -- weights connecting y --> Σ
-  
+
   x::VecF               # nin x 1 -- input
   xhat::VecF            # nin x 1 -- xhat = standardize(x)
-  α::VecF               # nin x 1 -- 
+  α::VecF               # nin x 1 --
   y::VecF               # nin x 1 -- y = xhat .* β + α
   δy::VecF              # nin x 1 -- sensitivities for y:  δyᵢ := dC / dyᵢ   (calculated during backward pass)
 
@@ -50,7 +51,7 @@ type NormalizedLayer{A <: Mapping,
 
   β::VecF               # nin x 1 -- updated by SGD step, used to compute y
   r::VecF               # nin x 1 -- vector of dropout retention... 0 if we drop this incoming weight, 1 if we keep it
-  nextr::VecF           # nout x 1 -- retention of the nodes of this layer (as opposed to r 
+  nextr::VecF           # nout x 1 -- retention of the nodes of this layer (as opposed to r
                         #             which applies to the incoming weights)
 end
 
@@ -58,11 +59,12 @@ end
 
 function NormalizedLayer(nin::Integer, nout::Integer, activation::Mapping,
                          updater::ParameterUpdater, p::Float64 = 1.0;
+                         ploss::ParameterLoss = NoParameterLoss(),
                          weightInit::Function = _initialWeights,
                          wgt = ExponentialWeight(500))
 
   w = weightInit(nin, nout, activation)
-  NormalizedLayer(nin, nout, activation, p,
+  NormalizedLayer(nin, nout, activation, ploss, p,
                   ParameterUpdaterState(updater, nout, nin),
                   ParameterUpdaterState(updater, nout, 1),
                   ParameterUpdaterState(updater, nin, 1),
@@ -81,7 +83,7 @@ function Base.print{A,M,G}(io::IO, l::NormalizedLayer{A,M,G})
   print(io, "‖δΣ‖₁=$(sumabs(l.δΣ)) ‖δy‖₁=$(sumabs(l.δy)) ")
   print(io, "$(M<:TransposeView ? "T" : "")}")
 end
-function Base.show(io::IO, l::NormalizedLayer) 
+function Base.show(io::IO, l::NormalizedLayer)
   print(io, l)
 end
 
@@ -154,13 +156,19 @@ function forward!(layer::NormalizedLayer, x::AVecF, istraining::Bool)
   # update Σ
   dosigmamult!(layer, p)
 
-  forward!(layer.activation, layer.a, layer.Σ)     # activate
+  # forward!(layer.activation, layer.a, layer.Σ)     # activate
+  value!(layer.a, layer.activation, layer.Σ)  # activate
 end
 
 
-function updateSensitivities!(layer::NormalizedLayer, costmult::AVecF, multiplyDerivative::Bool)
-  updateδΣ!(layer, costmult, multiplyDerivative)
-  updateδy!(layer)
+# function updateSensitivities!(layer::NormalizedLayer, costmult::AVecF, multiplyDerivative::Bool)
+#   updateδΣ!(layer, costmult, multiplyDerivative)
+#   updateδy!(layer)
+# end
+
+function updateSensitivities!(layer::NormalizedLayer, mloss::ModelLoss, output::AVec, target::AVec)
+    sensitivity!(layer.δΣ, layer.activation, mloss, layer.Σ, output, target)
+    updateδy!(layer)
 end
 
 function updateSensitivities!(layer::NormalizedLayer, nextlayer::NormalizedLayer)
@@ -168,16 +176,16 @@ function updateSensitivities!(layer::NormalizedLayer, nextlayer::NormalizedLayer
   updateδy!(layer)
 end
 
-# backward step for the final (output) layer
-# note: costmult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
-function updateδΣ!(layer::NormalizedLayer, costmult::AVecF, multiplyDerivative::Bool)
-  copy!(layer.δΣ, costmult)
-  if multiplyDerivative
-    for i in 1:layer.nout
-      layer.δΣ[i] *= backward(layer.activation, layer.Σ[i])
-    end
-  end
-end
+# # backward step for the final (output) layer
+# # note: costmult is the amount to multiply against f'(Σ)... L2 case should be: (yhat-y)
+# function updateδΣ!(layer::NormalizedLayer, costmult::AVecF, multiplyDerivative::Bool)
+#   copy!(layer.δΣ, costmult)
+#   if multiplyDerivative
+#     for i in 1:layer.nout
+#       layer.δΣ[i] *= backward(layer.activation, layer.Σ[i])
+#     end
+#   end
+# end
 
 
 # this is the backward step for a hidden layer
@@ -187,8 +195,8 @@ function updateδΣ!(layer::NormalizedLayer, nextlayer::NormalizedLayer)
   for i in 1:layer.nout
     σi = std(nextlayer.xvar[i]) |> if0then1
     βi = nextlayer.β[i]
-    deriv = backward(layer.activation, layer.Σ[i])
-    layer.δΣ[i] = nextlayer.δy[i] * (βi / σi) * deriv
+    d = deriv(layer.activation, layer.Σ[i])
+    layer.δΣ[i] = nextlayer.δy[i] * (βi / σi) * d
   end
 end
 
@@ -211,41 +219,39 @@ gradients:
   wGrad = δΣ * y
   αGrad = δy
   βGrad = δy * xhat
-```"""
+```
+"""
 function updateWeights!(layer::NormalizedLayer, updater::ParameterUpdater)
 
-  # note: i refers to the output, j refers to the input
-  # TODO: change gradient state to operate on one vector only... then have dbState, dwState, etc
+    # note: i refers to the output, j refers to the input
+    # TODO: change gradient state to operate on one vector only... then have dbState, dwState, etc
 
-  # update w and b
-  # note: make sure we only update when the node is retained (from dropout)
-  for i in 1:layer.nout
-    if layer.nextr[i] > 0.0
+    # update w and b
+    # note: make sure we only update when the node is retained (from dropout)
+    for i in 1:layer.nout
+        if layer.nextr[i] > 0.0
+            # layer.b[i] += Δij(updater, layer.dbState, layer.δΣ[i], 0.0, i, 1)
+            layer.b[i] += param_change!(layer.dbState[i], updater, layer.ploss, layer.δΣ[i], 0.0)
 
-      layer.b[i] += Δij(updater, layer.dbState, layer.δΣ[i], 0.0, i, 1)
-      
-      for j in 1:layer.nin
-        if layer.r[j] > 0.0
-
-          layer.w[i,j] += Δij(updater, layer.dwState, layer.δΣ[i] * layer.y[j], layer.w[i,j], i, j)
-
+            for j in 1:layer.nin
+                if layer.r[j] > 0.0
+                    # layer.w[i,j] += Δij(updater, layer.dwState, layer.δΣ[i] * layer.y[j], layer.w[i,j], i, j)
+                    layer.w[i,j] += param_change!(layer.dwState[i,j], updater, layer.ploss, layer.δΣ[i] * layer.y[j], layer.w[i,j])
+                end
+            end
         end
-      end
     end
-  end
 
 
-  # update β and α... only when the input is retained (from dropout)
-  for i in 1:layer.nin
-    if layer.r[i] > 0.0
-
-      layer.α[i] += Δij(updater, layer.dαState, layer.δy[i], 0.0, i, 1)
-      layer.β[i] += Δij(updater, layer.dβState, layer.δy[i] * layer.xhat[i], 0.0, i, 1)
-
+    # update β and α... only when the input is retained (from dropout)
+    for i in 1:layer.nin
+        if layer.r[i] > 0.0
+            # layer.α[i] += Δij(updater, layer.dαState, layer.δy[i], 0.0, i, 1)
+            # layer.β[i] += Δij(updater, layer.dβState, layer.δy[i] * layer.xhat[i], 0.0, i, 1)
+            layer.α[i] += param_change!(layer.dαState[i], updater, layer.ploss, layer.δy[i], 0.0)
+            layer.β[i] += param_change!(layer.dβState[i], updater, layer.ploss, layer.δy[i] * layer.xhat[i], 0.0)
+        end
     end
-  end
 
 
 end
-
-

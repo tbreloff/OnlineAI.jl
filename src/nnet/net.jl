@@ -1,8 +1,8 @@
 
-const LAYER = Layer
+# const LAYER = Layer
 # const LAYER = NormalizedLayer
 
-type NeuralNet <: NetStat
+type NeuralNet{LAYER} <: NetStat
   layers::Vector{LAYER}  # note: this doesn't include input layer!!
   params::NetParams
   solverParams::SolverParams
@@ -11,7 +11,7 @@ type NeuralNet <: NetStat
   # costmult::VecF
 
   # TODO: inner constructor which performs some sanity checking on activation/cost combinations:
-  function NeuralNet(layers::Vector{LAYER},
+  function NeuralNet{LAYER}(layers::Vector{LAYER},
                       params::NetParams,
                       solverParams::SolverParams,
                       inputTransformer::Transformer = IdentityTransformer())
@@ -90,7 +90,8 @@ function backward!(net::NeuralNet, output, target)
 
   # update δᵢ starting from the output layer
   layer = net.layers[end]
-  δ = sensitivity!(layer.δ, layer.activation, net.params.mloss, layer.x, output, target)
+  # δ = sensitivity!(layer.δ, layer.activation, net.params.mloss, layer.x, output, target)
+  updateSensitivities!(layer, net.params.mloss, output, target)
 
   # now update the remaining sensitivities using bakckprop
   for i in length(net.layers)-1:-1:1

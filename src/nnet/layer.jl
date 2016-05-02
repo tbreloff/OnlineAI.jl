@@ -101,8 +101,13 @@ end
 #   end
 # end
 
+function updateSensitivities!(layer::Layer, mloss::ModelLoss, output::AVec, target::AVec)
+    sensitivity!(layer.δ, layer.activation, mloss, layer.x, output, target)
+end
+
 # this is the backward step for a hidden layer
 # notes: we are figuring out the effect of each node's activation value on the next sensitivities
+# TODO: replace with LearnBase version when implemented
 function updateSensitivities!(layer::Layer, nextlayer::Layer)
   for i in 1:layer.nout
     δi = 0.0

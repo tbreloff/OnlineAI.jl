@@ -5,7 +5,9 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
                   params = NetParams(),
                   solverParams = SolverParams(),
                   inputTransformer::Transformer = IdentityTransformer(),
-                  wgt::Weight = EqualWeight())
+                  wgt::Weight = EqualWeight(),
+                  LAYER::DataType = Layer
+                  )
   layers = LAYER[]
   nin = numInputs
 
@@ -24,7 +26,7 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
                         weightInit = params.weightInit
                        ))
     nin = nout
-    
+
     # next layers will get the "hidden" dropout probability
     pDropout = getDropoutProb(params, false)
   end
@@ -39,9 +41,11 @@ function buildNet(numInputs::Integer, numOutputs::Integer, hiddenStructure::AVec
                       weightInit = params.weightInit
                      ))
 
-  NeuralNet(layers, params, solverParams, inputTransformer)
+  NeuralNet{LAYER}(layers, params, solverParams, inputTransformer)
 end
 
 buildClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., finalMapping = SigmoidMapping())
 buildTanhClassificationNet(args...; kwargs...) = buildNet(args...; kwargs..., hiddenMapping = TanhMapping(), finalMapping = TanhMapping())
 buildRegressionNet(args...; kwargs...) = buildNet(args...; kwargs..., finalMapping = IdentityMapping())
+
+buildNet{LAYER <: NeuralNetLayer}(::Type{LAYER}, args...; kw...) = buildNet(args...; kw..., LAYER = LAYER)
