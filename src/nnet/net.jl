@@ -147,7 +147,7 @@ end
 
 function cost(net::NeuralNet, input::AVecF, target::AVecF)
   output = forward!(net, input)
-  value(net.params.mloss, target, output)
+  sum(value(net.params.mloss, target, output))
 end
 totalCost(net::NetStat, data::DataPoint) = cost(net, data.x, data.y)
 totalCost(net::NetStat, dataset::DataPoints) = sum([totalCost(net, data) for data in dataset])

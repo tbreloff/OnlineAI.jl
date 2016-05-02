@@ -3,6 +3,8 @@ module NNetTest
 
 using OnlineAI, FactCheck
 
+srand(1)
+
 function xor_data()
   inputs = [0 0; 0 1; 1 0; 1 1]
   targets = float(sum(inputs,2) .== 1)
@@ -59,10 +61,13 @@ end
 facts("NNet") do
 
   atol = 0.05
-  solverParams = SolverParams(maxiter=50000,
-                              minerror=1e-3,
-                              plotiter=-1,
-                              plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a])
+  solverParams = SolverParams(
+    maxiter=50000,
+    erroriter=10000,
+    minerror=1e-3,
+    plotiter=-1,
+    plotfields=Symbol[:x, :xhat, :β, :α, :δy, :y, :w, :b, :δΣ, :Σ, :a]
+    )
 
   updater = AdaMaxUpdater()
   # updater = SGDModel(η=0.001)
@@ -76,9 +81,10 @@ facts("NNet") do
   net, output, stats = testxor(params=NetParams(updater=AdaMaxUpdater(), mloss=CrossentropyLoss()), finalMapping=SigmoidMapping(), solverParams=solverParams)
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
+  solverParams.maxiter = 300000
   net, output, stats = testxor(params=NetParams(updater=AdaMaxUpdater(), mloss=CrossentropyLoss(), dropout=Dropout(1.0,0.9)),
                                finalMapping=SigmoidMapping(), solverParams=solverParams,
-                               hiddenLayerNodes = [6,6,6,6,6])
+                               hiddenLayerNodes = [6,6,6,6])
   @fact output --> roughly([0., 1., 1., 0.], atol=atol)
 
 end # facts
